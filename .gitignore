@@ -1,0 +1,23 @@
+/.metadata/
+backend/target/
+.settings/
+.classpath
+.project
+**/mvnw
+**/mvnw.cmd
+HELP.md
+
+# ========================
+# Sistema operacional
+# ========================
+.DS_Store
+
+# ========================
+# Node / Vite / React base
+# ========================
+node_modules/
+dist/
+build/
+*.log
+*.lock
+frontend/node_modules/

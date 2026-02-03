@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { clinicasMock, medicosMock, type Clinica } from '../types/escala';
+import { clinicasMock, medicosMock, type Clinica, initialAlocacoesMock } from '../types/escala';
 
 export const Escala = () => {
-  const [alocacoes, setAlocacoes] = useState<Record<string, Clinica>>({});
+  const [alocacoes, setAlocacoes] = useState<Record<string, Clinica>>(initialAlocacoesMock);
   const [isPaintingMode, setIsPaintingMode] = useState(false);
   const [isHeaderExpanded, setIsHeaderExpanded] = useState(true); // Controle do Collapse
   const [activePaintingClinica, setActivePaintingClinica] = useState<Clinica | null>(null);
@@ -127,7 +127,7 @@ export const Escala = () => {
           <table className="w-full border-separate border-spacing-0">
             <thead className="sticky top-0 z-20">
               <tr className="bg-gray-50/95 backdrop-blur-sm">
-                <th className="sticky left-0 top-0 z-30 bg-gray-50 p-4 border-b border-r border-gray-200 min-w-[160px] text-left">
+                <th className="sticky left-0 top-0 z-30 bg-gray-50 p-4 border-b border-r border-gray-200 min-w-[25px] text-left">
                   <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Médico</span>
                 </th>
                 {horas.map(hora => (

@@ -1,10 +1,12 @@
 package br.com.anestesiaflow.auth.repository;
 
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import br.com.anestesiaflow.auth.entidade.Usuario;
+import br.com.anestesiaflow.entidades.Usuario;
 
 public interface UsuarioRepository extends JpaRepository<Usuario, Integer> {
 
-	public Usuario findByLogin(String login);	
+	public abstract Optional<Usuario> findByLogin(String login);	
 }

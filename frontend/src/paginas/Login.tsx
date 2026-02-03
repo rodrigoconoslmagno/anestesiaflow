@@ -4,20 +4,39 @@ import { Password } from 'primereact/password';
 import { Button } from 'primereact/button';
 import { Logo } from '@/componentes/logo/Logo.tsx';
 import { useNavigate } from 'react-router-dom';
+import { server } from  '@/api/server'
+import { useAppToast } from '@/context/ToastContext';
+import { useAuth } from '@/context/AuthContext';
 
 export const Login: FC = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [login, setLogin] = useState('');
+  const [senha, setSenha] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { showError, showSuccess } = useAppToast();
+  const { loginSucesso } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const usuario = await server.login({ login, senha });
+      loginSucesso(usuario);
+    
+      // 3. Salvando no localStorage
+      localStorage.setItem('@AnestesiaFlow:user', JSON.stringify(usuario));
+      
+      showSuccess('Bem-vindo!', 'Autenticação realizada com sucesso.');
       navigate('/dashboard');
-    }, 1500);
+    } catch (err: any) {
+      if (err.response?.status === 401) {
+        showError('Acesso Negado', 'Usuário ou senha inválidos.');
+      } else {
+        showError('Erro de Conexão', 'Não foi possível contatar o servidor.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -64,8 +83,8 @@ export const Login: FC = () => {
               <div className="p-icon-field p-icon-field-left">
                 <i className="pi pi-user" />
                 <InputText 
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  value={login}
+                  onChange={(e) => setLogin(e.target.value)}
                   placeholder="Login"
                   className="p-4 border-gray-200 rounded-2xl focus:border-ap-blue-light transition-all shadow-sm"
                   required
@@ -78,8 +97,8 @@ export const Login: FC = () => {
               <div className="p-icon-field p-icon-field-left">
                 <i className="pi pi-lock" />
                 <Password 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
                   toggleMask
                   feedback={false}
                   placeholder="••••••••"

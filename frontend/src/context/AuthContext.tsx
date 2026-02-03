@@ -1,0 +1,62 @@
+// AuthContext.tsx
+import { createContext, useContext, useState, useEffect, type FC, type ReactNode } from 'react';
+import { type Usuario, server } from '@/api/server';
+
+interface AuthContextData {
+    usuario: Usuario | null;
+    loading: boolean;
+    loginSucesso: (dados: Usuario) => void;
+    logout: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextData>({} as AuthContextData);
+
+export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
+    const [usuario, setUsuario] = useState<Usuario | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function validate() {
+            try {
+                // DESCOMENTADO: Necessário para recuperar a sessão via Cookie
+                const data = await server.me();
+                setUsuario(data);
+            } catch (err) {
+                console.error("Sessão inválida ou expirada");
+                localStorage.removeItem('@AnestesiaFlow:user');
+            } finally {
+                setLoading(false);
+            }
+        }
+        validate();
+    }, []);
+
+    const loginSucesso = (dados: Usuario) => {
+        setUsuario(dados);
+        setLoading(false); // Garante que o loading para após o login
+    };
+
+    const logout = async () => {
+        try {
+            await server.logout();
+        } finally {
+            setUsuario(null);
+            localStorage.removeItem('@AnestesiaFlow:user');
+            window.location.href = '/login';
+        }
+    };
+
+    return (
+        <AuthContext.Provider value={{ usuario, loading, loginSucesso, logout }}>
+            {children}
+        </AuthContext.Provider>
+    );
+};
+
+export const useAuth = () => {
+    const context = useContext(AuthContext);
+    if (!context) {
+        throw new Error('useAuth deve ser usado dentro de um AuthProvider');
+    }
+    return context;
+};

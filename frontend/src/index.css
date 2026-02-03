@@ -59,3 +59,138 @@ body {
   border-color: #0066CC !important;
   box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.1) !important;
 }
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-8px); }
+  50% { transform: translateX(8px); }
+  75% { transform: translateX(-8px); }
+}
+
+.animate-shake {
+  animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+/* Customização do Toast para ficar mais "clean" */
+.p-toast {
+  opacity: 0.95;
+}
+
+.p-toast .p-toast-message {
+  border-radius: 12px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+/* Container principal do Toast */
+.p-toast {
+  opacity: 0.98;
+  z-index: 9999 !important; /* Garante que fique sobre modais e headers */
+}
+
+/* Estilo de cada card de mensagem */
+.p-toast .p-toast-message {
+  background: #ffffff;
+  border: none;
+  border-radius: 16px; /* Bordas mais arredondadas como os inputs */
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1rem;
+}
+
+/* Ajuste de conteúdo interno */
+.p-toast .p-toast-message .p-toast-message-content {
+  padding: 1.25rem;
+  border-radius: 16px;
+}
+
+/* Ícones do Toast */
+.p-toast .p-toast-message .p-toast-message-icon {
+  font-size: 1.5rem;
+}
+
+/* Títulos e Detalhes */
+.p-toast .p-toast-message .p-toast-summary {
+  font-weight: 700;
+  font-size: 1rem;
+  margin-left: 0.5rem;
+}
+
+.p-toast .p-toast-message .p-toast-detail {
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  margin-left: 0.5rem;
+  color: #4b5563; /* Gray-600 */
+}
+
+/* Cores por Severidade (Borda lateral fina para identificação) */
+.p-toast .p-toast-message-success {
+  border-left: 6px solid #22c55e !important; /* Verde */
+}
+
+.p-toast .p-toast-message-error {
+  border-left: 6px solid #ef4444 !important; /* Vermelho */
+}
+
+.p-toast .p-toast-message-info {
+  border-left: 6px solid #0066CC !important; /* Azul ap-blue-light */
+}
+
+.p-toast .p-toast-message-warn {
+  border-left: 6px solid #f59e0b !important; /* Amarelo */
+}
+
+/* Botão de fechar do Toast */
+.p-toast .p-toast-icon-close {
+  color: #9ca3af;
+  transition-property: background-color;
+  transition-duration: 0.2s;
+}
+
+.p-toast .p-toast-icon-close:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@media (max-width: 1023px) {
+  main {
+    padding-bottom: 5rem !important;
+    padding-top: 5rem !important; /* Espaço para o Header Mobile */
+  }
+}
+
+.p-ripple {
+  overflow: hidden;
+  position: relative;
+}
+
+/* Scrollbar fina para a Sidebar Desktop */
+aside::-webkit-scrollbar {
+  width: 4px;
+}
+
+aside::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+aside::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+}
+
+/* Estilo para Cards de Dashboard */
+.card-stats {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  border: 1px solid #edf2f7;
+  transition: all 0.2s ease-in-out;
+}
+
+.card-stats:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}

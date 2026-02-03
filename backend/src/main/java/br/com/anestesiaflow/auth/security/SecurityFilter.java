@@ -31,7 +31,25 @@ public class SecurityFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        String token = this.recoverToken(request);
+    	String path = request.getRequestURI();
+    	
+    	if (path.startsWith("/static/") ||
+                path.startsWith("/js/") ||
+                path.startsWith("/css/") ||
+                path.startsWith("/assets/") ||
+                path.endsWith(".png") ||
+                path.endsWith(".jpg") ||
+                path.endsWith(".jpeg") ||
+                path.endsWith(".svg") ||
+                path.endsWith(".ico") ||
+                path.endsWith(".html") ||
+                path.endsWith(".json")) {
+
+                filterChain.doFilter(request, response);
+                return;
+            }
+    	
+    	String token = this.recoverToken(request);
         if (token != null && !token.isEmpty()) {
         	String login = tokenService.validateToken(token);
             if (login != null) {

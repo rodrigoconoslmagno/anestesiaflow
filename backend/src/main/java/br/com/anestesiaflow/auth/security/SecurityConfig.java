@@ -33,6 +33,20 @@ public class SecurityConfig {
 				.authorizeHttpRequests(authorize -> authorize.requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
 															 .requestMatchers(HttpMethod.POST, "/auth/logout").permitAll()
 															 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+															 .requestMatchers(
+																	    "/", 
+																	    "/index.html", 
+																	    "/**/*.png",
+																	    "/**/*.jpg",
+																	    "/**/*.jpeg",
+																	    "/**/*.svg",
+																	    "/**/*.css",
+																	    "/**/*.js",
+																	    "/favicon.ico",
+																	    "/manifest.json",
+																	    "/static/**",
+																	    "/assets/**"												                
+													                ).permitAll()
 															 .anyRequest()
 															 .authenticated()
 						)
@@ -46,7 +60,11 @@ public class SecurityConfig {
 	public CorsConfigurationSource orsConfigurationSource() {
 		CorsConfiguration configuration = new CorsConfiguration();
 		
-		configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173"));
+		configuration.setAllowedOrigins(Arrays.asList(
+		        "http://localhost:5173", 
+		        "http://127.0.0.1:5173",
+		        "http://192.168.0.237:5173" // IP fixo do seu Mac
+		    ));
 		configuration.setAllowedMethods(Arrays.asList("GET", "POST", "OPTIONS"));
 		configuration.setAllowedHeaders(Arrays.asList("*"));
 		

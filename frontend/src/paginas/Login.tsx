@@ -32,7 +32,7 @@ export const Login: FC = () => {
       if (err.response?.status === 401) {
         showError('Acesso Negado', 'Usuário ou senha inválidos.');
       } else {
-        showError('Erro de Conexão', 'Não foi possível contatar o servidor.');
+        showError('Erro de Conexão', 'Não foi possível contatar o servidor.' + err);
       }
     } finally {
       setLoading(false);

@@ -128,7 +128,7 @@ export const Sudoku = () => {
             <thead className="sticky top-0 z-20">
               <tr className="bg-gray-50/95 backdrop-blur-sm">
                 <th className="sticky left-0 top-0 z-10 bg-gray-50 p-1 border-b border-r border-gray-200 min-w-[15px] text-left">
-                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Médico</span>
+                  <span className="text-[15px] font-black text-gray-400 uppercase tracking-widest">Médico</span>
                 </th>
                 {horas.map(hora => (
                   <th key={hora} className="p-1 border-b border-gray-100 min-w-20 text-center bg-gray-50/95 border-r last:border-r-0">

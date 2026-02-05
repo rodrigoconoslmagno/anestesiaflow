@@ -31,6 +31,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             } catch (err) {
                 console.error("Sessão inválida ou expirada");
                 localStorage.removeItem('@AnestesiaFlow:user');
+                sessionStorage.clear();
             } finally {
                 setLoading(false);
             }
@@ -49,7 +50,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         } finally {
             setUsuario(null);
             localStorage.removeItem('@AnestesiaFlow:user');
-            window.location.href = '/';
+            sessionStorage.clear();
+            window.location.href = '/login';
         }
     };
 

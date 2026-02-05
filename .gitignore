@@ -1,5 +1,6 @@
 /.metadata/
 backend/target/
+backend/src/main/resources/static/
 .settings/
 .classpath
 .project

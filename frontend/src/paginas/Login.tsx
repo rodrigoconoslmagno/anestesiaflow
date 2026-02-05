@@ -1,4 +1,4 @@
-import { useState, type FC } from 'react';
+import { useState, type FC, useEffect } from 'react';
 import { InputText } from 'primereact/inputtext';
 import { Password } from 'primereact/password';
 import { Button } from 'primereact/button';
@@ -14,7 +14,13 @@ export const Login: FC = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { showError, showSuccess } = useAppToast();
-  const { loginSucesso } = useAuth();
+  const { usuario, loginSucesso } = useAuth();
+
+  useEffect(() => {
+    if (!loading && usuario) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [usuario, loading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

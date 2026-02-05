@@ -35,6 +35,7 @@ public class SecurityConfig {
 															 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 															 .requestMatchers(
 																	    "/", 
+																	    "/login",
 																	    "/index.html", 
 																	    "/**/*.png",
 																	    "/**/*.jpg",

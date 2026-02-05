@@ -27,12 +27,8 @@ export const AppRoutes = () => {
             Se o usuário acessar a raiz "/", mandamos para o "/dashboard".
             O ProtectedRoute vai validar se ele pode entrar ou se vai pro login.
         */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
-        {/* PÁGINA NÃO ENCONTRADA (404):
-            Se ele digitar qualquer coisa que não existe, volta para o dashboard.
-        */}
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
   );

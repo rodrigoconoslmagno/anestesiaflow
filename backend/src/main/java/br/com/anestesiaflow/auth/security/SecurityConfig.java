@@ -47,6 +47,7 @@ public class SecurityConfig {
 																	    "/static/**",
 																	    "/assets/**"												                
 													                ).permitAll()
+															 .requestMatchers("/{path:[^\\.]*}", "/*/{path:[^\\.]*}", "/**/{path:[^\\.]*}").permitAll()
 															 .anyRequest()
 															 .authenticated()
 						)

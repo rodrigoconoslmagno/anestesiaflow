@@ -3,27 +3,36 @@ import { Login } from '@/paginas/Login';
 import { DashboardLayout } from '@/layouts/DashboardLayout'; 
 import { DashboardHome } from '@/paginas/DashboardHome';
 import { ProtectedRoute } from './ProtectedRoute';
-import { Escala } from '@/paginas/Escala';
+import { Sudoku } from '@/paginas/Sudoku';
+import { Usuario } from '@/paginas/Usuario';
 
 export const AppRoutes = () => {
   return (
     <BrowserRouter>
       <Routes>
-        {/* ROTA PÚBLICA: Sem menu lateral */}
+        {/* ROTA PÚBLICA */}
         <Route path="/login" element={<Login />} />
 
         {/* Rotas protegidas com Layout */}
         <Route element={<ProtectedRoute />}>
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<DashboardHome />} />
-            <Route path="/escala" element={<Escala />} />
-            {/* Adicione outras aqui */}
+            <Route path="/sudoku" element={<Sudoku />} />
+            <Route path="/usuario" element={<Usuario />} />
+            {/* Adicione outras rotas aqui */}
           </Route>
         </Route>
 
-        {/* REDIRECIONAMENTO: Se o usuário acessar a raiz ou rota inexistente */}
-        <Route path="/" element={<Navigate to="/login" />} />
-        <Route path="*" element={<Navigate to="/login" />} />
+        {/* CORREÇÃO AQUI: 
+            Se o usuário acessar a raiz "/", mandamos para o "/dashboard".
+            O ProtectedRoute vai validar se ele pode entrar ou se vai pro login.
+        */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+        {/* PÁGINA NÃO ENCONTRADA (404):
+            Se ele digitar qualquer coisa que não existe, volta para o dashboard.
+        */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </BrowserRouter>
   );

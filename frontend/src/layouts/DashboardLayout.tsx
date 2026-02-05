@@ -79,7 +79,7 @@ export const DashboardLayout: FC = () => {
 
   const mobileQuickActions = [
     { label: 'Início', icon: 'pi pi-home', to: '/dashboard' },
-    { label: 'Escalas', icon: 'pi pi-calendar', to: '/escalas/geral' },
+    { label: 'Sudoku', icon: 'pi pi-calendar', to: '/sudoku' },
     { label: 'Médicos', icon: 'pi pi-users', to: '/medicos' },
   ];
 
@@ -174,7 +174,7 @@ export const DashboardLayout: FC = () => {
         "flex-1 flex flex-col min-w-0 overflow-hidden relative transition-all duration-300",
         fullViewMode ? "lg:ml-20" : "lg:ml-0"
       )}>
-        <div className="flex-1 p-6 lg:p-10 flex flex-col h-full"> 
+        <div className="flex-1 p-6 lg:p-5 flex flex-col h-full"> 
             <div className="w-full h-full flex flex-col min-h-0">
                 <Outlet /> 
             </div>

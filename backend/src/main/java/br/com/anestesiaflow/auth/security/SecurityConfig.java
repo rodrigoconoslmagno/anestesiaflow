@@ -60,14 +60,14 @@ public class SecurityConfig {
 	public CorsConfigurationSource orsConfigurationSource() {
 		CorsConfiguration configuration = new CorsConfiguration();
 
-//		configuration.setAllowedOrigins(Arrays.asList(
-//		        "http://localhost:5173", 
-//		        "http://127.0.0.1:5173",
-//		        "http://192.168.0.237:5173", // IP fixo do seu Mac
-//		        "https://anestesiaflow.onrender.com",
-//		        "https://anestesiaflow.onrender.com:8080"
-//		    ));
-		configuration.addAllowedOriginPattern("*");
+		configuration.setAllowedOrigins(Arrays.asList(
+		        "http://localhost:5173", 
+		        "http://127.0.0.1:5173",
+		        "http://192.168.0.237:5173", // IP fixo do seu Mac
+		        "https://anestesiaflow.onrender.com",
+		        "https://anestesiaflow.onrender.com:8080"
+		    ));
+//		configuration.addAllowedOriginPattern("*");
 		configuration.setAllowedMethods(Arrays.asList("GET", "POST", "OPTIONS"));
 		configuration.setAllowedHeaders(Arrays.asList("*"));
 		

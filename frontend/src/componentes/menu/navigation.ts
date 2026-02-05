@@ -13,6 +13,7 @@ export interface MenuItem {
       children: [
         { label: 'Médicos', icon: 'pi pi-users', to: '/medicos' },
         { label: 'Clínicas', icon: 'pi pi-building', to: '/clinicas' },
+        { label: 'Usuários', icon: 'pi pi-user', to: '/usuario' },
       ]
     },
     { 
@@ -20,7 +21,7 @@ export interface MenuItem {
       icon: 'pi pi-calendar',
       children: [
         { label: 'Minhas Escalas', icon: 'pi pi-user-edit', to: '/escalas/minhas' },
-        { label: 'Geral', icon: 'pi pi-globe', to: '/escala' },
+        { label: 'Sudoku', icon: 'pi pi-globe', to: '/sudoku' },
       ]
     }
   ];

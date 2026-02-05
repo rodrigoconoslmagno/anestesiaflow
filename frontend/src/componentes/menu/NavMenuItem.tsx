@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { clsx } from 'clsx';
 import { Ripple } from 'primereact/ripple';
-import type { MenuItem } from '@/componentes/menu/menu';
+import type { MenuItem } from '@/componentes/menu/navigation';
 
 interface NavMenuItemProps {
   item: MenuItem;

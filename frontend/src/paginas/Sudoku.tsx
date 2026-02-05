@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { clinicasMock, medicosMock, type Clinica, initialAlocacoesMock } from '../types/escala';
+import { clinicasMock, medicosMock, type Clinica, initialAlocacoesMock } from '../types/sudoku';
 
-export const Escala = () => {
+export const Sudoku = () => {
   const [alocacoes, setAlocacoes] = useState<Record<string, Clinica>>(initialAlocacoesMock);
   const [isPaintingMode, setIsPaintingMode] = useState(false);
   const [isHeaderExpanded, setIsHeaderExpanded] = useState(true); // Controle do Collapse
@@ -74,7 +74,7 @@ export const Escala = () => {
               <i className={`pi ${isHeaderExpanded ? 'pi-chevron-up' : 'pi-chevron-down'} font-bold`}></i>
             </button>
             <div>
-              <h2 className="text-xl font-black text-blue-900 tracking-tight leading-none">Gestão de Escalas</h2>
+              <h2 className="text-xl font-black text-blue-900 tracking-tight leading-none">Sudoku de Escalas</h2>
               {!isHeaderExpanded && (
                 <p className="text-[10px] text-gray-400 font-bold uppercase mt-1 tracking-widest">Painel de Clínicas Oculto</p>
               )}
@@ -127,12 +127,12 @@ export const Escala = () => {
           <table className="w-full border-separate border-spacing-0">
             <thead className="sticky top-0 z-20">
               <tr className="bg-gray-50/95 backdrop-blur-sm">
-                <th className="sticky left-0 top-0 z-30 bg-gray-50 p-4 border-b border-r border-gray-200 min-w-[25px] text-left">
+                <th className="sticky left-0 top-0 z-10 bg-gray-50 p-1 border-b border-r border-gray-200 min-w-[15px] text-left">
                   <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Médico</span>
                 </th>
                 {horas.map(hora => (
-                  <th key={hora} className="p-3 border-b border-gray-100 min-w-20 text-center bg-gray-50/95 border-r last:border-r-0">
-                    <span className="text-[10px] font-bold text-gray-500">{hora}</span>
+                  <th key={hora} className="p-1 border-b border-gray-100 min-w-20 text-center bg-gray-50/95 border-r last:border-r-0">
+                    <span className="text-[15px] font-bold text-gray-500">{hora}</span>
                   </th>
                 ))}
               </tr>
@@ -140,7 +140,7 @@ export const Escala = () => {
             <tbody className="divide-y divide-gray-50">
               {medicosMock.map((medico) => (
                 <tr key={medico.id} className="group hover:bg-gray-50/30">
-                  <td className="sticky left-0 z-10 bg-white p-4 border-r border-gray-100 font-bold text-sm text-gray-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                  <td className="sticky left-0 z-10 bg-white py-1 px-4 border-r border-gray-100 font-bold text-sm text-gray-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                     <span className="truncate">{medico.nome}</span>
                   </td>
                   {horas.map(hora => {
@@ -153,12 +153,12 @@ export const Escala = () => {
                         onMouseEnter={() => handleMouseEnter(medico.id, hora)}
                         className={`p-1 text-center border-r border-gray-50 last:border-r-0 ${isPaintingMode ? 'cursor-crosshair' : ''}`}
                       >
-                         <div className="w-full h-12 flex items-center justify-center" onMouseDown={() => handleMouseDown(medico.id, hora, alocacao)}>
+                         <div className="w-full h-7 flex items-center justify-center" onMouseDown={() => handleMouseDown(medico.id, hora, alocacao)}>
                           {alocacao ? (
                             <div 
                               draggable={!isPaintingMode}
                               onDragStart={(e) => onDragStart(e, alocacao, { medicoId: medico.id, hora })}
-                              className="w-7 h-7 rounded-full shadow-lg ring-2 ring-white animate-scalein hover:scale-110 transition-transform"
+                              className="w-5 h-5 rounded-full shadow-lg ring-2 ring-white animate-scalein hover:scale-100 transition-transform"
                               style={{ backgroundColor: alocacao.cor }}
                               onClick={() => {
                                 if (!isPaintingMode) {

@@ -1,10 +1,12 @@
 // AuthContext.tsx
 import { createContext, useContext, useState, useEffect, type FC, type ReactNode } from 'react';
 import { type Usuario, server } from '@/api/server';
+import { Manutencao } from '@/paginas/Manutencao';
 
 interface AuthContextData {
     usuario: Usuario | null;
     loading: boolean;
+    isOffline: boolean;
     loginSucesso: (dados: Usuario) => void;
     logout: () => Promise<void>;
 }
@@ -14,8 +16,13 @@ const AuthContext = createContext<AuthContextData>({} as AuthContextData);
 export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const [usuario, setUsuario] = useState<Usuario | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isOffline, setIsOffline] = useState(false);
 
     useEffect(() => {
+        const handleOffline = () => setIsOffline(true);
+
+        window.addEventListener('server-offline', handleOffline);
+
         async function validate() {
             try {
                 // DESCOMENTADO: Necessário para recuperar a sessão via Cookie
@@ -46,8 +53,12 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         }
     };
 
+    if (isOffline) {
+        return <Manutencao />;
+    }
+
     return (
-        <AuthContext.Provider value={{ usuario, loading, loginSucesso, logout }}>
+        <AuthContext.Provider value={{ usuario, loading, isOffline, loginSucesso, logout }}>
             {children}
         </AuthContext.Provider>
     );

@@ -49,7 +49,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         } finally {
             setUsuario(null);
             localStorage.removeItem('@AnestesiaFlow:user');
-            window.location.href = '/login';
+            window.location.href = '/';
         }
     };
 

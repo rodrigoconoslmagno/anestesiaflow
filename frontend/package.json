@@ -13,6 +13,7 @@
     "@hookform/resolvers": "^5.2.2",
     "axios": "^1.13.4",
     "clsx": "^2.1.1",
+    "mobile-drag-drop": "^3.0.0-rc.0",
     "primeicons": "^7.0.0",
     "primereact": "^10.9.7",
     "react": "^19.2.0",

@@ -1,56 +1,113 @@
 import { useState, useEffect } from 'react';
+import { Button } from 'primereact/button';
 import { clinicasMock, medicosMock, type Clinica, initialAlocacoesMock } from '../types/sudoku';
+import { SudokuCell } from '@/componentes/sudoku/SudokuCell';
+import { ClinicasPanel } from '@/componentes/sudoku/ClinicasPanel';
+import '@/componentes/sudoku/sudoku.css';
 
 export const Sudoku = () => {
   const [alocacoes, setAlocacoes] = useState<Record<string, Clinica>>(initialAlocacoesMock);
   const [isPaintingMode, setIsPaintingMode] = useState(false);
-  const [isHeaderExpanded, setIsHeaderExpanded] = useState(true); // Controle do Collapse
+  const [isHeaderExpanded, setIsHeaderExpanded] = useState(true);
   const [activePaintingClinica, setActivePaintingClinica] = useState<Clinica | null>(null);
   const [isDraggingWithinGrid, setIsDraggingWithinGrid] = useState(false);
-  
+
   const horas = Array.from({ length: 13 }, (_, i) => `${(i + 7).toString().padStart(2, '0')}:00`);
 
-  // --- Mantenha as funções onDragStart, onDrop, handleMouseDown e handleMouseEnter anteriores ---
+  // --- Lógica de Drag and Drop ---
   const onDragStart = (e: React.DragEvent, clinica: Clinica, origem?: { medicoId: number; hora: string }) => {
-    if (isPaintingMode) { e.preventDefault(); return; }
+    if (isPaintingMode) {
+      e.preventDefault(); // Garante que não arraste nada se estiver pintando
+      return;
+    }
+    
+    // Indica ao sistema que o item pode ser movido
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.dropEffect = 'move';
+    
     e.dataTransfer.setData('clinica', JSON.stringify(clinica));
     if (origem) e.dataTransfer.setData('origem', JSON.stringify(origem));
+
+    (e.target as HTMLElement).classList.add('dragging-active');
   };
 
-  const onDrop = (e: React.DragEvent, targetMedicoId: number, targetHora: string) => {
+  const onDragEnd = (e: React.DragEvent) => {
+    // Remove a classe independente de onde o item caiu
+    (e.target as HTMLElement).classList.remove('dragging-active');
+  };
+
+  const onDrop = (e: React.DragEvent, medicoId: number, hora: string) => {
     e.preventDefault();
-    const targetKey = `${targetMedicoId}-${targetHora}`;
-    if (alocacoes[targetKey]) return;
-    const clinica = JSON.parse(e.dataTransfer.getData('clinica')) as Clinica;
-    const origemRaw = e.dataTransfer.getData('origem');
-    setAlocacoes(prev => {
-      const newAlocacoes = { ...prev };
-      if (origemRaw) {
-        const origem = JSON.parse(origemRaw);
-        delete newAlocacoes[`${origem.medicoId}-${origem.hora}`];
-      }
-      newAlocacoes[targetKey] = clinica;
-      return newAlocacoes;
-    });
-  };
-
-  const handleMouseDown = (medicoId: number, hora: string, clinica?: Clinica) => {
-    if (isPaintingMode && clinica) {
-      setIsDraggingWithinGrid(true);
-      setActivePaintingClinica(clinica);
-      marcarCelula(medicoId, hora, clinica);
+    e.stopPropagation();
+  
+    const clinicaData = e.dataTransfer.getData('clinica');
+    const origemData = e.dataTransfer.getData('origem');
+  
+    if (!clinicaData) return;
+  
+    try {
+      const clinica = JSON.parse(clinicaData);
+      const targetKey = `${medicoId}-${hora}`;
+  
+      setAlocacoes(prev => {
+        const novo = { ...prev };
+        
+        // Se tiver origem, é uma movimentação entre células
+        if (origemData) {
+          const origem = JSON.parse(origemData);
+          const origemKey = `${origem.medicoId}-${origem.hora}`;
+          // Só remove se a origem for diferente do destino
+          if (origemKey !== targetKey) {
+            delete novo[origemKey];
+          }
+        }
+        
+        novo[targetKey] = clinica;
+        return novo;
+      });
+    } catch (err) {
+      console.error("Erro no drop mobile:", err);
     }
   };
 
-  const handleMouseEnter = (medicoId: number, hora: string) => {
-    if (isPaintingMode && isDraggingWithinGrid && activePaintingClinica) {
+  const handleMouseDown = (medicoId: number, hora: string) => {
+    // Se não estiver no modo pintura, sai imediatamente para não afetar o Drag
+    if (!isPaintingMode) {
+      return;
+    }
+  
+    const alocacaoExistente = alocacoes[`${medicoId}-${hora}`];
+    
+    if (alocacaoExistente) {
+      setActivePaintingClinica(alocacaoExistente);
+      setIsDraggingWithinGrid(true);
+    } else if (activePaintingClinica) {
+      setIsDraggingWithinGrid(true);
       marcarCelula(medicoId, hora, activePaintingClinica);
     }
   };
 
   const marcarCelula = (medicoId: number, hora: string, clinica: Clinica) => {
-    const key = `${medicoId}-${hora}`;
-    if (!alocacoes[key]) setAlocacoes(prev => ({ ...prev, [key]: clinica }));
+    setAlocacoes(prev => ({ ...prev, [`${medicoId}-${hora}`]: clinica }));
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isPaintingMode || !isDraggingWithinGrid || !activePaintingClinica) return;
+  
+    // Impede que a tela suba/desça enquanto você está pintando as células
+    if (e.cancelable) e.preventDefault(); 
+  
+    const touch = e.touches[0];
+    const element = document.elementFromPoint(touch.clientX, touch.clientY);
+    const cell = element?.closest('td[data-medico]');
+    
+    if (cell) {
+      const medicoId = Number(cell.getAttribute('data-medico'));
+      const hora = cell.getAttribute('data-hora');
+      if (medicoId && hora) {
+        marcarCelula(medicoId, hora, activePaintingClinica);
+      }
+    }
   };
 
   useEffect(() => {
@@ -60,121 +117,100 @@ export const Sudoku = () => {
   }, []);
 
   return (
-    <div className="flex flex-col h-full w-full animate-fadein overflow-hidden select-none">
+    <div className={`sudoku-container pb-8 min-h-screen flex flex-col select-none ${isPaintingMode ? `painting-active` : ``}`}>
       
-      {/* HEADER COMPACTO COM CONTROLES */}
-      <div className="shrink-0 bg-gray-50 pb-4 pt-2 border-b border-gray-100">
-        <div className="flex items-center justify-between w-full mb-4">
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => setIsHeaderExpanded(!isHeaderExpanded)}
-              className="p-2 hover:bg-gray-200 rounded-lg transition-colors text-blue-900"
-              title={isHeaderExpanded ? "Recolher clínicas" : "Expandir clínicas"}
-            >
-              <i className={`pi ${isHeaderExpanded ? 'pi-chevron-up' : 'pi-chevron-down'} font-bold`}></i>
-            </button>
-            <div>
-              <h2 className="text-xl font-black text-blue-900 tracking-tight leading-none">Sudoku de Escalas</h2>
-              {!isHeaderExpanded && (
-                <p className="text-[10px] text-gray-400 font-bold uppercase mt-1 tracking-widest">Painel de Clínicas Oculto</p>
-              )}
-            </div>
-          </div>
-
-          {/* BOTÃO DE MODO (MOVER/PINTAR) - SEMPRE VISÍVEL */}
-          <button 
-            onClick={() => setIsPaintingMode(!isPaintingMode)}
-            className={`flex items-center gap-3 px-6 py-2 rounded-xl transition-all shadow-sm border-2 ${
-              isPaintingMode 
-              ? 'bg-blue-600 border-blue-400 text-white shadow-blue-200' 
-              : 'bg-white border-gray-200 text-gray-600 hover:border-blue-200'
-            }`}
-          >
-            <i className={`pi ${isPaintingMode ? 'pi-pencil' : 'pi-arrows-alt'}`}></i>
-            <span className="font-black text-xs uppercase tracking-tighter">
-              {isPaintingMode ? 'Pintar' : 'Mover'}
-            </span>
-          </button>
-        </div>
-
-        {/* COMPONENTE DE COLLAPSE (CLÍNICAS) */}
-        <div className={`grid transition-all duration-300 ease-in-out ${
-          isHeaderExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 overflow-hidden'
-        }`}>
-          <div className="overflow-hidden">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 bg-white p-4 rounded-2xl border border-gray-100 shadow-inner">
-              {clinicasMock.map((clinica) => (
-                <div key={clinica.id} className="flex items-center gap-3 bg-gray-50 px-3 py-2 rounded-xl border border-transparent shadow-sm">
-                  <div 
-                    draggable={!isPaintingMode}
-                    onDragStart={(e) => onDragStart(e, clinica)}
-                    className={`w-5 h-5 min-w-5 rounded-full ring-2 ring-white shadow-sm ${
-                      !isPaintingMode ? 'cursor-grab active:cursor-grabbing hover:scale-110' : 'opacity-50'
-                    }`} 
-                    style={{ backgroundColor: clinica.cor }}
-                  />
-                  <span className="text-[11px] font-bold text-gray-600 truncate uppercase">{clinica.nome}</span>
-                </div>
-              ))}
-            </div>
+      {/* HEADER: Layout Restaurado (Chevron - Título - Botão Modo) */}
+      <div className="flex items-center justify-between mb-4 bg-white p-2 rounded-lg shadow-sm border border-gray-100">
+        <div className="flex items-center gap-4">
+          <Button 
+            icon={isHeaderExpanded ? "pi pi-chevron-up" : "pi pi-chevron-down"} 
+            className="p-button-text p-button-secondary p-button-sm"
+            onClick={() => setIsHeaderExpanded(!isHeaderExpanded)}
+          />
+          <div>
+            <h1 className="text-xl font-black text-blue-900 m-0 tracking-tight leading-none">Sudoku de Escalas</h1>
+            {!isHeaderExpanded && (
+              <span className="text-[10px] text-gray-400 font-bold uppercase mt-1 tracking-widest block">Painel de Clínicas Oculto</span>
+            )}
           </div>
         </div>
+
+        <Button 
+          icon={isPaintingMode ? "pi pi-pencil" : "pi pi-arrows-alt"} 
+          label={isPaintingMode ? "Pintar" : "Mover"}
+          severity={isPaintingMode ? "info" : "secondary"}
+          className={`px-4 py-2 font-bold text uppercase shadow-sm border-2 ${
+            isPaintingMode ? 'bg-blue-600 border-blue-400 text-white' : ''
+          }`}
+          onClick={() => { 
+            setIsPaintingMode(!isPaintingMode); 
+            setActivePaintingClinica(null); 
+          }}
+        />
       </div>
 
-      {/* ÁREA DO GRID (EXPANDIDA) */}
-      <div className="flex-1 min-h-0 bg-white rounded-b-3xl flex flex-col overflow-hidden">
-        <div className="overflow-auto flex-1 custom-scrollbar">
-          <table className="w-full border-separate border-spacing-0">
-            <thead className="sticky top-0 z-20">
-              <tr className="bg-gray-50/95 backdrop-blur-sm">
-                <th className="sticky left-0 top-0 z-10 bg-gray-50 p-1 border-b border-r border-gray-200 min-w-[15px] text-left">
-                  <span className="text-[15px] font-black text-gray-400 uppercase tracking-widest">Médico</span>
+      {/* PAINEL DE CLÍNICAS (Collapse + Componente Reutilizável) */}
+      <div className={`transition-all overflow-hidden ${
+        isHeaderExpanded ? 'max-h-[500px] opacity-100 mb-4' : 'max-h-0 opacity-0'
+      }`}>
+        <ClinicasPanel 
+          clinicas={clinicasMock}
+          layout="horizontal"
+          isPaintingMode={isPaintingMode}
+          activeClinicaId={activePaintingClinica?.id}
+          onDragStart={onDragStart}
+          onSelect={(c) => isPaintingMode && setActivePaintingClinica(c)}
+        />
+      </div>
+
+      {/* ÁREA DO GRID */}
+      <div className="sudoku-table-container flex-1 flex flex-col border border-gray-200 shadow-lg rounded-xlx`">
+        <div className="overflow-auto flex-1 custom-scrollbar"
+            onTouchMove={handleTouchMove} 
+            onTouchEnd={() => setIsDraggingWithinGrid(false)}
+        >
+          <table className="w-full">
+            <thead className="sticky top-0 z-[100]">
+              <tr className="bg-gray-50">
+                <th className="text-center sticky left-0 top-0 z-[1100] bg-gray-50 min-w-[20px] border-b border-r border-gray-200">
+                  <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Méd</span>
                 </th>
-                {horas.map(hora => (
-                  <th key={hora} className="p-1 border-b border-gray-100 min-w-20 text-center bg-gray-50/95 border-r last:border-r-0">
-                    <span className="text-[15px] font-bold text-gray-500">{hora}</span>
+                {horas.map(h => (
+                  <th key={h} className="text-xs font-bold text-gray-500 border-b border-r border-gray-100 text-center min-w-[50px]">
+                    {h}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
-              {medicosMock.map((medico) => (
-                <tr key={medico.id} className="group hover:bg-gray-50/30">
-                  <td className="sticky left-0 z-10 bg-white py-1 px-4 border-r border-gray-100 font-bold text-sm text-gray-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                    <span className="truncate">{medico.nome}</span>
+            <tbody>
+              {medicosMock.map(medico => (
+                <tr key={medico.id} className="hover:bg-gray-50/30">
+                  <td className="font-bold text-sm text-center text-gray-700 sticky left-0 bg-white border-r border-b border-gray-100 shadow-sm">
+                    {medico.nome}
                   </td>
-                  {horas.map(hora => {
-                    const alocacao = alocacoes[`${medico.id}-${hora}`];
-                    return (
-                      <td 
-                        key={hora}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={(e) => onDrop(e, medico.id, hora)}
-                        onMouseEnter={() => handleMouseEnter(medico.id, hora)}
-                        className={`p-1 text-center border-r border-gray-50 last:border-r-0 ${isPaintingMode ? 'cursor-crosshair' : ''}`}
-                      >
-                         <div className="w-full h-7 flex items-center justify-center" onMouseDown={() => handleMouseDown(medico.id, hora, alocacao)}>
-                          {alocacao ? (
-                            <div 
-                              draggable={!isPaintingMode}
-                              onDragStart={(e) => onDragStart(e, alocacao, { medicoId: medico.id, hora })}
-                              className="w-5 h-5 rounded-full shadow-lg ring-2 ring-white animate-scalein hover:scale-100 transition-transform"
-                              style={{ backgroundColor: alocacao.cor }}
-                              onClick={() => {
-                                if (!isPaintingMode) {
-                                  const n = { ...alocacoes };
-                                  delete n[`${medico.id}-${hora}`];
-                                  setAlocacoes(n);
-                                }
-                              }}
-                            />
-                          ) : (
-                            <div className="w-1.5 h-1.5 rounded-full bg-gray-200" />
-                          )}
-                        </div>
-                      </td>
-                    );
-                  })}
+                  {horas.map(hora => (
+                    <SudokuCell
+                      key={hora}
+                      medicoId={medico.id} // Passando os novos IDs
+                      hora={hora}
+                      alocacao={alocacoes[`${medico.id}-${hora}`]}
+                      isPaintingMode={isPaintingMode}
+                      onDragStart={(e) => onDragStart(e, alocacoes[`${medico.id}-${hora}`]!, { medicoId: medico.id, hora })}
+                      onDrop={(e) => onDrop(e, medico.id, hora)}
+                      onDragEnd={onDragEnd}
+                      onMouseDown={() => handleMouseDown(medico.id, hora)}
+                      onMouseEnter={() => {
+                        if (isPaintingMode && isDraggingWithinGrid && activePaintingClinica) {
+                          marcarCelula(medico.id, hora, activePaintingClinica);
+                        }
+                      }}
+                      onRemove={() => {
+                        const n = { ...alocacoes };
+                        delete n[`${medico.id}-${hora}`];
+                        setAlocacoes(n);
+                      }}
+                    />
+                  ))}
                 </tr>
               ))}
             </tbody>

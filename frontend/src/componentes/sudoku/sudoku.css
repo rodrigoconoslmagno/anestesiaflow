@@ -1,0 +1,158 @@
+/* ==========================================================================
+   SUDOKU CSS - VERSÃO FINAL DE HIERARQUIA TOTAL (Z-INDEX)
+   ========================================================================== */
+
+/* 1. CONTAINER E ESTRUTURA DA TABELA */
+.sudoku-container {
+    background-color: #f4f7f9;
+    touch-action: pan-y;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.sudoku-table-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: auto;
+    isolation: isolate; /* Garante que os z-index internos não conflitem com o resto da página */
+    -webkit-overflow-scrolling: touch;
+}
+
+.sudoku-table {
+    border-collapse: separate !important; /* Vital para que o sticky funcione corretamente */
+    border-spacing: 0;
+    width: 100%;
+}
+
+/* 2. O SISTEMA DE CAMADAS (A CHAVE PARA A CORREÇÃO) 
+      Canto (1100) > Horas (1000) > Médicos (900) > Bolinha Drag (500) > Grid (1) */
+
+/* CANTO SUPERIOR ESQUERDO (A célula "MÉD") */
+th.sticky.left-0.top-0 {
+    position: sticky !important;
+    left: 0 !important;
+    top: 0 !important;
+    z-index: 1100 !important; /* A camada mais alta de toda a tabela */
+    background-color: #f1f5f9 !important; /* Cor sólida obrigatória */
+    border-right: 2px solid #e5e7eb !important;
+    border-bottom: 2px solid #e5e7eb !important;
+}
+
+thead.sticky {
+    position: sticky;
+    top: 0;
+    z-index: 1000; /* Deve ser maior que o z-index da td.sticky.left-0 (900) */
+}
+
+/* CABEÇALHO DE HORÁRIOS (Topo) */
+thead.sticky th:not(.left-0) {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 1000 !important; /* Abaixo do canto, acima dos médicos */
+    background-color: #f9fafb !important;
+    border-bottom: 2px solid #e5e7eb !important;
+}
+
+/* COLUNA DE MÉDICOS (Esquerda) */
+td.sticky.left-0 {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: 900 !important; /* Abaixo do cabeçalho de horas */
+    background-color: white !important;
+    border-right: 2px solid #e5e7eb !important;
+    box-shadow: 2px 0 5px -2px rgba(0,0,0,0.1);
+}
+
+/* 3. CÉLULAS DO GRID E CONTEÚDO */
+.sudoku-table td:not(.sticky) {
+    position: relative;
+    z-index: 1;
+    padding: 0 !important;
+    height: 45px;
+    min-width: 65px;
+    border-bottom: 1px solid #f2f2f2;
+    border-right: 1px solid #f2f2f2;
+}
+
+.sudoku-cell-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: none !important;
+}
+
+/* 4. BOLINHAS (CLINICA-DOT) */
+.clinica-dot-sm {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    position: relative;
+    z-index: 10;
+    pointer-events: none;
+    transition: transform 0.2s ease;
+}
+
+/* Bolinha em estado de arrasto (Zoom) */
+.clinica-dot-sm.is-dragging {
+    z-index: 500 !important; /* Fica acima das outras células, mas mergulha sob os médicos/horas */
+    transform: scale(1.6) !important;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.3) !important;
+}
+
+/* 5. AUXILIARES */
+.empty-dot {
+    width: 16px;
+    height: 16px;
+    background-color: #f2f2f2;
+    border-radius: 50%;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+
+.dragging-active {
+    opacity: 0.5;
+}
+
+/* Quando o modo de pintura estiver ativo, mudamos o cursor de toda a área */
+.sudoku-container.painting-active {
+    cursor: copy; /* Ou 'cell', se preferir um visual de precisão */
+}
+
+/* Garante que as células e conteúdos também herdem o cursor de pintura */
+.sudoku-container.painting-active .sudoku-cell-content,
+.sudoku-container.painting-active .clinica-dot-sm,
+.sudoku-container.painting-active td {
+    cursor: copy !important;
+}
+
+/* Opcional: Cursor de "conta-gotas" se estiver passando sobre uma bolinha já existente */
+.sudoku-container.painting-active .clinica-dot-sm:hover {
+    cursor: crosshair;
+}
+
+.sudoku-table-container {
+    touch-action: pan-x pan-y; 
+}
+
+/* Quando estiver pintando, evitamos que o navegador tente "selecionar texto" ou "dar zoom" ao arrastar o dedo */
+.sudoku-container.painting-active td {
+    touch-action: none; /* Bloqueia o scroll apenas enquanto pinta para precisão */
+    -webkit-tap-highlight-color: transparent; /* Remove aquele quadrado cinza ao tocar no Android */
+}
+
+/* Garante que o feedback visual de 'copy' apareça se houver um mouse conectado ao Android */
+.sudoku-container.painting-active {
+    cursor: copy !important;
+}

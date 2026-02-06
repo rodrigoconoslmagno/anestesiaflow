@@ -174,7 +174,7 @@ export const DashboardLayout: FC = () => {
         "flex-1 flex flex-col min-w-0 overflow-hidden relative transition-all duration-300",
         fullViewMode ? "lg:ml-20" : "lg:ml-0"
       )}>
-        <div className="flex-1 p-6 lg:p-5 flex flex-col h-full"> 
+        <div className="flex-1 p-1 lg:p-5 flex flex-col h-full"> 
             <div className="w-full h-full flex flex-col min-h-0">
                 <Outlet /> 
             </div>

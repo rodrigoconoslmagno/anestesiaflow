@@ -156,8 +156,8 @@ body {
 
 @media (max-width: 1023px) {
   main {
-    padding-bottom: 5rem !important;
-    padding-top: 5rem !important; /* Espaço para o Header Mobile */
+    padding-bottom: rem !important;
+    padding-top: 1rem !important; /* Espaço para o Header Mobile */
   }
 }
 

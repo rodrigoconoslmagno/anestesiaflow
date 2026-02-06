@@ -1,9 +1,13 @@
 import { Button } from 'primereact/button';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-export const CrudHeader = ({ title, onAdd, filterContent }: any) => {
+export const CrudHeader = ({ title, onAdd, filterContent, onClose }: any) => {
   const op = useRef<any>(null);
+  const navigate = useNavigate();
+
+  const handleClose = onClose || (() => navigate('/dashboard'));
 
   return (
     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 md:p-6 bg-white border-b border-gray-100">
@@ -37,6 +41,15 @@ export const CrudHeader = ({ title, onAdd, filterContent }: any) => {
             <i className="pi pi-plus text-white mr-2"></i>
             <span className="text-white font-bold uppercase text-xs">Novo</span>
           </Button>
+
+          <Button 
+            icon="pi pi-times" 
+            label="Sair" // Adicionado label para clareza no desktop
+            outlined
+            severity="danger" // Vermelho para indicar saída/fechamento
+            className="flex h-11 px-4 border-red-200 text-red-500 hover:bg-red-50"
+            onClick={handleClose}
+          />
         </div>
       </div>
 

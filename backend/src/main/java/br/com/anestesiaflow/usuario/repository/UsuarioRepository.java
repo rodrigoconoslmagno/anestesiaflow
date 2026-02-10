@@ -1,4 +1,4 @@
-package br.com.anestesiaflow.auth.repository;
+package br.com.anestesiaflow.usuario.repository;
 
 import java.util.Optional;
 

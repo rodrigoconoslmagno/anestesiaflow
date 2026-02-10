@@ -4,7 +4,7 @@ import { DashboardLayout } from '@/layouts/DashboardLayout';
 import { DashboardHome } from '@/paginas/DashboardHome';
 import { ProtectedRoute } from './ProtectedRoute';
 import { Sudoku } from '@/paginas/Sudoku';
-import { Usuario } from '@/paginas/Usuario';
+import { UsuarioView } from '@/paginas/Usuario';
 
 export const AppRoutes = () => {
   return (
@@ -18,7 +18,7 @@ export const AppRoutes = () => {
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<DashboardHome />} />
             <Route path="/sudoku" element={<Sudoku />} />
-            <Route path="/usuario" element={<Usuario />} />
+            <Route path="/usuario" element={<UsuarioView />} />
             {/* Adicione outras rotas aqui */}
           </Route>
         </Route>

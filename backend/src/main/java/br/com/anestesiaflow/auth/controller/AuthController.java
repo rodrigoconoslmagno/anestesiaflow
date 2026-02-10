@@ -6,7 +6,6 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -14,29 +13,27 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import br.com.anestesiaflow.auth.dto.LoginRequestDTO;
 import br.com.anestesiaflow.auth.dto.LoginResponseDTO;
-import br.com.anestesiaflow.auth.repository.UsuarioRepository;
 import br.com.anestesiaflow.auth.service.TokenService;
 import br.com.anestesiaflow.entidades.Usuario;
+import br.com.anestesiaflow.usuario.dto.UsuarioResponseDTO;
+import br.com.anestesiaflow.usuario.service.UsuarioService;
 
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
 
-	private final UsuarioRepository usuarioRepository;
-	private final PasswordEncoder passwordEncoder;
+	private final UsuarioService usuarioService;
 	private final TokenService tokenService;
 	
-	public AuthController(UsuarioRepository usuarioRepository, 
-			PasswordEncoder passwordEncoder, TokenService tokenService) {
-		this.usuarioRepository = usuarioRepository;
-		this.passwordEncoder = passwordEncoder;
+	public AuthController(UsuarioService usuarioService, TokenService tokenService) {
+		this.usuarioService = usuarioService;
 		this.tokenService = tokenService;
 	}
 
 	@PostMapping("/login")
 	public ResponseEntity<LoginResponseDTO> login(@RequestBody LoginRequestDTO body){
-		Usuario usuario = usuarioRepository.findByLogin(body.login()).orElseThrow(() -> new RuntimeException("Usuário nãp encontrado"));
-		if (passwordEncoder.matches(body.senha(), usuario.getSenha())){
+		UsuarioResponseDTO usuario = usuarioService.findUsuarioByLogin(body.login(), body.senha());
+		if (usuario != null){
 			String token = tokenService.generateToken(usuario);
 			ResponseCookie cookie = ResponseCookie.from("accessToken", token)
 							.httpOnly(true)
@@ -47,7 +44,7 @@ public class AuthController {
 							.build();
 			return ResponseEntity.ok()
 					.header(HttpHeaders.SET_COOKIE, cookie.toString())
-					.body(new LoginResponseDTO(usuario.getNome(), token));
+					.body(new LoginResponseDTO(usuario.nome(), token));
 		}
 		
 		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();

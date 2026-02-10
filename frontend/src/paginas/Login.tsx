@@ -26,7 +26,7 @@ export const Login: FC = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const usuario = await server.login({ login, senha });
+      const usuario = await server.auth.login({ login, senha });
       loginSucesso(usuario);
     
       // 3. Salvando no localStorage

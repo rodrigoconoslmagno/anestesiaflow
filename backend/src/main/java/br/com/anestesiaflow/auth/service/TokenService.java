@@ -3,16 +3,13 @@ package br.com.anestesiaflow.auth.service;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTCreationException;
 import com.auth0.jwt.exceptions.JWTVerificationException;
-
-import br.com.anestesiaflow.entidades.Usuario;
+import br.com.anestesiaflow.usuario.dto.UsuarioResponseDTO;
 
 @Service
 public class TokenService {
@@ -21,20 +18,23 @@ public class TokenService {
 	private String secrety;
 	private final String issuer = "anestesiaflow";
 	
-	
-	public String generateToken(Usuario usuario) {
+	public String generateToken(UsuarioResponseDTO usuario) {
 		try {
 			Algorithm algorithm = Algorithm.HMAC256(secrety);
 			
 			String token = JWT.create()
 						.withIssuer(issuer)
-						.withSubject(usuario.getLogin())
+						.withSubject(usuario.login())
 						.withExpiresAt(generateExpirationDate())
 						.sign(algorithm);
 			return token;
 		} catch (JWTCreationException e) {
 			throw new RuntimeException("Eroo na autenticação");
 		}
+	}
+	
+	private Instant generateExpirationDate() {
+		return LocalDateTime.now().plusHours(2).toInstant(ZoneOffset.of("-3"));
 	}
 	
 	public String validateToken(String token) {
@@ -51,7 +51,4 @@ public class TokenService {
 		}
 	}
 	
-	private Instant generateExpirationDate() {
-		return LocalDateTime.now().plusHours(2).toInstant(ZoneOffset.of("-3"));
-	}
 }

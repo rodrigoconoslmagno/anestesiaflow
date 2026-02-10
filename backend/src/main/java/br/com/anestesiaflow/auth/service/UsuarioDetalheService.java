@@ -7,8 +7,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 
-import br.com.anestesiaflow.auth.repository.UsuarioRepository;
 import br.com.anestesiaflow.entidades.Usuario;
+import br.com.anestesiaflow.usuario.repository.UsuarioRepository;
 
 @Component
 public class UsuarioDetalheService implements UserDetailsService{

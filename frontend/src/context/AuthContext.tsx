@@ -26,7 +26,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         async function validate() {
             try {
                 // DESCOMENTADO: Necessário para recuperar a sessão via Cookie
-                const data = await server.me();
+                const data = await server.auth.me();
                 setUsuario(data);
             } catch (err) {
                 console.error("Sessão inválida ou expirada");
@@ -46,7 +46,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
     const logout = async () => {
         try {
-            await server.logout();
+            await server.auth.logout();
         } finally {
             setUsuario(null);
             localStorage.removeItem('@AnestesiaFlow:user');

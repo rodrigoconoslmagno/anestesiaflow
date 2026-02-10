@@ -202,3 +202,19 @@ aside::-webkit-scrollbar-thumb {
   background-color: #e2e8f0;
   border-radius: 10px;
 }
+
+.p-datatable-modern .p-datatable-tbody > tr:hover {
+  background: #f8fafc !important;
+  transition: background 0.2s ease;
+}
+
+/* Remover bordas excessivas */
+.p-datatable-modern .p-datatable-thead > tr > th {
+  border: none !important;
+}
+
+/* Deixar o input de busca (se houver) com bordas arredondadas e ícone suave */
+.p-inputtext {
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}

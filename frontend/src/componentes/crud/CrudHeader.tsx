@@ -47,7 +47,7 @@ export const CrudHeader = ({ title, onAdd, filterContent, onClose }: any) => {
             label="Sair" // Adicionado label para clareza no desktop
             outlined
             severity="danger" // Vermelho para indicar saída/fechamento
-            className="flex h-11 px-4 border-red-200 text-red-500 hover:bg-red-50"
+            className="hidden md:flex h-11 px-4 border-red-200 text-red-500 hover:bg-red-50"
             onClick={handleClose}
           />
         </div>

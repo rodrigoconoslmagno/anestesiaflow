@@ -70,7 +70,7 @@ public class SecurityConfig {
 		        "https://anestesiaflow.onrender.com:8080"
 		    ));
 //		configuration.addAllowedOriginPattern("*");
-		configuration.setAllowedMethods(Arrays.asList("GET", "POST", "OPTIONS"));
+		configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 		configuration.setAllowedHeaders(Arrays.asList("*"));
 		
 		configuration.setAllowCredentials(true);

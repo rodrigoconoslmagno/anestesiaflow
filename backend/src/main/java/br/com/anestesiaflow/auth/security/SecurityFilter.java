@@ -11,9 +11,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import br.com.anestesiaflow.auth.repository.UsuarioRepository;
 import br.com.anestesiaflow.auth.service.TokenService;
 import br.com.anestesiaflow.entidades.Usuario;
+import br.com.anestesiaflow.usuario.repository.UsuarioRepository;
 
 import java.io.IOException;
 import java.util.Collections;

@@ -1,33 +1,146 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Button } from 'primereact/button';
 import { Sidebar } from 'primereact/sidebar';
 import { CrudHeader } from './CrudHeader';
 import { useNavigate } from 'react-router-dom';
+import { type BaseEntity } from '@/types/baseEntity';
+import { useForm, type DefaultValues, type Resolver, type Control, type FieldErrors } from 'react-hook-form';
+import type z from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 
-interface CrudBaseProps<T> {
+import { useAppToast } from '@/context/ToastContext';
+import { server } from '@/api/server';
+import { confirmDialog } from 'primereact/confirmdialog';
+import { CrudFooter } from './CrudFooter';
+
+interface CrudBaseProps<T extends BaseEntity> {
   title: string;
-  data: T[];
+  resourcePath: string; // Ex: '/usuarios'
+  schema: z.ZodObject<any>;
+  defaultValues: DefaultValues<T>;
   columns: { field: string; header: string; body?: (item: T) => React.ReactNode }[];
-  loading?: boolean;
-  onEdit: (item: T) => void;
-  onAdd: () => void;
-  onDelete: (item: T) => void;
-  formVisible: boolean;
-  onHideForm: () => void;
-  onSaveForm: () => void;
-  isEditMode: boolean;
   filterContent?: React.ReactNode;
-  children: React.ReactNode;
+  children: (control: Control<T>, errors: FieldErrors<T>) => React.ReactNode;
 }
 
 export const CrudBase = <T extends { id?: any }>({
-  title, data, columns, loading, onEdit, onAdd, onDelete,
-  formVisible, onHideForm, onSaveForm, isEditMode, filterContent, children
+  title, resourcePath, schema, defaultValues, columns, filterContent, children
 }: CrudBaseProps<T>) => {
+  const [data, setData] = useState<T[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [formVisible, setFormVisible] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [mobileFiltersVisible, setMobileFiltersVisible] = useState(false);
+
   const navigate = useNavigate();
+  const { showSuccess, showError } = useAppToast();
+
+  const { control, handleSubmit, reset, watch, formState: { errors } } = useForm<T>({
+    resolver: zodResolver(schema) as unknown as Resolver<T>,
+    defaultValues
+  });
+
+  // Capture os valores de auditoria (ajuste os nomes dos campos conforme seu backend)
+  const auditValues = {
+    criacao: watch('dataCriacao' as any),
+    alteracao: watch('dataAtualizacao' as any)
+  };
+
+// --- MÉTODOS DE BACKEND IMPLÍCITOS ---
+const loadData = useCallback(async () => {
+  setLoading(true);
+  try {
+    // Chamada via POST para o endpoint de listagem
+    // Enviamos um objeto vazio {} como filtros iniciais
+    const result = await server.api.listar<T>(resourcePath, {}); 
+    setData(result);
+  } catch (err) {
+    showError('Erro', 'Erro ao carregar lista de registros.');
+  } finally {
+    setLoading(false);
+  }
+}, [resourcePath, showError]);
+
+useEffect(() => { loadData(); }, [loadData]);
+
+const onSave = async (formData: T) => {
+  setLoading(true);
+  try {
+    if (formData.id) {
+      // PUT /recurso/id
+      await server.api.atualizar(resourcePath, formData.id, formData);
+      showSuccess('Sucesso', 'Registro atualizado.');
+    } else {
+      // POST /recurso
+      await server.api.criar(resourcePath, formData);
+      showSuccess('Sucesso', 'Registro criado.');
+    }
+    setFormVisible(false);
+    loadData();
+  } catch (err: any )  {
+    const errorMessage = err.response?.data?.message || "Ocorreu um erro inesperado";
+    showError('Erro', errorMessage);
+  } finally {
+    setLoading(false);
+  }
+};
+
+const confirmDelete = (item: T) => {
+  confirmDialog({
+    header: 'Confirmação de Exclusão',
+    // Customizamos a mensagem para ter uma hierarquia visual clara
+    message: (
+      <div className="flex flex-col items-center gap-3">
+        <i className="pi pi-exclamation-triangle text-red-500 text-5xl"></i>
+        <div className="text-center">
+          <p className="text-lg font-bold text-gray-700 m-0">
+            Você está prestes a excluir este registro.
+          </p>
+          <p className="text-gray-500 text-sm mt-1">
+            Esta ação não poderá ser desfeita. Tem certeza que deseja continuar?
+          </p>
+        </div>
+      </div>
+    ),
+    icon: 'hidden', // Ocultamos o ícone padrão para usar o nosso customizado acima
+    acceptLabel: 'Sim, Excluir',
+    rejectLabel: 'Não, Cancelar',
+    
+    // Classes de Estilo para os Botões
+    // 'p-button-danger' é a classe padrão do Prime para vermelho
+    acceptClassName: 'bg-red-600 hover:bg-red-700 text-white border-none px-6 py-2.5 font-bold shadow-md transition-all',
+    rejectClassName: 'p-button-text p-button-secondary text-gray-600 hover:text-gray-800 px-6 py-2.5 font-bold',
+    
+    // Estilo do container do Diálogo
+    className: 'max-w-[480px] rounded-2xl border-none shadow-2xl',
+    
+    accept: async () => {
+      try {
+        await server.api.excluir(resourcePath, item.id);
+        showSuccess('Excluído', 'Registro removido com sucesso.');
+        loadData();
+      } catch (err: any) {
+        const errorMessage = err.response?.data?.message || "Ocorreu um erro inesperado";
+        showError('Erro', errorMessage);
+      }
+    }
+  });
+};
+
+// --- CONTROLE DE TELA ---
+const handleAdd = () => {
+  setIsEditMode(false);
+  reset(defaultValues);
+  setFormVisible(true);
+};
+
+const handleEdit = (item: T) => {
+  setIsEditMode(true);
+  reset(item as any);
+  setFormVisible(true);
+};
 
   return (
     <div className="h-screen w-full bg-[#f8fafc] p-2 lg:p-1 flex flex-col overflow-hidden">
@@ -37,45 +150,65 @@ export const CrudBase = <T extends { id?: any }>({
           
           {!formVisible ? (
             /* --- VISÃO DA LISTAGEM --- */
-            <div className="flex flex-col h-full animate-fadein relative">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-full">
               <div className="shrink-0">
                 <CrudHeader 
                   title={title} 
-                  onAdd={onAdd} 
+                  onAdd={handleAdd} 
                   filterContent={filterContent}
                 />
               </div>
 
-              <div className="flex-grow overflow-auto custom-scrollbar">
+              <div className="flex-grow overflow-auto custom-scrollbar p-4"> {/* Adicionado padding para o grid respirar */}
                 <DataTable 
                   value={data} 
                   loading={loading} 
                   paginator 
                   rows={10} 
-                  className="p-datatable-sm"
+                  className="p-datatable-modern pb-4"
+                  rowHover // Ativa o destaque da linha ao passar o mouse
+                  stripedRows={false} // Desative as listras para um look mais clean
                   responsiveLayout="stack" 
                   breakpoint="960px"
-                  emptyMessage={
-                    <div className="flex flex-col items-center justify-center py-10">
-                      <i className="pi pi-search text-gray-300 text-4xl mb-3"></i>
-                      <span className="text-gray-500 font-medium text-lg">
-                        Nenhum registro encontrado.
-                      </span>
-                      <p className="text-gray-400 text-sm">
-                        Tente ajustar seus filtros ou adicionar um novo item.
-                      </p>
-                    </div>
-                  }
+                  paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
+                  currentPageReportTemplate="{first}-{last} de {totalRecords}"
+                  // Estilo da Tabela
+                  pt={{
+                    header: { className: 'bg-white border-none' },
+                    thead: { className: 'bg-gray-50/50' },
+                    column: {
+                        headerCell: { className: 'bg-gray-50/50 text-gray-400 uppercase text-[11px] tracking-widest font-bold py-4 border-b border-gray-100' },
+                        bodyCell: { className: 'py-1 border-b border-gray-50 text-gray-600' }
+                    }
+                  }}
                 >
                   {columns.map((col) => (
                     <Column key={col.field} field={col.field} header={col.header} body={col.body} sortable />
                   ))}
-                  <Column header="Ações" body={(rowData: T) => (
-                    <div className="flex gap-2 md:justify-end px-2 py-2">
-                      <Button icon="pi pi-pencil" text rounded onClick={() => onEdit(rowData)} className="bg-blue-50 md:bg-transparent" />
-                      <Button icon="pi pi-trash" text rounded severity="danger" onClick={() => onDelete(rowData)} className="bg-red-50 md:bg-transparent" />
-                    </div>
-                  )} />
+                    <Column 
+                      header="Ações" 
+                      headerClassName="flex justify-end pr-10"
+                      body={(rowData: T): React.ReactElement => (
+                        <div className="flex gap-1 justify-end pr-4">
+                          <Button 
+                            icon="pi pi-pencil" 
+                            tooltip="Editar" 
+                            tooltipOptions={{ position: 'top' }}
+                            text rounded 
+                            className="text-blue-500 hover:bg-blue-50 transition-all duration-200" 
+                            onClick={() => handleEdit(rowData)} 
+                          />
+                          <Button 
+                            icon="pi pi-trash" 
+                            tooltip="Excluir"
+                            tooltipOptions={{ position: 'top' }}
+                            text rounded 
+                            className="text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all duration-200" 
+                            onClick={() => confirmDelete(rowData)} 
+                          />
+                        </div>
+                      )} 
+                    />
                 </DataTable>
               </div>
 
@@ -101,7 +234,7 @@ export const CrudBase = <T extends { id?: any }>({
                 
                 {/* Botão Novo (Principal - Azul) */}
                 <button 
-                  onClick={onAdd}
+                  onClick={handleAdd}
                   className="w-16 h-16 rounded-full bg-blue-600 text-white shadow-2xl flex items-center justify-center border-none transition-transform active:scale-90"
                 >
                   <i className="pi pi-plus text-xl"></i>
@@ -135,32 +268,22 @@ export const CrudBase = <T extends { id?: any }>({
                   <h3 className="text-lg font-bold text-gray-800">{isEditMode ? `Editar ${title}` : `Novo ${title}`}</h3>
                   <p className="text-gray-400 text-[10px] uppercase tracking-wider">Formulário</p>
                 </div>
-                <Button icon="pi pi-times" rounded text severity="secondary" onClick={onHideForm} />
+                <Button icon="pi pi-times" rounded text severity="secondary" onClick={() => setFormVisible(false)} />
               </div>
 
               <div className="flex-grow overflow-y-auto p-4 md:p-8 bg-white custom-scrollbar">
-                <div className="max-w-5xl mx-auto pb-10">
-                    {children}
+                <div className="max-w-5xl mx-auto pb-10 grid grid-cols-12 gap-4">
+                  {children(control, errors)}
                 </div>
               </div>
 
               {/* RODAPÉ DESKTOP: Botões à Direita */}
-              <div className="flex flex-row justify-end items-center gap-3 py-4 px-6 border-t bg-gray-50 shrink-0 z-10">
-                <Button 
-                  label="Cancelar" 
-                  outlined 
-                  severity="secondary" 
-                  onClick={onHideForm} 
-                  className="flex-1 md:flex-none md:px-6 py-3 md:py-2.5 font-bold text-sm bg-white border-gray-300 text-gray-600"
-                />
-                <Button 
-                  label="Salvar Registro" 
-                  icon="pi pi-check" 
-                  className="flex-1 md:flex-none md:px-10 py-3 md:py-2.5 bg-blue-600 border-none text-white font-bold text-sm shadow-md" 
-                  onClick={onSaveForm}
-                  loading={loading}
-                />
-              </div>
+              <CrudFooter 
+                onCancel={() => setFormVisible(false)}
+                onSave={handleSubmit(onSave)}
+                loading={loading}
+                auditData={isEditMode ? auditValues : undefined} // Só mostra auditoria na edição
+              />
             </div>
           )}
         </div>

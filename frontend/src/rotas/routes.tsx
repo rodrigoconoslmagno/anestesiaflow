@@ -5,6 +5,8 @@ import { DashboardHome } from '@/paginas/DashboardHome';
 import { ProtectedRoute } from './ProtectedRoute';
 import { Sudoku } from '@/paginas/Sudoku';
 import { UsuarioView } from '@/paginas/Usuario';
+import { MedicoView } from '@/paginas/MedicoView';
+import { EstabelecimentoView  } from '@/paginas/EstabelecimentoView';
 
 export const AppRoutes = () => {
   return (
@@ -19,6 +21,8 @@ export const AppRoutes = () => {
             <Route path="/dashboard" element={<DashboardHome />} />
             <Route path="/sudoku" element={<Sudoku />} />
             <Route path="/usuario" element={<UsuarioView />} />
+            <Route path="/medico" element={<MedicoView />} />
+            <Route path="/estabelecimento" element={<EstabelecimentoView />} />
             {/* Adicione outras rotas aqui */}
           </Route>
         </Route>

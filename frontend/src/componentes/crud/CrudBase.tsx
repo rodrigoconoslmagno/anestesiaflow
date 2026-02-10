@@ -172,6 +172,7 @@ const handleEdit = (item: T) => {
                   breakpoint="960px"
                   paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
                   currentPageReportTemplate="{first}-{last} de {totalRecords}"
+                  emptyMessage={`Nenhuma ${title} encontrado.`}
                   // Estilo da Tabela
                   pt={{
                     header: { className: 'bg-white border-none' },

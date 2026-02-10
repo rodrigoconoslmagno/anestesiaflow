@@ -11,8 +11,8 @@ export interface MenuItem {
       label: 'Cadastros', 
       icon: 'pi pi-list', 
       children: [
-        { label: 'Médicos', icon: 'pi pi-users', to: '/medicos' },
-        { label: 'Clínicas', icon: 'pi pi-building', to: '/clinicas' },
+        { label: 'Médicos', icon: 'pi pi-users', to: '/medico' },
+        { label: 'Clínicas', icon: 'pi pi-building', to: '/estabelecimento' },
         { label: 'Usuários', icon: 'pi pi-user', to: '/usuario' },
       ]
     },

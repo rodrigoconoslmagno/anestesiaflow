@@ -98,6 +98,7 @@ export const AppSelect = <T extends FieldValues>({
               filterPlaceholder="Buscar..."
               emptyFilterMessage="Nenhum registro encontrado"
               itemTemplate={props.itemTemplate || defaultItemTemplate}
+              loading={loading}
               className={classNames(
                   'w-full border border-gray-500 rounded-lg outline-none transition-all duration-200 text-lg', 
                   props.className, 

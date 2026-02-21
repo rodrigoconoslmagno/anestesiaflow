@@ -61,6 +61,10 @@ export const EstabelecimentoView = () => {
                 }
             },
             { 
+                field: 'sigla', 
+                header: 'Sigla' 
+            },
+            { 
                 field: 'ativo', 
                 header: 'Status', 
                 body: (row: { ativo: any; }) => (
@@ -77,9 +81,17 @@ export const EstabelecimentoView = () => {
                         name="nome"
                         label="Nome" 
                         control={control} 
-                        colSpan={12} 
+                        colSpan={10} 
                         maxLength={60}
                         required
+                    />
+
+                    <AppInputText
+                        name="sigla"
+                        label="Sigla" 
+                        control={control} 
+                        colSpan={2} 
+                        maxLength={5}
                     />
 
                     <AppSwitch

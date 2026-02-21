@@ -66,6 +66,8 @@ public class SecurityConfig {
 		        "http://localhost:5173", 
 		        "http://127.0.0.1:5173",
 		        "http://192.168.0.237:5173", // IP fixo do seu Mac
+		        "http://192.168.0.7:5173", // IP fixo do seu Mac
+		        "http://192.168.0.7:8080",
 		        "https://anestesiaflow.onrender.com",
 		        "https://anestesiaflow.onrender.com:8080"
 		    ));

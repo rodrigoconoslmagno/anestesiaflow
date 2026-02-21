@@ -6,6 +6,7 @@ public record EstabelecimentoResponseDTO(
 		int id,
 		String nome,
 		String cor,
+		String sigla,
 		byte[] icone,
 		boolean ativo,
 		LocalDateTime dataCriacao,

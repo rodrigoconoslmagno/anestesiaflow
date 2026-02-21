@@ -10,6 +10,7 @@ export const getColSpanClass = (span: ColSpan = 12) => {
     'md:col-span-4': span === 4,
     'md:col-span-6': span === 6,
     'md:col-span-8': span === 8,
+    'md:col-span-10': span === 10,
     'md:col-span-12': span === 12,
   });
 };

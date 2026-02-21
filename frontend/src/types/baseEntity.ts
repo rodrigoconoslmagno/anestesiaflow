@@ -7,5 +7,9 @@ export const baseEntitySchema = z.object({
   dataAtualizacao: z.string().optional(), // dataAtualizacao no Java
 });
 
-// Type derivado do schema
-export type BaseEntity = z.infer<typeof baseEntitySchema>;
+
+export type BaseEntity = {
+  readonly id?: number;
+  readonly dataCriacao?: string;
+  readonly dataAtualizacao?: string;
+};

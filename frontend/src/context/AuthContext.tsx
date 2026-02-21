@@ -30,6 +30,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 setUsuario(data);
             } catch (err) {
                 console.error("Sessão inválida ou expirada");
+                setUsuario(null);
                 localStorage.removeItem('@AnestesiaFlow:user');
                 sessionStorage.clear();
             } finally {

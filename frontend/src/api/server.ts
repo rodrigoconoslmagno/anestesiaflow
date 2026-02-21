@@ -11,6 +11,10 @@ export const server = {
     listar: <T>(url: string, filtros: any = {}) => 
       httpClient.post<T[]>(`${url}/listar`, filtros).then(res => res.data),
     
+    buscarId: <T>(url: string, id: any) => {
+      return httpClient.post<T>(`${url}/buscarid`, {id}).then(res => res.data)
+    },
+
     // Salvar (POST para novo ou PUT para edição)
     criar: <T>(url: string, data: T) => 
       httpClient.post<T>(url, data).then(res => res.data),
@@ -19,7 +23,19 @@ export const server = {
       httpClient.put<T>(`${url}/${id}`, data).then(res => res.data),
     
     excluir: (url: string, id: any) => 
-      httpClient.delete(`${url}/${id}`).then(res => res.data),
+      httpClient.delete(`${url}/${id}`).then(res => res.data),  
+
+    upload: async (url: string, file: File, key: string = 'file') => {
+      const formData = new FormData();
+      formData.append(key, file);
+
+      const response = await httpClient.post(url, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data;
+    },  
   },
 
   // --- AUTENTICAÇÃO (Refatorada) ---

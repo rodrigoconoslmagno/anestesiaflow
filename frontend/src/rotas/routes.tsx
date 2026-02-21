@@ -7,6 +7,8 @@ import { Sudoku } from '@/paginas/Sudoku';
 import { UsuarioView } from '@/paginas/Usuario';
 import { MedicoView } from '@/paginas/MedicoView';
 import { EstabelecimentoView  } from '@/paginas/EstabelecimentoView';
+import { EscalaView } from '@/paginas/EscalaView';
+import { TelaPlanilhaMedica } from '@/paginas/TelaPlanilhaMedica';
 
 export const AppRoutes = () => {
   return (
@@ -23,7 +25,8 @@ export const AppRoutes = () => {
             <Route path="/usuario" element={<UsuarioView />} />
             <Route path="/medico" element={<MedicoView />} />
             <Route path="/estabelecimento" element={<EstabelecimentoView />} />
-            {/* Adicione outras rotas aqui */}
+            <Route path="/escala" element={<EscalaView />} />
+            <Route path="/planilha" element={<TelaPlanilhaMedica />} />
           </Route>
         </Route>
 

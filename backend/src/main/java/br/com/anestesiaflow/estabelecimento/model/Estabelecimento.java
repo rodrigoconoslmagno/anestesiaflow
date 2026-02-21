@@ -15,6 +15,8 @@ public class Estabelecimento extends BaseEntity<Integer> {
 	private String cor;
 	@Column
 	private byte[] icone;
+	@Column(length = 5)
+	private String sigla;
 	@Column
 	private boolean ativo;
 	
@@ -32,6 +34,14 @@ public class Estabelecimento extends BaseEntity<Integer> {
 	
 	public void setCor(String cor) {
 		this.cor = cor;
+	}
+	
+	public String getSigla() {
+		return sigla;
+	}
+	
+	public void setSigla(String sigla) {
+		this.sigla = sigla;
 	}
 	
 	public byte[] getIcone() {

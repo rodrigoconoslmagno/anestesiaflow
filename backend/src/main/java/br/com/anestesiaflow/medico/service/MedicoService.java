@@ -22,6 +22,18 @@ public class MedicoService {
 				.toList();
 	}
 	
+	public List<MedicoResponseDTO> listarAtivos(){
+		return medicoRepository.findAll().stream()
+				.filter(medico -> medico.isAtivo())
+				.map(this::mapperToDto)
+				.toList();
+	}
+	
+	public MedicoResponseDTO buscaId(Integer id) {
+		Medico medico = medicoRepository.findById(id).orElseThrow(() -> new BusinessException("Médico não encontrado")); 
+		return mapperToDto(medico);
+	}
+	
 	public MedicoResponseDTO salvar(MedicoRequestDTO dto) {
 		return mapperToDto(medicoRepository.save(mapperToMedico(dto)));
 	}
@@ -52,6 +64,7 @@ public class MedicoService {
 				medico.getId(), 
 				medico.getNome(), 
 				medico.getSigla(), 
+				medico.getDataAssociacao(),
 				medico.isAtivo(), 
 				medico.getDataCriacao(), 
 				medico.getDataAtualizacao());
@@ -61,6 +74,7 @@ public class MedicoService {
 		Medico medico = new Medico();
 		medico.setNome(dto.nome());
 		medico.setSigla(dto.sigla());
+		medico.setDataAssociacao(dto.dataAssociacao());
 		medico.setAtivo(dto.ativo());
 		return medico;
 	}
@@ -68,6 +82,7 @@ public class MedicoService {
 	private Medico mapperToMedico(Medico medico, MedicoRequestDTO dto) {
 		medico.setNome(dto.nome());
 		medico.setSigla(dto.sigla());
+		medico.setDataAssociacao(dto.dataAssociacao());
 		medico.setAtivo(dto.ativo());
 		return medico;
 	}

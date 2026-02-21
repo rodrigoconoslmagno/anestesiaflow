@@ -22,6 +22,19 @@ public class EstabelecimentoService {
 				.toList();
 	}
 	
+	public List<EstabelecimentoResponseDTO> listarAtivos(){
+		return estRepository.findAll().stream()
+				.filter(est -> est.isAtivo())
+				.map(this::mapperToDto)
+				.toList();
+	}
+	
+	public EstabelecimentoResponseDTO buscaId(int id) {
+		Estabelecimento estabelecimento = estRepository.findById(id).
+				orElseThrow(() -> new BusinessException("Clinica e ou Hospital não encontrado"));
+		return mapperToDto(estabelecimento);
+	}
+	
 	public EstabelecimentoResponseDTO salvar(EstabelecimentoRequestDTO dto) {
 		validarCorIcone(dto);
 		return mapperToDto(estRepository.save(mapperToEstabelecimento(dto)));
@@ -56,6 +69,7 @@ public class EstabelecimentoService {
 				estabelecimento.getId(), 
 				estabelecimento.getNome(), 
 				estabelecimento.getCor(),
+				estabelecimento.getSigla(),
 				estabelecimento.getIcone(), 
 				estabelecimento.isAtivo(), 
 				estabelecimento.getDataCriacao(), 
@@ -66,6 +80,7 @@ public class EstabelecimentoService {
 		Estabelecimento estabelecimento = new Estabelecimento();
 		estabelecimento.setNome(dto.nome());
 		estabelecimento.setCor(dto.cor());
+		estabelecimento.setSigla(dto.sigla());
 		estabelecimento.setIcone(dto.icone());
 		estabelecimento.setAtivo(dto.ativo());
 		
@@ -77,6 +92,7 @@ public class EstabelecimentoService {
 		estabelecimento.setCor(dto.cor());
 		estabelecimento.setIcone(dto.icone());
 		estabelecimento.setAtivo(dto.ativo());
+		estabelecimento.setSigla(dto.sigla());
 		
 		return estabelecimento;
 	}

@@ -14,13 +14,17 @@ export const Login: FC = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { showError, showSuccess } = useAppToast();
-  const { usuario, loginSucesso } = useAuth();
+  const { usuario, loginSucesso, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    if (!loading && usuario) {
+    if (!authLoading && usuario) {
       navigate('/dashboard', { replace: true });
     }
-  }, [usuario, loading, navigate]);
+  }, [usuario, authLoading, navigate]);
+
+  if (authLoading) {
+    return null; 
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

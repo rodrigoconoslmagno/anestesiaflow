@@ -1,5 +1,7 @@
 package br.com.anestesiaflow.medico.model;
 
+import java.time.LocalDate;
+
 import br.com.anestesiaflow.framework.persistence.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,6 +15,8 @@ public class Medico extends BaseEntity<Integer> {
 	private String nome;
 	@Column(length = 3)
 	private String sigla;
+	@Column(name = "dataassociacao")
+	private LocalDate dataAssociacao;
 	@Column
 	private boolean ativo;
 
@@ -30,6 +34,14 @@ public class Medico extends BaseEntity<Integer> {
 	
 	public void setSigla(String sigla) {
 		this.sigla = sigla;
+	}
+	
+	public LocalDate getDataAssociacao() {
+		return dataAssociacao;
+	}
+	
+	public void setDataAssociacao(LocalDate dataAssociacao) {
+		this.dataAssociacao = dataAssociacao;
 	}
 	
 	public boolean isAtivo() {

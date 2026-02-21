@@ -1,7 +1,7 @@
 package br.com.anestesiaflow.estabelecimento.controller;
 
 import java.util.List;
-
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,9 +26,19 @@ public class EstabelecimentoController {
 	private EstabelecimentoService estService;
 
 	@PostMapping("/listar")
-	public ResponseEntity<List<?>> listar() {
+	public ResponseEntity<List<EstabelecimentoResponseDTO>> listar(@RequestBody(required = false) Map<String, Object> filtros) {
+        if (filtros != null && filtros.get("ativo") != null) {
+        	return ResponseEntity.ok(estService.listarAtivos());
+        }
+		
         return ResponseEntity.ok(estService.listarTodos());
     }
+	
+	@PostMapping("/buscarid")
+	public ResponseEntity<EstabelecimentoResponseDTO> buscaPorId(@RequestBody Map<String, Integer> payload) {
+		Integer id = payload.get("id");
+		return ResponseEntity.ok(estService.buscaId(id));
+	}
 	
 	@PostMapping
     public ResponseEntity<EstabelecimentoResponseDTO> criar(@Validated @RequestBody EstabelecimentoRequestDTO dto) {

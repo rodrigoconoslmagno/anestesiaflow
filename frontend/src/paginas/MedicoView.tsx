@@ -1,7 +1,9 @@
 import { CrudBase } from '@/componentes/crud/CrudBase';
+import { AppCalendar } from '@/componentes/datetime/AppCalendar';
 import { AppInputText } from '@/componentes/inputtext/AppInputText';
 import { AppSwitch } from '@/componentes/switch/AppSwitch';
 import { type Medico, medicoSchema } from '@/types/medico';
+import { DateUtils } from '@/utils/DateUtils';
 
 export const MedicoView = () => {
     return (
@@ -11,12 +13,16 @@ export const MedicoView = () => {
             resourcePath='/medico'
             schema={medicoSchema}
             defaultValues={{ 
-            nome: '', 
-            sigla: ''
+                nome: '', 
+                sigla: '',
+                ativo: true
             }}
             columns={[
             { field: 'nome', header: 'Nome' },
             { field: 'sigla', header: 'Sigla' },
+            { field: 'dataassociacao', header: 'Sócio desde',
+                body: (rowData) => DateUtils.formatarParaBR(rowData.dataAssociacao)
+            },
             { 
                 field: 'ativo', 
                 header: 'Status', 
@@ -50,11 +56,19 @@ export const MedicoView = () => {
                         required
                     />
 
+                    <AppCalendar
+                        name='dataAssociacao'
+                        label='Sócio desde:'
+                        control={control}
+                        colSpan={3}
+                        required
+                    />
+
                     <AppSwitch<Medico>
                         name="ativo"
                         label="Situação"
                         control={control}
-                        colSpan={6}
+                        colSpan={3}
                         labelOn='Ativo'
                         labelOff='Inativo'
                     />

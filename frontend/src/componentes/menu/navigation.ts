@@ -20,7 +20,8 @@ export interface MenuItem {
       label: 'Escalas', 
       icon: 'pi pi-calendar',
       children: [
-        { label: 'Minhas Escalas', icon: 'pi pi-user-edit', to: '/escalas/minhas' },
+        { label: 'Escalas', icon: 'pi pi-user-edit', to: '/escala' },
+        { label: 'Planilha', icon: 'pi pi-user-edit', to: '/planilha' },
         { label: 'Sudoku', icon: 'pi pi-globe', to: '/sudoku' },
       ]
     }

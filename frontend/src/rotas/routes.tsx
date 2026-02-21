@@ -8,7 +8,7 @@ import { UsuarioView } from '@/paginas/Usuario';
 import { MedicoView } from '@/paginas/MedicoView';
 import { EstabelecimentoView  } from '@/paginas/EstabelecimentoView';
 import { EscalaView } from '@/paginas/EscalaView';
-import { TelaPlanilhaMedica } from '@/paginas/TelaPlanilhaMedica';
+// import { TelaPlanilhaMedica } from '@/paginas/TelaPlanilhaMedica';
 
 export const AppRoutes = () => {
   return (
@@ -26,7 +26,7 @@ export const AppRoutes = () => {
             <Route path="/medico" element={<MedicoView />} />
             <Route path="/estabelecimento" element={<EstabelecimentoView />} />
             <Route path="/escala" element={<EscalaView />} />
-            <Route path="/planilha" element={<TelaPlanilhaMedica />} />
+            {/* <Route path="/planilha" element={<TelaPlanilhaMedica />} /> */}
           </Route>
         </Route>
 

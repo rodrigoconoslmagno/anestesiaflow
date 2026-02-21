@@ -1,10 +1,10 @@
 import axios from 'axios';
 
 const hostname = window.location.hostname;
-const baseURL = `http://${hostname}:8080`;
-// const baseURL = window.location.hostname === 'localhost' 
-//   ? `http://${hostname}:8080` 
-//   : '/';
+// const baseURL = `http://${hostname}:8080`;
+const baseURL = window.location.hostname === 'localhost' 
+  ? `http://${hostname}:8080` 
+  : '/';
 
 const httpClient = axios.create({
   baseURL: baseURL,

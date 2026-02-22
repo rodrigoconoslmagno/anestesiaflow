@@ -1,5 +1,6 @@
 package br.com.anestesiaflow.estabelecimento.service;
 
+import java.util.Comparator;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,7 @@ public class EstabelecimentoService {
 	public List<EstabelecimentoResponseDTO> listarAtivos(){
 		return estRepository.findAll().stream()
 				.filter(est -> est.isAtivo())
+				.sorted(Comparator.comparing(Estabelecimento::getId))
 				.map(this::mapperToDto)
 				.toList();
 	}

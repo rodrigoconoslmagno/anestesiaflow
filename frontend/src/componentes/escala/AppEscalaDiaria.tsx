@@ -7,6 +7,7 @@ import { useWatch, type Control, useFormContext } from 'react-hook-form';
 import { server } from '@/api/server';
 import type { EscalaSemana } from '@/types/escala';
 import { getIntervalosEscala } from '@/types/escalaHelper';
+import type { Estabelecimento } from '@/types/estabelecimento';
 
 interface AppEscalaDiariaProps {
     control: Control<EscalaSemana>;
@@ -172,11 +173,21 @@ export const AppEscalaDiaria = ({ control, dataAtivaExterno }: AppEscalaDiariaPr
         return dataInicioIntervalo <= agora;
     };
 
+    const getNomeEstabelecimento = (estabelecimento: Estabelecimento): string => {
+        if (estabelecimento.sigla) {
+            return estabelecimento.sigla;
+        }
+
+        if (estabelecimento.nome?.length <= 5){
+            return estabelecimento.nome;
+        }
+
+        return estabelecimento.nome?.substring(0, 5);
+    }
+
     if (loading) {
         return <div className="flex justify-center p-8"><ProgressSpinner style={{ width: '40px' }} /></div>;
     }
-
-    console.log("analise", escalas)
 
     return (
         <div className="flex flex-col gap-0 overflow-hidden rounded-xl border border-slate-200 shadow-sm bg-white">
@@ -238,7 +249,7 @@ export const AppEscalaDiaria = ({ control, dataAtivaExterno }: AppEscalaDiariaPr
                                     />
                                 ) : null}
                             </div>
-                            <span className="truncate text-[11px] uppercase tracking-wide">{est.nome}</span>
+                            <span className="truncate text-[11px] uppercase tracking-wide">{getNomeEstabelecimento(est)}</span>
                         </div>
                     )}
                 />

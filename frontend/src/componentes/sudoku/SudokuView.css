@@ -1,0 +1,124 @@
+/* SudokuView.css */
+
+.sudoku-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background-color: #f8fafc; /* Slate 50 */
+    overflow: hidden;
+    /* Impede o "pull-to-refresh" e o scroll enquanto arrasta */
+    touch-action: none; 
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Densidade da Tabela */
+.sudoku-table-custom .p-datatable-thead > tr > th {
+    background: #f1f5f9 !important;
+    color: #475569 !important;
+    font-size: 11px !important;
+    padding: 10px 2px !important;
+    border: 1px solid #e2e8f0 !important;
+}
+
+.sudoku-table-custom .p-datatable-tbody > tr > td {
+    padding: 0 !important;
+    width: 28px !important;
+    min-width: 28px !important;
+    height: 28px !important;
+    border: 1px solid #e2e8f0 !important;
+}
+
+/* Coluna Médico */
+.sudoku-table-custom .p-frozen-column {
+    background-color: #ffffff !important;
+    border-right: 2px solid #3b82f6 !important; /* Destaque azul na borda do médico */
+}
+
+/* Garante que o container do grid não bloqueie o toque nos draggables */
+.sudoku-table-custom .p-datatable-wrapper {
+    touch-action: pan-x pan-y; /* Permite scroll na tabela, mas... */
+}
+
+/* Bolinhas */
+.clinica-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    margin: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 10px;
+    font-weight: 800;
+    cursor: grab;
+    box-shadow: inset 0 -2px 0 rgba(0,0,0,0.2);
+    touch-action: none;
+}
+
+/* No item que você arrasta */
+.clinica-dot, .clinica-item-draggable {
+    touch-action: none;
+    -webkit-touch-callout: none; /* Impede o menu de "salvar imagem" no iOS */
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Accordion Custom */
+.custom-accordion .p-accordion-header-link {
+    padding: 0.15rem !important;
+    background: #fff !important;
+    font-size: 12px !important;
+    font-weight: bold !important;
+    color: #64748b !important;
+}
+
+/* Bloqueia o zoom e o menu de contexto do Safari no painel de clínicas */
+.clinicas-panel-container, 
+.clinica-item-draggable {
+    touch-action: none !important; /* Impede scroll e zoom nativo */
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none !important; /* Impede o menu de "Salvar Imagem" */
+}
+
+/* Muito importante: a imagem dentro da bolinha não pode interceptar o toque */
+.clinica-item-draggable img {
+    pointer-events: none !important;
+    -webkit-user-drag: none;
+}
+
+.clinica-dot, 
+[data-testid="draggable-item"], /* Caso esteja usando algum test-id */
+.w-\[28px\].h-\[28px\].rounded-full { 
+    touch-action: none !important;
+    user-select: none !important;
+    -webkit-user-drag: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Impede que a imagem dentro da bolinha "roube" o toque */
+.clinica-dot img, 
+.rounded-full img {
+    pointer-events: none !important;
+    -webkit-user-drag: none !important;
+}
+
+.p-accordion-content {
+    padding: 0.25rem;
+}
+
+/* Mobile FAB */
+.mobile-exit-fab {
+    position: fixed;
+    bottom: 50px;
+    right: 25px;
+    width: 30px;
+    height: 30px;
+    border-radius: 30px;
+    background: linear-gradient(135deg, #ef4444, #b91c1c);
+    color: white;
+    border: none;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+    z-index: 999;
+}

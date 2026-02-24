@@ -7,15 +7,15 @@ export interface Usuario {
 export const server = {
   // --- CLIENTE REST PARA CRUD ---
   api: {
-    // Agora o listar usa POST para maior segurança e envio de filtros complexos
     listar: <T>(url: string, filtros: any = {}) => 
       httpClient.post<T[]>(`${url}/listar`, filtros).then(res => res.data),
-    
-    buscarId: <T>(url: string, id: any) => {
-      return httpClient.post<T>(`${url}/buscarid`, {id}).then(res => res.data)
-    },
 
-    // Salvar (POST para novo ou PUT para edição)
+    listarCustomizada: <T>(url: string, method: string, filtros: any = {}) => 
+      httpClient.post<T[]>(`${url}${method}`, filtros).then(res => res.data),
+    
+    buscarId: <T>(url: string, id: any) => 
+      httpClient.post<T>(`${url}/buscarid`, {id}).then(res => res.data),
+
     criar: <T>(url: string, data: T) => 
       httpClient.post<T>(url, data).then(res => res.data),
     

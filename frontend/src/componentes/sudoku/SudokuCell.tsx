@@ -1,7 +1,7 @@
-import { type Clinica } from '@/types/sudoku';
+import type { Estabelecimento } from '@/types/estabelecimento';
 
 interface SudokuCellProps {
-  alocacao?: Clinica;
+  alocacao?: Estabelecimento;
   isPaintingMode: boolean;
   onDragStart: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent) => void;
@@ -58,7 +58,6 @@ export const SudokuCell = ({
           <div
             /* A bolinha tem touch-none para que o segurar funcione sem scrollar a tela */
             className="clinica-dot-sm"
-            style={{ backgroundColor: alocacao.cor }}
           />
         ) : (
           <div className="empty-dot" />

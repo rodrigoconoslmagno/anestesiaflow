@@ -1,3 +1,5 @@
+import type { Estabelecimento } from "./estabelecimento";
+
 export interface Clinica {
     id: number;
     nome: string;
@@ -9,19 +11,19 @@ export interface Clinica {
     nome: string;
   }
   
-  export const clinicasMock: Clinica[] = [
-    { id: 1, nome: 'Santa Casa',         cor: '#dace13' }, 
-    { id: 2, nome: 'Unimed',             cor: '#2e93c9' },      
-    { id: 3, nome: 'M. Day Clinic',      cor: '#7f2a81' },  
-    { id: 4, nome: 'Cardiaca',           cor: '#ba4056' }, 
-    { id: 5, nome: 'Hemodinamica',       cor: '#db743b' },      
-    { id: 6, nome: 'CRHP',               cor: '#b5b0b5' }, 
-    { id: 7, nome: 'Oftalmos',           cor: '#847d85' }, 
-    { id: 8, nome: 'Cir. Plastica',      cor: '#87b17b' },      
-    { id: 9, nome: 'Imagem Sta Casa',    cor: '#6a8367' }, 
-    { id: 10, nome: 'HU - Imagem',       cor: '#8baed9' }, 
-    { id: 11, nome: 'HU - Hemodinamica', cor: '#a194cd' },      
-    { id: 12, nome: 'IORC',              cor: '#8ca7b9' }, 
+  export const clinicasMock: Estabelecimento[] = [
+    { id: 1, nome: 'Santa Casa',         cor: '#dace13', ativo: true, icone: undefined }, 
+    { id: 2, nome: 'Unimed',             cor: '#2e93c9', ativo: true, icone: undefined},      
+    { id: 3, nome: 'M. Day Clinic',      cor: '#7f2a81', ativo: true, icone: undefined },  
+    { id: 4, nome: 'Cardiaca',           cor: '#ba4056', ativo: true, icone: undefined}, 
+    { id: 5, nome: 'Hemodinamica',       cor: '#db743b', ativo: true, icone: undefined },      
+    { id: 6, nome: 'CRHP',               cor: '#b5b0b5', ativo: true, icone: undefined }, 
+    { id: 7, nome: 'Oftalmos',           cor: '#847d85', ativo: true, icone: undefined }, 
+    { id: 8, nome: 'Cir. Plastica',      cor: '#87b17b', ativo: true, icone: undefined },      
+    { id: 9, nome: 'Imagem Sta Casa',    cor: '#6a8367', ativo: true, icone: undefined }, 
+    { id: 10, nome: 'HU - Imagem',       cor: '#8baed9', ativo: true, icone: undefined }, 
+    { id: 11, nome: 'HU - Hemodinamica', cor: '#a194cd', ativo: true, icone: undefined},      
+    { id: 12, nome: 'IORC',              cor: '#8ca7b9', ativo: true, icone: undefined}, 
   ];
   
   export const medicosMock: Medico[] = [
@@ -50,7 +52,7 @@ export interface Clinica {
 
   const getClinica = (id: number) => clinicasMock.find(c => c.id === id) || clinicasMock[0];
 
-  export const initialAlocacoesMock: Record<string, Clinica> = {
+  export const initialAlocacoesMock: Record<string, Estabelecimento> = {
     "1-07:00": getClinica(1),
     "1-08:00": getClinica(1),
     "1-09:00": getClinica(1),

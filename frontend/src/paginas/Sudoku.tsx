@@ -1,21 +1,22 @@
 import { useState, useEffect } from 'react';
 import { Button } from 'primereact/button';
-import { clinicasMock, medicosMock, type Clinica, initialAlocacoesMock } from '../types/sudoku';
+import { clinicasMock, medicosMock, initialAlocacoesMock } from '../types/sudoku';
 import { SudokuCell } from '@/componentes/sudoku/SudokuCell';
 import { ClinicasPanel } from '@/componentes/sudoku/ClinicasPanel';
 import '@/componentes/sudoku/sudoku.css';
+import type { Estabelecimento } from '@/types/estabelecimento';
 
 export const Sudoku = () => {
-  const [alocacoes, setAlocacoes] = useState<Record<string, Clinica>>(initialAlocacoesMock);
+  const [alocacoes, setAlocacoes] = useState<Record<string, Estabelecimento>>(initialAlocacoesMock);
   const [isPaintingMode, setIsPaintingMode] = useState(false);
   const [isHeaderExpanded, setIsHeaderExpanded] = useState(true);
-  const [activePaintingClinica, setActivePaintingClinica] = useState<Clinica | null>(null);
+  const [activePaintingClinica, setActivePaintingClinica] = useState<Estabelecimento | null>(null);
   const [isDraggingWithinGrid, setIsDraggingWithinGrid] = useState(false);
 
   const horas = Array.from({ length: 13 }, (_, i) => `${(i + 7).toString().padStart(2, '0')}:00`);
 
   // --- Lógica de Drag and Drop ---
-  const onDragStart = (e: React.DragEvent, clinica: Clinica, origem?: { medicoId: number; hora: string }) => {
+  const onDragStart = (e: React.DragEvent, clinica: Estabelecimento, origem?: { medicoId: number; hora: string }) => {
     if (isPaintingMode) {
       e.preventDefault(); // Garante que não arraste nada se estiver pintando
       return;
@@ -87,7 +88,7 @@ export const Sudoku = () => {
     }
   };
 
-  const marcarCelula = (medicoId: number, hora: string, clinica: Clinica) => {
+  const marcarCelula = (medicoId: number, hora: string, clinica: Estabelecimento) => {
     setAlocacoes(prev => ({ ...prev, [`${medicoId}-${hora}`]: clinica }));
   };
 
@@ -155,11 +156,6 @@ export const Sudoku = () => {
       }`}>
         <ClinicasPanel 
           clinicas={clinicasMock}
-          layout="horizontal"
-          isPaintingMode={isPaintingMode}
-          activeClinicaId={activePaintingClinica?.id}
-          onDragStart={onDragStart}
-          onSelect={(c) => isPaintingMode && setActivePaintingClinica(c)}
         />
       </div>
 

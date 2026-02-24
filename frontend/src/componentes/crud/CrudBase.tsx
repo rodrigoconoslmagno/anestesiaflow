@@ -258,7 +258,7 @@ export const CrudBase = <T extends { id?: any }>({
   };
 
   return (
-    <div className="h-screen w-full bg-[#f8fafc] p-2 lg:p-1 flex flex-col overflow-hidden">
+    <div className="h-full w-full bg-[#f8fafc] p-2 lg:p-1 flex flex-col overflow-hidden">
       <div className="max-w-full mx-auto w-full flex-grow flex flex-col min-h-0">
         
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col flex-grow min-h-0 overflow-hidden">

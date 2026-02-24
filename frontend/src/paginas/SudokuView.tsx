@@ -324,6 +324,7 @@ export const SudokuView = () => {
               scrollable 
               scrollHeight="flex" 
               className="sudoku-table-custom"
+              emptyMessage={`Nenhuma escala encontrado.`}
             >
               <Column 
                 frozen 

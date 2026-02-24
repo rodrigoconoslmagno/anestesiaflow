@@ -10,7 +10,7 @@ export const CrudHeader = ({ title, onAdd, filterContent, onClose }: any) => {
   const handleClose = onClose || (() => navigate('/dashboard'));
 
   return (
-    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 md:p-6 bg-white border-b border-gray-100">
+    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 bg-white border-b border-gray-100">
       <div className="flex items-center gap-3">
         <h2 className="text-xl font-bold text-gray-700 m-0">{title}</h2>
         <span className="hidden md:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-600 border border-blue-100">

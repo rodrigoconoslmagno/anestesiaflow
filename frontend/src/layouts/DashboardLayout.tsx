@@ -79,7 +79,7 @@ export const DashboardLayout: FC = () => {
 
   const mobileQuickActions = [
     { label: 'Início', icon: 'pi pi-home', to: '/dashboard' },
-    { label: 'Sudoku', icon: 'pi pi-calendar', to: '/sudoku' },
+    { label: 'Sudoku', icon: 'pi pi-calendar', to: '/sudokuview' },
     { label: 'Médicos', icon: 'pi pi-users', to: '/medicos' },
   ];
 

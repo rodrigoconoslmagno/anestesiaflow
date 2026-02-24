@@ -20,7 +20,7 @@ export const MedicoView = () => {
             columns={[
             { field: 'nome', header: 'Nome' },
             { field: 'sigla', header: 'Sigla' },
-            { field: 'dataassociacao', header: 'Sócio desde',
+            { field: 'dataAssociacao', header: 'Sócio desde',
                 body: (rowData) => DateUtils.formatarParaBR(rowData.dataAssociacao)
             },
             { 

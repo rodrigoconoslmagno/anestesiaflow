@@ -6,5 +6,6 @@ import java.util.List;
 public record EscalaResponseDTO(
 		Integer id,
 	    int medicoId,
+	    String medicoSigla,
 	    LocalDate data,
 	    List<EscalaItemResponseDTO> itens) {}

@@ -19,6 +19,7 @@ public class EstabelecimentoService {
 	
 	public List<EstabelecimentoResponseDTO> listarTodos(){
 		return estRepository.findAll().stream()
+				.sorted(Comparator.comparing(Estabelecimento::getId))
 				.map(estabeleciomento -> mapperToDto(estabeleciomento))
 				.toList();
 	}

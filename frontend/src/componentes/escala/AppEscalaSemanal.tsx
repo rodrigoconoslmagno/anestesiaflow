@@ -5,6 +5,7 @@ import { Button } from 'primereact/button';
 import { useWatch, type Control } from 'react-hook-form';
 import type { EscalaSemana } from '@/types/escala';
 import { getIntervalosEscala } from '@/types/escalaHelper';
+import { DateUtils } from '@/utils/DateUtils';
 
 interface AppEscalaSemanalProps {
     control: Control<EscalaSemana>;
@@ -89,29 +90,33 @@ export const AppEscalaSemanal = ({ control, onAgendar }: AppEscalaSemanalProps) 
 
     const linhasDias = useMemo(() => {
         const base = new Date(dataReferencia);
+        // Ajuste para Segunda-feira como dia 1 (ISO 8601)
+        // No JS: Dom=0, Seg=1, Ter=2...
         const diaSemana = base.getDay(); 
-        const domingoRef = new Date(base);
-        domingoRef.setDate(base.getDate() - diaSemana);
-        domingoRef.setHours(0, 0, 0, 0);
+        const diff = base.getDate() - diaSemana + (diaSemana === 0 ? -6 : 1);
+        
+        const segundaRef = new Date(base);
+        segundaRef.setDate(diff);
+        segundaRef.setHours(0, 0, 0, 0);
     
         return Array.from({ length: 7 }, (_, i) => {
-            const dataDia = new Date(domingoRef);
-            dataDia.setDate(domingoRef.getDate() + i);
-            const dataISO = dataDia.toISOString().split('T')[0];
+            const dataDia = new Date(segundaRef);
+            dataDia.setDate(segundaRef.getDate() + i);
+            const dataISO = DateUtils.paraISO(dataDia);
     
             return {
                 id: i,
                 data: dataISO,
                 nomeDia: dataDia.toLocaleDateString('pt-BR', { weekday: 'short' }).toUpperCase(),
                 dataExibicao: dataDia.getDate(),
-                isHoje: new Date().toISOString().split('T')[0] === dataISO,
+                isHoje: DateUtils.paraISO(new Date()) === dataISO,
                 _medicoAtivo: medicoId
             };
         });
     }, [dataReferencia, medicoId]);
 
     const isSemanaAtual = useMemo(() => {
-        const hojeISO = new Date().toISOString().split('T')[0];
+        const hojeISO = DateUtils.paraISO(new Date());
         return linhasDias.some(dia => dia.data === hojeISO);
     }, [linhasDias]);
 
@@ -200,16 +205,13 @@ export const AppEscalaSemanal = ({ control, onAgendar }: AppEscalaSemanalProps) 
                            scrollable
                 >
                     <Column 
-                        header="Dia" 
-                        className="bg-slate-100 border-r" 
-                        style={{ minWidth: '100px' }} 
+                        header="S/D" 
+                        className="bg-slate-200 border-r" 
+                        style={{ minWidth: '40px' }} 
                         frozen // FIXA A COLUNA
                         alignFrozen="left"
                         body={(rowData) => (
                             <div className={`flex flex-row items-center justify-center gap-2 ${rowData.isHoje ? 'text-blue-600' : 'text-slate-500'}`}>
-                                <span className="text-base font-black leading-none">
-                                    {rowData.nomeDia}
-                                </span>
                                 <span className="text-base font-black leading-none">
                                     {rowData.dataExibicao}
                                 </span>
@@ -221,12 +223,12 @@ export const AppEscalaSemanal = ({ control, onAgendar }: AppEscalaSemanalProps) 
                             key={hora.field} 
                             header={(
                                 <div className="flex justify-center items-center">
-                                    <span className={`text-[13px] font-bold tracking-tight`}>
+                                    <span className={`text-[12px] font-bold tracking-tight`}>
                                         {hora.header}
                                     </span>
                                 </div>
                             )}
-                            headerClassName="bg-slate-50 border-b border-slate-100 p-0 min-w-[50px]"
+                            headerClassName="bg-slate-50 border-b border-slate-100 p-0 min-w-[28px]"
                             headerStyle={{ justifyContent: 'center' }}  
                             pt={{
                                 headerContent: { className: 'justify-center' } // Força o alinhamento central no PrimeReact

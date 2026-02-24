@@ -1,9 +1,9 @@
 package br.com.anestesiaflow.escala.controller;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,9 +29,17 @@ public class EscalaController {
 	private EscalaService escalaService;
 	
 	@PostMapping("/listar")
-	public ResponseEntity<List<EscalaSemanaSummaryDTO>> listar() {
+	public ResponseEntity<List<EscalaSemanaSummaryDTO>> listar(@RequestBody(required = false) Map<String, Object> filtros) {
         return ResponseEntity.ok(escalaService.listarTodos());
     }
+	
+	@PostMapping("/listardia")
+	public ResponseEntity<List<EscalaResponseDTO>> listardia(@RequestBody(required = false) Map<String, LocalDate> filtros) {
+		if (filtros != null && filtros.get("data") != null) {
+			return ResponseEntity.ok(escalaService.listarPorData(filtros.get("data")));
+		}
+		return ResponseEntity.ok().build();
+	}
 	
 	@PostMapping("/buscarid")
 	public ResponseEntity<EscalaSemanaDTO> buscaPorId(@RequestBody Map<String, Integer> payload) {
@@ -43,6 +51,19 @@ public class EscalaController {
     public ResponseEntity<EscalaResponseDTO> criar(@Validated @RequestBody EscalaSemanaDTO dto) {
         EscalaResponseDTO novEscala = escalaService.salvar(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(novEscala);
+    }
+	
+	@PostMapping("/sudoku")
+    public ResponseEntity<EscalaResponseDTO> criar(@Validated @RequestBody List<EscalaResponseDTO> dto) {
+		EscalaSemanaDTO semana = new EscalaSemanaDTO(
+				0,
+			    null,
+			    null,
+				null,
+				null,
+				dto);
+		escalaService.salvar(semana);
+        return ResponseEntity.status(HttpStatus.CREATED).body(null);
     }
 	
 	@DeleteMapping("/{id}")

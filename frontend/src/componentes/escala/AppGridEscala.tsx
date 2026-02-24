@@ -7,6 +7,7 @@ import { server } from '@/api/server';
 import { FieldWrapper } from '@/componentes/FieldWrapper';
 import { getColSpanClass, type ColSpan } from '@/utils/GridUtils';
 import { useAppToast } from '@/context/ToastContext';
+import { DateUtils } from '@/utils/DateUtils';
 
 interface AppGridEscalaProps {
     colSpan?: ColSpan;
@@ -120,7 +121,7 @@ export const AppGridEscala = ({ colSpan = 12, label, control, getNomeMedico, onC
 
             const nomeMedico = getNomeMedico();
 
-            const dataUrl = dia.fullDate.toISOString().split('T')[0];
+            const dataUrl = DateUtils.paraISO(dia.fullDate);
             navigate(`/escala/detalhe/${rowData.id}/${dataUrl}`, {
                 state: { 
                     editMode: true,

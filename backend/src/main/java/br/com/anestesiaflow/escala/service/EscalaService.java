@@ -5,7 +5,8 @@ import java.io.InputStream;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Optional;
+
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -14,6 +15,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import br.com.anestesiaflow.escala.dto.EscalaItemResponseDTO;
+import br.com.anestesiaflow.escala.dto.EscalaRequestDTO;
 import br.com.anestesiaflow.escala.dto.EscalaResponseDTO;
 import br.com.anestesiaflow.escala.dto.EscalaSemanaDTO;
 import br.com.anestesiaflow.escala.dto.EscalaSemanaSummaryDTO;
@@ -23,6 +25,9 @@ import br.com.anestesiaflow.escala.repository.EscalaRepository;
 import br.com.anestesiaflow.estabelecimento.model.Estabelecimento;
 import br.com.anestesiaflow.estabelecimento.repository.EstabelecimentoRepository;
 import br.com.anestesiaflow.exception.BusinessException;
+import br.com.anestesiaflow.medico.model.Medico;
+import br.com.anestesiaflow.medico.service.MedicoService;
+import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 
@@ -31,14 +36,43 @@ public class EscalaService {
 
 	private final EscalaRepository escalaRepository;
 	private final EstabelecimentoRepository estabelecimentoRepository;
+	private final MedicoService medicoService;
+	private final EntityManager entityManager;
 	
-	public EscalaService(EscalaRepository escalaRepository,EstabelecimentoRepository estabelecimentoRepository) {
+	public EscalaService(EscalaRepository escalaRepository,EstabelecimentoRepository estabelecimentoRepository,
+					MedicoService medicoService, EntityManager entityManager) {
 		this.escalaRepository = escalaRepository;
 		this.estabelecimentoRepository = estabelecimentoRepository;
+		this.medicoService = medicoService;
+		this.entityManager = entityManager;
 	}
 	
 	public List<EscalaSemanaSummaryDTO> listarTodos(){
 		return escalaRepository.findEscalasAgrupadasComMedico();
+	}
+	
+	public List<EscalaResponseDTO> listarPorData(LocalDate data){
+		List<Escala> escalas = escalaRepository.findByData(data);
+		
+		return medicoService.listarAtivos().stream().map(medico -> {
+			
+			Optional<Escala> escalaEncontrada = escalas.stream().
+					filter(escala -> escala.getMedico().getId().equals(medico.id())).
+					findFirst();
+			
+			if (escalaEncontrada.isPresent()) {
+				return mapperToDto(escalaEncontrada.get());
+			} 
+				
+			return new EscalaResponseDTO(
+						null,
+						medico.id(),
+						medico.sigla(),
+						data,
+						new ArrayList<>());
+		}).toList();
+		
+		//return escalas.stream().map(this::mapperToDto).toList();
 	}
 	
 	public EscalaSemanaDTO buscarId(int id) {
@@ -47,22 +81,22 @@ public class EscalaService {
 	        .orElseThrow(() -> new BusinessException("Escala não encontrada"));
 
 	    LocalDate dataAlvo = escalaReferencia.getData();
-	    Integer medicoId = escalaReferencia.getMedicoId();
+	    Integer medicoId = escalaReferencia.getMedico().getId();
 
 	    // 2. Lógica para pegar o Domingo (Início da Semana) e Sábado (Fim)
 	    // No Java, Sunday é o 7º dia ou 1º dependendo da config, vamos forçar:
-	    LocalDate domingo = dataAlvo.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.SUNDAY));
-	    LocalDate sabado = domingo.plusDays(6);
+	    LocalDate segunda = dataAlvo.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
+	    LocalDate domingo = segunda.plusDays(6);
 
 	    // 3. Busca todos os registros do médico nesse intervalo
-	    List<Escala> escalasDaSemana = escalaRepository.findByMedicoIdAndDataBetweenOrderByDataAsc(medicoId, domingo, sabado);
+	    List<Escala> escalasDaSemana = escalaRepository.findByMedico_IdAndDataBetweenOrderByDataAsc(medicoId, segunda, domingo);
 
 	    // 4. Converte para o DTO que o Front espera (EscalaSemanaDTO)
 	    List<EscalaResponseDTO> itensDTO = escalasDaSemana.stream()
 	        .map(this::mapperToDto) // Você já tem lógica similar
 	        .toList();
 
-	    return new EscalaSemanaDTO(medicoId, null, null, domingo, sabado, itensDTO);
+	    return new EscalaSemanaDTO(medicoId, null, null, segunda, domingo, itensDTO);
 	}
 	
 	private EscalaResponseDTO retorno;
@@ -90,7 +124,16 @@ public class EscalaService {
 	            sincronizarItens(entidadeEscala, escalaDto.itens());
 	        }
 
-	        escalaRepository.save(entidadeEscala);
+	        if (entidadeEscala.getItens() == null || entidadeEscala.getItens().isEmpty()) {
+	            // Se a escala já existia no banco e agora está vazia -> APAGA
+	            if (entidadeEscala.getId() != null) {
+	                escalaRepository.delete(entidadeEscala);
+	            }
+	            // Se for uma escala nova e veio vazia, simplesmente não faz nada (não salva)
+	            retorno = null; 
+	        } else {
+	        	escalaRepository.save(entidadeEscala);
+	        }
 	        
 	        retorno = mapperToDto(entidadeEscala);
 	    });
@@ -130,11 +173,11 @@ public class EscalaService {
         // 2. Calcula o início (Domingo) e fim (Sábado) daquela semana
         // Usamos a mesma lógica de deslocamento (-1 dia para o Domingo ser o início)
         LocalDate data = referencia.getData();
-        LocalDate inicioSemana = data.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.SUNDAY));
-        LocalDate fimSemana = inicioSemana.plusDays(6);
+        LocalDate segunda = data.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
+        LocalDate domingo = segunda.plusDays(6);
 
         // 3. Deleta todos os registros do médico naquele intervalo
-        List<Escala> escalasDaSemana = escalaRepository.findByMedicoIdAndDataBetweenOrderByDataAsc(referencia.getMedicoId(), inicioSemana, fimSemana);
+        List<Escala> escalasDaSemana = escalaRepository.findByMedico_IdAndDataBetweenOrderByDataAsc(referencia.getMedico().getId(), segunda, domingo);
 
         // 4. Remove via repositório (Isso aciona o CascadeType.ALL e limpa os itens)
         escalaRepository.deleteAll(escalasDaSemana);
@@ -143,7 +186,8 @@ public class EscalaService {
 	private EscalaResponseDTO mapperToDto(Escala escala) {
 		return new EscalaResponseDTO(
 					escala.getId(), 
-					escala.getMedicoId(),
+					escala.getMedico().getId(),
+					escala.getMedico().getSigla(),
 					escala.getData(),
 					escala.getItens().stream().map(this::mapperToDto).toList());
 	}
@@ -160,7 +204,7 @@ public class EscalaService {
 	
 	private Escala mapperToEscala(EscalaResponseDTO dto) {
 		Escala escala = new Escala();
-		escala.setMedicoId(dto.medicoId());
+		escala.setMedico(entityManager.getReference(Medico.class, dto.medicoId()));
 		escala.setData(dto.data());
 		return escala;
 	}
@@ -179,7 +223,7 @@ public class EscalaService {
 	}
 	
 	private Escala mapperToEscala(EscalaResponseDTO dto, Escala escala) {
-		escala.setMedicoId(dto.medicoId());
+		escala.getMedico().setId(dto.medicoId());
 		escala.setData(dto.data());
 		return escala;
 	}

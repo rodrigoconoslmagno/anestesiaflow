@@ -303,7 +303,11 @@ export const CrudBase = <T extends { id?: any }>({
                   }}
                 >
                   {columns.map((col) => (
-                    <Column key={col.field} field={col.field} header={col.header} body={col.body} sortable />
+                    <Column key={col.field} 
+                            field={col.field} 
+                            header={col.header} 
+                            body={col.body} 
+                            sortable={true} />
                   ))}
                     <Column 
                       header="Ações" 

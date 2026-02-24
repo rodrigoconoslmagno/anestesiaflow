@@ -14,7 +14,9 @@ export const EstabelecimentoView = () => {
             schema={estabelecimentoSchema}
             defaultValues={{ 
                 nome: '', 
-                cor: '',
+                cor: undefined,
+                icone: undefined,
+                sigla: undefined,
                 ativo: true
             }}
             columns={[

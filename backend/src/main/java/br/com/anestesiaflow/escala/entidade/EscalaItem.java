@@ -19,12 +19,12 @@ public class EscalaItem extends BaseEntity<Integer> {
 
 	private static final long serialVersionUID = 2653262773963093553L;
 
-	@ManyToOne(fetch = FetchType.EAGER)
+	@ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "escalaid", nullable = false)
     @JsonBackReference
     private Escala escala;
     
-    @ManyToOne(fetch = FetchType.EAGER) // Eager aqui é aceitável se você sempre precisar da cor/ícone
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "estabelecimentoid")
     private Estabelecimento estabelecimento;
 

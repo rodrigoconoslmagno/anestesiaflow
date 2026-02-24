@@ -1,17 +1,32 @@
 import { z } from 'zod';
 import { baseEntitySchema, type BaseEntity } from '@/types/baseEntity'
+import { DateUtils } from '@/utils/DateUtils';
+
+// --- NOVO TIPO SEPARADO (Para uso no Sudoku e Mockups) ---
+export const escalaItemSchema = z.object({
+    id: z.number().optional(),
+    estabelecimentoId: z.number().int().positive("Selecione um local").optional(),
+    hora: z.string().
+        transform(val => {
+            // Remove espaços e pega apenas os primeiros 5 caracteres (HH:mm)
+            return val.trim().substring(0, 5);
+        })
+        .refine(val => /^\d{2}:\d{2}$/.test(val), {
+            message: "Formato de hora inválido (HH:mm)"
+        }),
+    cor: z.string().nullable().optional(),
+    icone: z.any().optional()
+});
+
+export type EscalaItem = z.infer<typeof escalaItemSchema>;
 
 export const escalaSchema = baseEntitySchema.extend({
     medicoId: z.number().int().positive("Informe um médico"),
+    medicoSigla: z.string().optional(),
     data: z.date().or(z.string()).transform((val) => 
-        val instanceof Date ? val.toISOString().split('T')[0] : val
+        val instanceof Date ? DateUtils.paraISO(val) : val
     ),
-    itens: z.array(z.object({
-        estabelecimentoId: z.number().int(),
-        hora: z.string(), // Envie como "07:00"
-        cor: z.string().optional(),
-        icone: z.any().optional()
-    })).optional()
+    itens: z.array(escalaItemSchema).optional()
 });
 
 //).min(1, "Adicione pelo menos um horário")
@@ -24,12 +39,6 @@ export const escalaSummarySchema = baseEntitySchema.extend({
 });
 
 export type EscalaSummary = z.infer<typeof escalaSummarySchema> & BaseEntity;
-
-export const escalaItemSchema = z.object({
-    id: z.number().optional(),
-    estabelecimentoId: z.number().int().positive("Selecione um local"),
-    hora: z.string().regex(/^\d{2}:\d{2}$/, "Formato de hora inválido (HH:mm)")
-});
 
 export interface EscalaSemana extends BaseEntity {
     medicoId: number;

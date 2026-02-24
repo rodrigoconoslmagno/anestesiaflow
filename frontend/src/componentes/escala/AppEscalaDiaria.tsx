@@ -19,12 +19,12 @@ const CelulaGrid = ({ marcado, cor, icone, onClick, bloqueado }: any) => {
         <div 
             // Só executa o clique se NÃO estiver bloqueado
             onClick={!bloqueado ? onClick : undefined} 
-            className={`flex items-center justify-center transition-all min-h-[44px] min-w-[44px] border-r border-b  border-slate-300
+            className={`flex items-center justify-center transition-all min-h-[28px] min-w-[28px] border-r border-b  border-slate-300
                 ${bloqueado ? 'cursor-not-allowed opacity-40 bg-slate-50/50' : 'cursor-pointer hover:bg-blue-50/50'}`}
         >
             {marcado ? (
                 <div 
-                    className={`w-[32px] h-[32px] rounded-full border border-white shadow-inne flex items-center justify-center animate-fadein overflow-hidden
+                    className={`w-[28px] h-[28px] rounded-full border border-white shadow-inne flex items-center justify-center animate-fadein overflow-hidden
                         ${bloqueado ? 'grayscale' : ''}`}
                     style={{ backgroundColor: cor?.startsWith('#') ? cor : `#${cor}` }}
                 >
@@ -149,7 +149,7 @@ export const AppEscalaDiaria = ({ control, dataAtivaExterno }: AppEscalaDiariaPr
                     icone: entidadeEst?.icone 
                 });
             }
-            
+            console.log("analise post item", itens)
             novasEscalas[diaIndex].itens = itens;
         }
     
@@ -232,13 +232,19 @@ export const AppEscalaDiaria = ({ control, dataAtivaExterno }: AppEscalaDiariaPr
                     header="Clinica / Hospitais" 
                     frozen 
                     style={{ minWidth: '70px' }} 
-                    className="bg-slate-100 font-bold border-r border-b border-t border-slate-300 "
+                    className="bg-slate-100 font-bold border-r border-b border-t border-slate-300 p-0"
                     headerClassName='border-r border-b border-t border-slate-300 '
+
+                    // headerClassName="bg-slate-50 border-b border-slate-300 p-0 min-w-[28px]"
+                    headerStyle={{ justifyContent: 'center' }}  
+                    pt={{
+                        headerContent: { className: 'justify-center' } // Força o alinhamento central no PrimeReact
+                    }}
                     body={(est) => (
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1">
                             {/* Círculo de cor com suporte a ícone */}
                             <div 
-                                className="w-[28px] h-[28px] rounded-full shadow-inner border-b border-black/5 flex items-center justify-center overflow-hidden" 
+                                className="w-[29px] h-[29px] pl-1 rounded-full shadow-inner border-b border-black/5 flex items-center justify-center overflow-hidden" 
                                 style={{ backgroundColor: est.cor?.startsWith('#') ? est.cor : `#${est.cor}` }}
                             >
                                 {est.icone ? (
@@ -249,7 +255,7 @@ export const AppEscalaDiaria = ({ control, dataAtivaExterno }: AppEscalaDiariaPr
                                     />
                                 ) : null}
                             </div>
-                            <span className="truncate text-[11px] uppercase tracking-wide">{getNomeEstabelecimento(est)}</span>
+                            <span className="truncate text-[10px] uppercase tracking-wide">{getNomeEstabelecimento(est)}</span>
                         </div>
                     )}
                 />
@@ -265,7 +271,7 @@ export const AppEscalaDiaria = ({ control, dataAtivaExterno }: AppEscalaDiariaPr
                                 </span>
                             </div>
                         )}
-                        headerClassName="bg-slate-50 border-b border-r border-slate-300 p-0 min-w-[50px]"
+                        headerClassName="bg-slate-50 border-b border-slate-300 p-0 min-w-[24px]"
                         headerStyle={{ justifyContent: 'center' }} 
                         pt={{
                             headerContent: { className: 'justify-center' } // Força o alinhamento central no PrimeReac

@@ -1,5 +1,6 @@
 package br.com.anestesiaflow.medico.service;
 
+import java.util.Comparator;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,7 @@ public class MedicoService {
 	
 	public List<MedicoResponseDTO> listarTodos(){
 		return medicoRepository.findAll().stream()
+				.sorted(Comparator.comparing(Medico::getDataAssociacao))
 				.map(medico -> mapperToDto(medico))
 				.toList();
 	}
@@ -25,6 +27,7 @@ public class MedicoService {
 	public List<MedicoResponseDTO> listarAtivos(){
 		return medicoRepository.findAll().stream()
 				.filter(medico -> medico.isAtivo())
+				.sorted(Comparator.comparing(Medico::getDataAssociacao))
 				.map(this::mapperToDto)
 				.toList();
 	}

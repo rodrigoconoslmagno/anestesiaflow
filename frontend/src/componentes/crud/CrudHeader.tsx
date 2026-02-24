@@ -34,13 +34,15 @@ export const CrudHeader = ({ title, onAdd, filterContent, onClose }: any) => {
           )}
 
           {/* BOTÃO NOVO: Visível apenas no Desktop */}
-          <Button 
-            onClick={onAdd} 
-            className="hidden md:flex bg-blue-600 hover:bg-blue-700 border-none shadow-md px-6 h-11 min-w-[110px] justify-center"
-          >
-            <i className="pi pi-plus text-white mr-2"></i>
-            <span className="text-white font-bold uppercase text-xs">Novo</span>
-          </Button>
+          {onAdd && ( 
+            <Button 
+              onClick={onAdd} 
+              className="hidden md:flex bg-blue-600 hover:bg-blue-700 border-none shadow-md px-6 h-11 min-w-[110px] justify-center"
+            >
+              <i className="pi pi-plus text-white mr-2"></i>
+              <span className="text-white font-bold uppercase text-xs">Novo</span>
+            </Button>
+          )}
 
           <Button 
             icon="pi pi-times" 

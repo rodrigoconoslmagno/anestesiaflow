@@ -13,30 +13,32 @@ import jakarta.transaction.Transactional;
 
 public interface EscalaRepository extends JpaRepository<Escala, Integer> {
 
-	@EntityGraph(attributePaths = {"itens", "itens.estabelecimento"})
-	List<Escala> findByMedicoIdAndDataBetweenOrderByDataAsc(Integer medicoId, LocalDate inicio, LocalDate fim);
+	@EntityGraph(attributePaths = {"medico", "itens", "itens.estabelecimento"})
+	List<Escala> findByMedico_IdAndDataBetweenOrderByDataAsc(Integer medicoId, LocalDate inicio, LocalDate fim);
+	
+	@EntityGraph(attributePaths = {"itens", "itens.estabelecimento", "medico"})
+	List<Escala> findByData(LocalDate data);
 	
 	@Query(value = """
 				SELECT 
-				    min(e.id) as id,
-				    m.nome as nomeMedico, 
-				    m.sigla as siglaMedico,
-				    (date_trunc('week', e.data + interval '1 day') - interval '1 day')::date as dataInicio,
-				    (date_trunc('week', e.data + interval '1 day') + interval '5 days')::date as dataFim
-				FROM Escala e
-				INNER JOIN Medico m ON e.medicoid = m.id
-				GROUP BY 
-				    e.medicoid, 
-				    m.nome, 
-				    m.sigla, 
-				    dataInicio, 
-				    dataFim
-				ORDER BY dataInicio DESC
+			        min(e.id) as id,
+			        m.nome as nomeMedico, 
+			        m.sigla as siglaMedico,
+			        date_trunc('week', e.data)::date as dataInicio,
+			        (date_trunc('week', e.data) + interval '6 days')::date as dataFim
+			    FROM Escala e
+			    INNER JOIN Medico m ON e.medicoid = m.id
+			    GROUP BY 
+			        e.medicoid, 
+			        m.nome, 
+			        m.sigla, 
+			        dataInicio, 
+			        dataFim
+			    ORDER BY dataInicio DESC, m.nome ASC
 		    """, nativeQuery = true)
 	List<EscalaSemanaSummaryDTO> findEscalasAgrupadasComMedico();
 	
 	@Modifying
     @Transactional
-    @Query("DELETE FROM Escala e WHERE e.medicoId = :medicoId AND e.data BETWEEN :inicio AND :fim")
-    void deleteByMedicoIdAndDataBetween(int medicoId, LocalDate inicio, LocalDate fim);
+    void deleteByMedico_IdAndDataBetween(int medicoId, LocalDate inicio, LocalDate fim);
 }

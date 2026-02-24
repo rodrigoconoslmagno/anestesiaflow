@@ -16,11 +16,12 @@ import '@/componentes/sudoku/SudokuView.css';
 import type { Estabelecimento } from '@/types/estabelecimento';
 import type { Escala, EscalaItem } from '@/types/escala';
 import { DateUtils } from '@/utils/DateUtils';
+import clsx from 'clsx';
 
-const DroppableCell = ({ id, alocacao, bloqueado }: any) => {
+const DroppableCell = ({ id, alocacao, bloqueado, isPaintingMode, onMouseDown, onMouseEnter, }: any) => {
   const { isOver, setNodeRef } = useDroppable({ 
     id, 
-    disabled: bloqueado 
+    disabled: bloqueado
   });
 
   const [medicoId, hora] = id.split('|');
@@ -28,26 +29,36 @@ const DroppableCell = ({ id, alocacao, bloqueado }: any) => {
   return (
     <div 
       ref={setNodeRef} 
+      data-medico={medicoId} // Adicione isso
+      data-hora={hora}     // Adicione isso
+      // IMPORTANTE: Só executa estas funções se isPaintingMode for TRUE
+      onMouseDown={(e) => isPaintingMode && onMouseDown?.(e)}
+      onMouseEnter={(e) => isPaintingMode && onMouseEnter?.(e)}
       className={`flex items-center justify-center min-h-[28px] min-w-[28px] border-r border-b border-slate-300 transition-colors
-          ${bloqueado ? 'bg-slate-100/50' : 'hover:bg-blue-50/50'}
+          ${bloqueado ? 'bg-slate-50/50 cursor-not-allowed' : 'hover:bg-blue-50/50'}
           ${isOver && !bloqueado ? 'bg-blue-200' : ''}`}
+      style={{ touchAction: isPaintingMode ? 'none' : 'auto' }}
     >
       {alocacao ? (
         <DraggableItem 
           alocacao={alocacao} 
           medicoId={Number(medicoId)} 
           horaOriginal={hora} 
+          isPaintingMode={isPaintingMode}
+          bloqueado={bloqueado}
         />
       ) : (
-        !bloqueado && <div className="w-1 h-1 bg-slate-300 rounded-full opacity-40"></div>
+        bloqueado && <div className="w-[14px] h-[14px] bg-slate-200 rounded-full opacity-50" />
       )}
+      {!alocacao && !bloqueado && <div className="w-1 h-1 bg-slate-300 rounded-full opacity-40"></div>}
     </div>
   );
 };
 
-const DraggableItem = ({ alocacao, medicoId, horaOriginal }: any) => {
+const DraggableItem = ({ alocacao, medicoId, horaOriginal, isPaintingMode, bloqueado }: any) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `alocado|${medicoId}|${horaOriginal}`,
+    disabled: bloqueado,
     data: { 
         isFromGrid: true, 
         alocacao,
@@ -58,21 +69,22 @@ const DraggableItem = ({ alocacao, medicoId, horaOriginal }: any) => {
   // Consolidamos os estilos aqui
   const styleFinal = {
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
-    opacity: isDragging ? 0 : 1,
     zIndex: isDragging ? 999 : 1,
+    opacity: isDragging ? 0.5 : (bloqueado ? 0.6 : 1),
+    cursor: bloqueado ? 'not-allowed' : (isPaintingMode ? 'cell' : 'grab'),
     backgroundColor: alocacao.cor?.startsWith('#') ? alocacao.cor : `#${alocacao.cor}`,
-    cursor: isDragging ? 'grabbing' : 'grab',
-    // IMPORTANTE PARA MOBILE:
     touchAction: 'none', 
     WebkitUserSelect: 'none' as const,
+    filter: bloqueado ? 'saturate(0.8) brightness(0.9)' : 'none',
   };
 
   return (
     <div 
       ref={setNodeRef} 
       style={styleFinal} // <--- Apenas UM atributo style agora
-      {...listeners} 
-      {...attributes}
+      {...(isPaintingMode ? {} : listeners)} 
+      {...(isPaintingMode ? {} : attributes)}
+      onDragStart={(e) => (isPaintingMode || bloqueado) && e.preventDefault()}  
       className="w-[28px] h-[28px] rounded-full border border-white shadow-sm flex items-center justify-center overflow-hidden active:cursor-grabbing"
     >
       {alocacao.icone && (
@@ -93,19 +105,23 @@ export const SudokuView = () => {
   const [loading, setLoading] = useState(false);
   const [activeDragData, setActiveDragData] = useState<any>(null);
   const [lastUpdate, setLastUpdate] = useState(Date.now());
+  const [isPaintingMode, setIsPaintingMode] = useState(false);
+  const [activePaintingClinica, setActivePaintingClinica] = useState<Estabelecimento | null>(null);
+  const [isDraggingWithinGrid, setIsDraggingWithinGrid] = useState(false);
+  const [hasChangesToSave, setHasChangesToSave] = useState(false);
+  const [accordionActiveIndex, setAccordionActiveIndex] = useState<number | null>(0);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8, // Só ativa se mover 5px (evita cliques acidentais)
-      },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 250,    // Segurar por 250ms ativa o drag (evita o zoom)
-        tolerance: 5,  // Se o dedo tremer mais de 5px antes dos 250ms, cancela
-      },
-    })
+    useSensor(PointerSensor, useMemo(() => ({
+      activationConstraint: isPaintingMode 
+        ? { distance: 2000 } // Distância enorme para o Drag não "acordar" no modo pintura
+        : { distance: 8 },    // Distância normal para funcionar o arraste
+    }), [isPaintingMode])),
+    useSensor(TouchSensor, useMemo(() => ({
+      activationConstraint: isPaintingMode 
+        ? { delay: 99999, tolerance: 999 } 
+        : { delay: 250, tolerance: 5 },
+    }), [isPaintingMode]))
   );
 
   const dataStr = useMemo(() => {
@@ -155,6 +171,21 @@ export const SudokuView = () => {
     buscarEscalasDoDia(dataAtiva);
   }, [dataAtiva]);
 
+  // Adicione também este useEffect para garantir que o "arraste" pare ao soltar o mouse
+  useEffect(() => {
+    const stopDragging = () => setIsDraggingWithinGrid(false);
+    window.addEventListener('mouseup', stopDragging);
+    return () => window.removeEventListener('mouseup', stopDragging);
+  }, []);
+
+  useEffect(() => {
+    if (isPaintingMode) {
+        setAccordionActiveIndex(null); // Fecha o Accordion (null desativa todos os tabs)
+    } else {
+        setAccordionActiveIndex(0); // Abre o primeiro tab (Clínicas) ao sair do modo pintura
+    }
+}, [isPaintingMode]);
+
   const HORARIOS = useMemo(() => getIntervalosEscala(), []);
   const isHoje = dataAtiva.toDateString() === new Date().toDateString();
 
@@ -162,6 +193,11 @@ export const SudokuView = () => {
     const novaData = new Date(dataAtiva);
     novaData.setDate(novaData.getDate() + dias);
     setDataAtiva(novaData);
+
+    setIsPaintingMode(false);
+    setIsDraggingWithinGrid(false);
+    setActivePaintingClinica(null);
+    setAccordionActiveIndex(0);
   };
 
   const onDragEnd = async (event: any) => {
@@ -270,12 +306,160 @@ export const SudokuView = () => {
     return dataInicioIntervalo <= agora;
   };
 
+  // Função para marcar a célula (reaproveitando a lógica de salvamento que você já tem)
+  const marcarCelulaTouch = async (medicoId: number, hora: string) => {
+    if (!activePaintingClinica || !isPaintingMode) {
+      return;
+    }
+  
+    setEscalas(prevEscalas => {
+      const novasEscalas = [...prevEscalas];
+      let escalaIndex = novasEscalas.findIndex(e => e.medicoId === medicoId);
+      
+      if (escalaIndex === -1) {
+        novasEscalas.push({
+          medicoId,
+          data: dataStr,
+          itens: [],
+          medicoSigla: ''
+        });
+        escalaIndex = novasEscalas.length - 1;
+      }
+    
+      const escalaAlvo = { ...novasEscalas[escalaIndex] };
+      const itensAtuais = [...(escalaAlvo.itens || [])];
+    
+      // Verifica se já existe a mesma clínica na mesma hora
+      const jaExiste = itensAtuais.find(i => 
+        (i.hora?.substring(0, 5) || i.hora) === hora && 
+        i.estabelecimentoId === activePaintingClinica.id
+      );
+    
+      if (jaExiste) {
+        return prevEscalas;
+      }
+    
+      // IMPORTANTE: Remove o item antigo daquela hora para substituir
+      const novosItens = itensAtuais.filter(i => (i.hora?.substring(0, 5) || i.hora) !== hora);
+      
+      // Adiciona o novo item (Pincel)
+      novosItens.push({
+        id: undefined, // <--- Regra do seu backend: ID null para persistir novo item
+        estabelecimentoId: activePaintingClinica.id,
+        hora: hora,
+        cor: activePaintingClinica.cor,
+        icone: activePaintingClinica.icone
+      });
+    
+      escalaAlvo.itens = novosItens;
+      novasEscalas[escalaIndex] = escalaAlvo;
+      setHasChangesToSave(true);
+      return novasEscalas;
+    });
+  };
+
+  const persistirAlteracoesPintura = async () => {
+    if (!hasChangesToSave) return;
+
+    try {
+        const payload = escalas.map(p => ({
+            id: p.id || null,
+            medicoId: p.medicoId,
+            data: dataStr,
+            itens: p.itens?.map(i => ({
+                id: i.id || null,
+                estabelecimentoId: i.estabelecimentoId,
+                hora: i.hora.substring(0, 5),
+            }))
+        }));
+
+        await server.api.criar('/escala/sudoku', payload);
+        setHasChangesToSave(false); // Sucesso!
+    } catch (err) {
+        console.error("Erro ao persistir lote de pintura:", err);
+        // Opcional: Mostrar um Toast de erro aqui
+    }
+  };
+
+  const handleStartPainting = (clientX: number, clientY: number, e?: any) => {
+    if (!isPaintingMode) {
+      return;
+    }
+
+    // e.button === 0 garante que é o clique esquerdo
+    if (e && e.button !== 0 && e.type === 'mousedown') {
+      return;
+    }
+
+    // Crucial para desktop: impede o "ghost image" de arrastar do navegador
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
+
+    const element = document.elementFromPoint(clientX, clientY);
+    const cell = element?.closest('[data-medico]');
+
+    if (cell) {
+        const medicoId = Number(cell.getAttribute('data-medico'));
+        const hora = cell.getAttribute('data-hora');
+
+        if (isHoraBloqueada(hora!)) {
+          return; 
+        }
+
+        // Busca a clínica que está nesta célula para "copiar"
+        const escalaDoMedico = escalas.find(e => e.medicoId === medicoId);
+        const itemAlocado = escalaDoMedico?.itens?.find(i => 
+            (i.hora?.substring(0, 5) || i.hora) === hora
+        );
+
+        if (itemAlocado) {
+            setActivePaintingClinica({
+                id: itemAlocado.estabelecimentoId,
+                cor: itemAlocado.cor,
+                icone: itemAlocado.icone
+            } as Estabelecimento);
+            
+        }
+
+        setIsDraggingWithinGrid(true);
+    }
+  };
+
+  // 2. Função para o movimento no Mobile (Touch)
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (isPaintingMode && isDraggingWithinGrid && e.cancelable) {
+      e.preventDefault(); 
+    }
+
+    if (!isPaintingMode || !isDraggingWithinGrid || !activePaintingClinica) {
+      return;
+    }
+
+    const touch = e.touches[0];
+    const element = document.elementFromPoint(touch.clientX, touch.clientY);
+    const cell = element?.closest('[data-medico]');
+
+    if (cell) {
+        const mId = Number(cell.getAttribute('data-medico'));
+        const h = cell.getAttribute('data-hora');
+        if (mId && h) {
+            marcarCelulaTouch(mId, h); // Executa a cópia
+        }
+    }
+  };
+
   return (
     <div className="sudoku-container">
       {/* Regra 1: Removido botão Novo passando onAdd como undefined */}
       <CrudHeader title="Quadro Sudoku" onAdd={undefined} />
 
-      <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragEnd={onDragEnd}>
+      <DndContext 
+        sensors={sensors} 
+        collisionDetection={closestCorners} 
+        onDragStart={onDragStart} 
+        onDragEnd={onDragEnd}
+      >
         <div className="flex flex-col p-2 gap-2 flex-grow overflow-hidden">
           
           {/* Regra 2: Visual igual ao AppEscalaDiaria */}
@@ -308,14 +492,87 @@ export const SudokuView = () => {
               />
           </div>
 
-          <Accordion className="custom-accordion">
-            <AccordionTab header="Clínicas / Hospitais">
+          <Accordion 
+            className="custom-accordion"
+            activeIndex={accordionActiveIndex} 
+            onTabChange={(e) => setAccordionActiveIndex(e.index as number)}
+          >
+            <AccordionTab 
+              header={
+                <div className="flex items-center justify-between w-full pr-4">
+                  <span>Clínicas / Hospitais</span>
+                  
+                  {/* Botão visível apenas no Desktop dentro do Header do Accordion */}
+                  <div className="hidden md:flex items-center gap-2" onClick={(e) => e.stopPropagation()}> 
+                    <span className={clsx(
+                      "text-[10px] font-bold uppercase tracking-widest transition-opacity",
+                      isPaintingMode ? "text-blue-600 opacity-100" : "text-slate-400 opacity-0"
+                    )}>
+                      Modo Pintura Ativo
+                    </span>
+                    <Button 
+                      icon={isPaintingMode ? "pi pi-check" : "pi pi-palette"} 
+                      label={isPaintingMode ? "Finalizar" : "Ativar Pincel"}
+                      className={clsx(
+                        "p-button-rounded p-button-sm shadow-sm transition-all",
+                        isPaintingMode ? "p-button-primary" : "p-button-outlined p-button-secondary"
+                      )}
+                      onClick={() => {
+                        setIsPaintingMode(!isPaintingMode);
+                        if (isPaintingMode) {
+                          setIsDraggingWithinGrid(false);
+                          setActivePaintingClinica(null);
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+              }
+            >
               <ClinicasPanel clinicas={clinicas} />
             </AccordionTab>
           </Accordion>
 
-          {/* Regra 5-8: DataTable */}
-          <div className="flex-grow overflow-hidden bg-white border rounded-xl shadow-inner">
+          <div 
+            key={isPaintingMode ? 'painting-on' : 'painting-off'}
+            className={clsx(
+                "flex-grow overflow-hidden bg-white border rounded-xl shadow-inner",
+                isPaintingMode ? "touch-none cursor-cell overflow-hidden" : "overflow-auto"
+            )}
+            // Eventos para Desktop
+            onMouseDown={(e) => handleStartPainting(e.clientX, e.clientY, e)}
+            // ADICIONE ESTE HANDLER PARA DESKTOP
+            onMouseMove={(e) => {
+                if (isPaintingMode && isDraggingWithinGrid && activePaintingClinica) {
+                    const element = document.elementFromPoint(e.clientX, e.clientY);
+                    const cell = element?.closest('[data-medico]');
+                    if (cell) {
+                        const mId = Number(cell.getAttribute('data-medico'));
+                        const h = cell.getAttribute('data-hora');
+                        if (mId && h) marcarCelulaTouch(mId, h);
+                    }
+                }
+            }}
+            onMouseUp={() => { 
+              setIsDraggingWithinGrid(false); 
+              setActivePaintingClinica(null); 
+              persistirAlteracoesPintura();
+            }}
+            onMouseLeave={() => { 
+              setIsDraggingWithinGrid(false); 
+              setActivePaintingClinica(null); 
+              persistirAlteracoesPintura();
+            }}
+            
+            // Eventos para Mobile (Onde o problema estava)
+            onTouchStart={(e) => isPaintingMode && handleStartPainting(e.touches[0].clientX, e.touches[0].clientY)}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={() => { 
+              setIsDraggingWithinGrid(false); 
+              setActivePaintingClinica(null); 
+              persistirAlteracoesPintura();
+            }}    
+          >
             <DataTable 
               key={`grid-${lastUpdate}`}
               value={escalas}
@@ -366,6 +623,14 @@ export const SudokuView = () => {
                           alocacao={itemAlocado}
                           sigla={escala.medicoSigla}
                           bloqueado={bloqueado}
+                          isPaintingMode={isPaintingMode}
+                          // Quando clica na célula, chama a função que busca o que tem nela
+                          onMouseDown={isPaintingMode ? (e: any) => handleStartPainting(e.clientX, e.clientY) : undefined}
+                          onMouseEnter={isPaintingMode ? () => {
+                            if (isDraggingWithinGrid && activePaintingClinica) {
+                                marcarCelulaTouch(escala.medicoId, h.field);
+                            }
+                          } : undefined}
                         />
                         )}
                     } />
@@ -415,6 +680,28 @@ export const SudokuView = () => {
 
       <button className="mobile-exit-fab md:hidden" onClick={() => navigate(-1)}>
         <i className="pi pi-times" />
+      </button>
+
+      <button 
+        className={clsx(
+          "fixed bottom-24 right-4 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center border-none z-50 transition-all md:hidden",
+          isPaintingMode ? "bg-blue-600 text-white" : "bg-white text-gray-500 border border-gray-200"
+        )}
+        onClick={() => {
+          const novoModo = !isPaintingMode;
+          setIsPaintingMode(novoModo);
+          
+          // RESET TOTAL: Limpa tudo que pode travar o mouse/touch
+          setIsDraggingWithinGrid(false);
+          setActivePaintingClinica(null);
+          
+          // Isso força o React a limpar o estado de movimento
+          if (!novoModo) {
+              document.body.style.cursor = 'default';
+          }
+        }}
+      >
+        <i className={clsx("pi", isPaintingMode ? "pi-pencil" : "pi-palette", "text-xl")}></i>
       </button>
     </div>
   );

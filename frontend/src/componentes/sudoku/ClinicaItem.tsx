@@ -24,7 +24,7 @@ export const ClinicaItem = ({ clinica, label }: { clinica: Estabelecimento; labe
       ref={setNodeRef} 
       {...listeners} 
       {...attributes}
-      className={`clinica-item-draggable flex items-center gap-1 bg-white pl-1 pr-1 rounded-full border border-slate-200 shadow-sm transition-all ${isDragging ? 'invisible' : ''}`}
+      className={`clinica-item-draggable flex items-center gap-1 bg-white pl-1 rounded-full border border-slate-200 shadow-sm transition-all ${isDragging ? 'invisible' : ''}`}
       style={{ ...style, touchAction: 'none' }} // touchAction aqui é vital
     >
       <div 

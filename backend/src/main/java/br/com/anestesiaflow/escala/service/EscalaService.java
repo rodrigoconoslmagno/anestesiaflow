@@ -99,46 +99,38 @@ public class EscalaService {
 	    return new EscalaSemanaDTO(medicoId, null, null, segunda, domingo, itensDTO);
 	}
 	
-	private EscalaResponseDTO retorno;
-	public EscalaResponseDTO salvar(EscalaSemanaDTO dto) {
-		// 1. Processar cada dia da escala enviado pelo frontend
-	    dto.escala().forEach(escalaDto -> {
-	        
-	    	Escala entidadeEscala;
-
+	public List<EscalaResponseDTO> salvar(EscalaSemanaDTO dto) {
+		List<EscalaResponseDTO> resultados = new ArrayList<>();
+		
+		for (var escalaDto : dto.escala()) {
+	        Escala entidadeEscala;
+	
 	        if (escalaDto.id() != null) {
-	            // REGISTRO EXISTENTE / ALTERAÇÃO
-	            // Buscamos a escala existente para manter a consistência
+	            // REGISTRO EXISTENTE
 	            entidadeEscala = escalaRepository.findById(escalaDto.id())
 	                .orElseThrow(() -> new BusinessException("Escala não encontrada"));
 	            
-	            // Atualizamos os dados básicos (como medicoId e data)
 	            entidadeEscala = mapperToEscala(escalaDto, entidadeEscala);
-	            
-	            // Sincronizamos os itens (horários/estabelecimentos)
 	            sincronizarItens(entidadeEscala, escalaDto.itens());
 	        } else {
 	            // REGISTRO NOVO
-	            // Criamos uma nova instância se o ID for nulo
 	            entidadeEscala = mapperToEscala(escalaDto);
 	            sincronizarItens(entidadeEscala, escalaDto.itens());
 	        }
-
+	
+	        // LÓGICA DE PERSISTÊNCIA / EXCLUSÃO
 	        if (entidadeEscala.getItens() == null || entidadeEscala.getItens().isEmpty()) {
-	            // Se a escala já existia no banco e agora está vazia -> APAGA
 	            if (entidadeEscala.getId() != null) {
 	                escalaRepository.delete(entidadeEscala);
+	                // Não adicionamos à lista de resultados pois ela deixou de existir
 	            }
-	            // Se for uma escala nova e veio vazia, simplesmente não faz nada (não salva)
-	            retorno = null; 
 	        } else {
-	        	escalaRepository.save(entidadeEscala);
+	            Escala salva = escalaRepository.save(entidadeEscala);
+	            resultados.add(mapperToDto(salva)); // Adiciona com o ID gerado/mantido
 	        }
-	        
-	        retorno = mapperToDto(entidadeEscala);
-	    });
+	    }
 		
-		return retorno;
+		return resultados;
 	}
 	
 	private void sincronizarItens(Escala escala, List<EscalaItemResponseDTO> itensDto) {

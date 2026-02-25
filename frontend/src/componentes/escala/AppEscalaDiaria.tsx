@@ -149,7 +149,6 @@ export const AppEscalaDiaria = ({ control, dataAtivaExterno }: AppEscalaDiariaPr
                     icone: entidadeEst?.icone 
                 });
             }
-            console.log("analise post item", itens)
             novasEscalas[diaIndex].itens = itens;
         }
     

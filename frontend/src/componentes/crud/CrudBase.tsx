@@ -133,7 +133,6 @@ export const CrudBase = <T extends { id?: any }>({
   useEffect(() => { loadData(); }, [loadData]);
 
   const onSave = async (formData: T) => {
-    console.log("salvamdo", formData)
     setLoading(true);
     try {
       if (formData.id) {

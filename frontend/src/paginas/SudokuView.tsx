@@ -6,7 +6,7 @@ import { Button } from 'primereact/button';
 import { Accordion, AccordionTab } from 'primereact/accordion';
 
 // DND-KIT (Regra 10)
-import { DndContext, PointerSensor, TouchSensor, useSensor, useSensors, DragOverlay, closestCorners, useDraggable, useDroppable } from '@dnd-kit/core';
+import { MeasuringStrategy, DndContext, PointerSensor, TouchSensor, useSensor, useSensors, DragOverlay, closestCorners, useDraggable, useDroppable } from '@dnd-kit/core';
 
 import { CrudHeader } from '@/componentes/crud/CrudHeader';
 import { server } from '@/api/server';
@@ -109,7 +109,8 @@ export const SudokuView = () => {
   const [activePaintingClinica, setActivePaintingClinica] = useState<Estabelecimento | null>(null);
   const [isDraggingWithinGrid, setIsDraggingWithinGrid] = useState(false);
   const [hasChangesToSave, setHasChangesToSave] = useState(false);
-  const [accordionActiveIndex, setAccordionActiveIndex] = useState<number | null>(0);
+  const [accordionActiveIndex, setAccordionActiveIndex] = useState<number | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, useMemo(() => ({
@@ -132,43 +133,40 @@ export const SudokuView = () => {
   }, [dataAtiva]);
 
   useEffect(() => {
-    const carregarDadosIniciais = async () => {
+    const carregarDados = async () => {
+      // Ativamos o loading logo no início
       setLoading(true);
+      
       try {
-        // Regra: Chamar API para estabelecimentos ativos
-        const resClinicas = await server.api.listar<Estabelecimento>('/estabelecimento', { ativo: true });
-        setClinicas(resClinicas || []); 
-  
-        // Aproveitamos para carregar os médicos que aparecerão nas linhas do grid
-        // const resMedicos = await server.api.listar<Medico>('/medico', { ativo: true });
-        // setMedicos(resMedicos || []);
+        const dataFormatada = DateUtils.paraISO(dataAtiva);
+
+        // Usamos Promise.all para disparar as buscas em paralelo se for a carga inicial.
+        // Se já tivermos as clínicas, buscamos apenas as escalas.
+        if (clinicas.length === 0) {
+          const [resClinicas, resEscalas] = await Promise.all([
+            server.api.listar<Estabelecimento>('/estabelecimento', { ativo: true }),
+            server.api.listarCustomizada<Escala>('/escala', '/listardia', { data: dataFormatada })
+          ]);
+          
+          setClinicas(resClinicas || []);
+          setEscalas(resEscalas || []);
+        } else {
+          // Se as clínicas já existem (mudança de data), buscamos apenas as escalas
+          const resEscalas = await server.api.listarCustomizada<Escala>('/escala', '/listardia', { data: dataFormatada });
+          setEscalas(resEscalas || []);
+        }
+
+        setLastUpdate(Date.now());
       } catch (error) {
         console.error("Erro ao carregar dados do Sudoku:", error);
       } finally {
+        // O loading só é desativado quando TUDO terminar
         setLoading(false);
       }
     };
 
-    carregarDadosIniciais();
-  }, []);
-
-  useEffect(() => {
-    const buscarEscalasDoDia = async (data: Date) => {
-      setLoading(true);
-      try {
-        const dataFormatada = DateUtils.paraISO(data);
-        // Busca as escalas do dia. O backend deve trazer os itens inclusos (Join)
-        
-        const escalas = await server.api.listarCustomizada<Escala>('/escala', '/listardia', { data: dataFormatada });
-        
-        setEscalas(escalas);
-        setLastUpdate(Date.now());
-      } finally {
-        setLoading(false);
-      }
-      };
-
-    buscarEscalasDoDia(dataAtiva);
+    carregarDados();
+    // O efeito roda na montagem e sempre que a data ativa mudar
   }, [dataAtiva]);
 
   // Adicione também este useEffect para garantir que o "arraste" pare ao soltar o mouse
@@ -181,10 +179,81 @@ export const SudokuView = () => {
   useEffect(() => {
     if (isPaintingMode) {
         setAccordionActiveIndex(null); // Fecha o Accordion (null desativa todos os tabs)
-    } else {
-        setAccordionActiveIndex(0); // Abre o primeiro tab (Clínicas) ao sair do modo pintura
+    } 
+  }, [isPaintingMode]);
+
+  useEffect(() => {
+    // Condição para salvar:
+    // - Temos mudanças pendentes (hasChangesToSave)
+    // - O usuário NÃO está no meio de um arraste de pintura (isDraggingWithinGrid)
+    // - O usuário NÃO está no meio de um arraste de item (activeDragData === null)
+    const interacaoFinalizada = !isDraggingWithinGrid && activeDragData === null;
+
+    if (hasChangesToSave && interacaoFinalizada) {
+      const sincronizarComBackend = async () => {
+        try {
+          setIsSyncing(true);
+          
+          const payload = escalas.map(p => ({
+            // Se a escala não tem itens, enviamos o ID dela para o backend saber QUAL deletar
+            // Se enviarmos sem ID e sem itens, o backend ignora.
+            id: p.id || null, 
+            medicoId: p.medicoId,
+            data: dataStr,
+            itens: p.itens?.map(i => ({
+              // O ITEM movido NUNCA deve levar o ID antigo, senão o JPA tenta dar update 
+              // em vez de criar um novo e gera conflito de Unique Key (Médico/Hora)
+              id: i.id || null, 
+              estabelecimentoId: i.estabelecimentoId,
+              hora: (i.hora?.substring(0, 5) || i.hora),
+            })) || [] 
+          }));
+          
+          // Dica: Tente enviar apenas as escalas que foram modificadas ou todas, 
+          // mas garanta que o 'id' do item movido seja nulo.
+          const response = await server.api.criar<Escala[]>('/escala/sudoku', payload as Escala[]);
+
+          if (response && Array.isArray(response)) {
+            // 1. Criamos um Mapa para acesso rápido
+            const mapaBack = new Map(response.map(e => [e.medicoId, e]));
+
+            // 2. Usamos a função de atualização para garantir o estado mais recente (prev)
+            setEscalas((prev) => {
+              const novoEstado = prev.map((escalaLocal) => {
+                const escalaDoBanco = mapaBack.get(escalaLocal.medicoId);
+
+                if (escalaDoBanco) {
+                  // Retornamos o objeto completo vindo do banco (com os IDs reais)
+                  return {
+                    ...escalaDoBanco,
+                    // Garantimos que campos visuais que talvez o back não retorne sejam mantidos
+                    medicoSigla: escalaLocal.medicoSigla 
+                  };
+                }
+
+                // Se o médico não está no retorno, limpamos as marcações dele no grid
+                return { 
+                  ...escalaLocal, 
+                  id: undefined, 
+                  itens: [] 
+                };
+              });
+
+              return novoEstado;
+            });
+          }
+
+          setHasChangesToSave(false);
+        } catch (err) {
+          console.error("Falha na sincronização:", err);
+        } finally {
+          setIsSyncing(false);
+        }
+      };
+
+      sincronizarComBackend();
     }
-}, [isPaintingMode]);
+  }, [hasChangesToSave, isDraggingWithinGrid, activeDragData, escalas, dataStr]);
 
   const HORARIOS = useMemo(() => getIntervalosEscala(), []);
   const isHoje = dataAtiva.toDateString() === new Date().toDateString();
@@ -197,83 +266,74 @@ export const SudokuView = () => {
     setIsPaintingMode(false);
     setIsDraggingWithinGrid(false);
     setActivePaintingClinica(null);
-    setAccordionActiveIndex(0);
   };
 
-  const onDragEnd = async (event: any) => {
+  const onDragEnd = (event: any) => {
     const { active, over } = event;
     setActiveDragData(null);
+    if (!over) return;
   
-    if (!over || !active) return;
-  
-    const dataAtiva = active.data.current;
+    const dragData = active.data.current;
     const [destMedicoIdStr, destHora] = over.id.split('|');
     const destMedicoId = Number(destMedicoIdStr);
+    const horaDestNorm = destHora.substring(0, 5);
   
-    const novasEscalas = [...escalas];
-  
-    // 1. Se for movimentação interna, limpamos a origem primeiro
-    if (dataAtiva.isFromGrid) {
-      const { medicoId: origMedicoId, hora: origHora } = dataAtiva.origem;
-      const escalaOrigem: Escala | undefined = novasEscalas.find(e => e.medicoId === origMedicoId);
-      if (escalaOrigem) {
-        escalaOrigem.itens = escalaOrigem.itens?.filter(i => (i.hora?.substring(0, 5) || i.hora) !== origHora);
-      }
-    }
-  
-    // 2. Identificamos a Clínica (seja do painel ou do grid)
-    const clinicaParaMover = dataAtiva.isFromGrid ? dataAtiva.alocacao : dataAtiva.clinica;
-  
-    // 3. Adicionamos no destino (mesma lógica anterior)
-    let escalaDestino = novasEscalas.find(e => e.medicoId === destMedicoId);
-    if (!escalaDestino) {
-      escalaDestino = { id: undefined, medicoId: destMedicoId, data: dataStr, itens: [], medicoSigla: '' };
-      novasEscalas.push(escalaDestino);
-    }
-  
-    const itensAtuais = escalaDestino.itens || [];
-
-    escalaDestino.itens = [
-      ...itensAtuais.filter(i => (i.hora?.substring(0, 5) || i.hora) !== destHora),
-      {
-        estabelecimentoId: clinicaParaMover.estabelecimentoId || clinicaParaMover.id,
-        hora: destHora,
-        cor: clinicaParaMover.cor,
-        icone: clinicaParaMover.icone
-      }
-    ];
-  
-    setEscalas(novasEscalas);
-    setLastUpdate(Date.now());
-  
-    // 4. Persistência (Enviamos as escalas alteradas para o Back)
-    // Recomendo enviar apenas a escala de destino e a de origem se forem diferentes
-    try {
-      // Filtramos apenas as escalas que foram afetadas no movimento
-      const escalasAfetadas = novasEscalas.filter(e => 
-          e.medicoId === destMedicoId || 
-          (dataAtiva.isFromGrid && e.medicoId === dataAtiva.origem.medicoId)
-      );
-  
-      // Montamos o payload seguindo a estrutura do seu EscalaRequestDTO
-      // mas enviando como um array
-      const payload = escalasAfetadas.map(p => ({
-          id: p.id || undefined,
-          medicoId: p.medicoId,
-          data: p.data, // formato ISO YYYY-MM-DD
-          itens: p.itens?.map(i => ({
-              id: i.id,
-              estabelecimentoId: i.estabelecimentoId,
-              hora: i.hora.substring(0, 5), // Garantindo o formato HH:mm
-          }))
+    setEscalas(prev => {
+      // 1. Cópia profunda
+      let tempEscalas = prev.map(e => ({
+        ...e,
+        itens: e.itens ? [...e.itens] : []
       }));
   
-      // Enviamos a lista completa em uma única requisição
-      await server.api.criar('/escala/sudoku', payload);
+      // 2. REMOÇÃO DA ORIGEM
+      if (dragData.isFromGrid) {
+        const { medicoId: oMedId, hora: oHora } = dragData.origem;
+        const oHoraNorm = oHora.substring(0, 5);
+        
+        tempEscalas = tempEscalas.map(e => {
+          if (e.medicoId === oMedId) {
+            return {
+              ...e,
+              itens: e.itens?.filter(i => (i.hora?.substring(0, 5) || i.hora) !== oHoraNorm)
+            };
+          }
+          return e;
+        });
+      }
   
-    } catch (err) {
-        console.error("Erro na transposição:", err);
-    }
+      // 3. PREPARAÇÃO DO ITEM
+      const clinica = dragData.isFromGrid ? dragData.alocacao : dragData.clinica;
+      const novoItem: EscalaItem = {
+        id: undefined, // SEMPRE undefined para o novo local
+        estabelecimentoId: clinica.estabelecimentoId || clinica.id,
+        hora: horaDestNorm,
+        cor: clinica.cor,
+        icone: clinica.icone
+      };
+  
+      // 4. ADIÇÃO NO DESTINO
+      const idxDest = tempEscalas.findIndex(e => e.medicoId === destMedicoId);
+  
+      if (idxDest === -1) {
+        tempEscalas.push({ 
+          medicoId: destMedicoId, 
+          data: dataStr, 
+          itens: [novoItem], 
+          medicoSigla: '' // O backend deve preencher ou você pode buscar do objeto clinica se necessário
+        });
+      } else {
+        tempEscalas[idxDest] = {
+          ...tempEscalas[idxDest],
+          itens: [
+            ...(tempEscalas[idxDest].itens || []).filter(i => (i.hora?.substring(0, 5) || i.hora) !== horaDestNorm),
+            novoItem
+          ]
+        };
+      }
+  
+      setHasChangesToSave(true);
+      return tempEscalas;
+    });
   };
 
   const onDragStart = (event: any) => {
@@ -307,78 +367,61 @@ export const SudokuView = () => {
   };
 
   // Função para marcar a célula (reaproveitando a lógica de salvamento que você já tem)
-  const marcarCelulaTouch = async (medicoId: number, hora: string) => {
-    if (!activePaintingClinica || !isPaintingMode) {
-      return;
-    }
+  const marcarCelulaTouch = (medicoId: number, hora: string) => {
+    if (!activePaintingClinica || !isPaintingMode) return;
+  
+    const horaNormalizada = hora.substring(0, 5);
   
     setEscalas(prevEscalas => {
-      const novasEscalas = [...prevEscalas];
-      let escalaIndex = novasEscalas.findIndex(e => e.medicoId === medicoId);
+      // 1. Localiza a escala do médico no estado mais atualizado possível
+      const escalaIndex = prevEscalas.findIndex(e => e.medicoId === medicoId);
       
+      // 2. Se não existe, cria uma nova
       if (escalaIndex === -1) {
-        novasEscalas.push({
-          medicoId,
-          data: dataStr,
-          itens: [],
-          medicoSigla: ''
-        });
-        escalaIndex = novasEscalas.length - 1;
+        const novaEscala: Escala = { 
+          medicoId, 
+          data: dataStr, 
+          itens: [{
+            id: undefined,
+            estabelecimentoId: activePaintingClinica.id,
+            hora: horaNormalizada,
+            cor: activePaintingClinica.cor,
+            icone: activePaintingClinica.icone
+          }], 
+          medicoSigla: '' 
+        };
+        setHasChangesToSave(true);
+        return [...prevEscalas, novaEscala];
       }
-    
-      const escalaAlvo = { ...novasEscalas[escalaIndex] };
-      const itensAtuais = [...(escalaAlvo.itens || [])];
-    
-      // Verifica se já existe a mesma clínica na mesma hora
-      const jaExiste = itensAtuais.find(i => 
-        (i.hora?.substring(0, 5) || i.hora) === hora && 
+  
+      // 3. Verifica se a célula já tem EXATAMENTE a mesma clínica (evita re-render à toa)
+      const escalaAtual = prevEscalas[escalaIndex];
+      const jaExiste = escalaAtual.itens?.find(i => 
+        (i.hora?.substring(0, 5) || i.hora) === horaNormalizada && 
         i.estabelecimentoId === activePaintingClinica.id
       );
-    
-      if (jaExiste) {
-        return prevEscalas;
-      }
-    
-      // IMPORTANTE: Remove o item antigo daquela hora para substituir
-      const novosItens = itensAtuais.filter(i => (i.hora?.substring(0, 5) || i.hora) !== hora);
+  
+      if (jaExiste) return prevEscalas;
+  
+      // 4. Cria a nova lista de itens substituindo o que houver na hora
+      const novosItens = [
+        ...(escalaAtual.itens || []).filter(i => (i.hora?.substring(0, 5) || i.hora) !== horaNormalizada),
+        {
+          id: undefined,
+          estabelecimentoId: activePaintingClinica.id,
+          hora: horaNormalizada,
+          cor: activePaintingClinica.cor,
+          icone: activePaintingClinica.icone
+        }
+      ];
+  
+      // 5. Retorna o novo array de escalas (Imutabilidade Total)
+      const novasEscalas = [...prevEscalas];
+      novasEscalas[escalaIndex] = { ...escalaAtual, itens: novosItens };
       
-      // Adiciona o novo item (Pincel)
-      novosItens.push({
-        id: undefined, // <--- Regra do seu backend: ID null para persistir novo item
-        estabelecimentoId: activePaintingClinica.id,
-        hora: hora,
-        cor: activePaintingClinica.cor,
-        icone: activePaintingClinica.icone
-      });
-    
-      escalaAlvo.itens = novosItens;
-      novasEscalas[escalaIndex] = escalaAlvo;
       setHasChangesToSave(true);
       return novasEscalas;
     });
-  };
-
-  const persistirAlteracoesPintura = async () => {
-    if (!hasChangesToSave) return;
-
-    try {
-        const payload = escalas.map(p => ({
-            id: p.id || null,
-            medicoId: p.medicoId,
-            data: dataStr,
-            itens: p.itens?.map(i => ({
-                id: i.id || null,
-                estabelecimentoId: i.estabelecimentoId,
-                hora: i.hora.substring(0, 5),
-            }))
-        }));
-
-        await server.api.criar('/escala/sudoku', payload);
-        setHasChangesToSave(false); // Sucesso!
-    } catch (err) {
-        console.error("Erro ao persistir lote de pintura:", err);
-        // Opcional: Mostrar um Toast de erro aqui
-    }
   };
 
   const handleStartPainting = (clientX: number, clientY: number, e?: any) => {
@@ -386,43 +429,38 @@ export const SudokuView = () => {
       return;
     }
 
-    // e.button === 0 garante que é o clique esquerdo
     if (e && e.button !== 0 && e.type === 'mousedown') {
       return;
     }
 
-    // Crucial para desktop: impede o "ghost image" de arrastar do navegador
     if (e && e.preventDefault) {
       e.preventDefault();
     }
-
+  
     const element = document.elementFromPoint(clientX, clientY);
     const cell = element?.closest('[data-medico]');
-
+  
     if (cell) {
         const medicoId = Number(cell.getAttribute('data-medico'));
         const hora = cell.getAttribute('data-hora');
-
-        if (isHoraBloqueada(hora!)) {
-          return; 
-        }
-
-        // Busca a clínica que está nesta célula para "copiar"
+        if (isHoraBloqueada(hora!)) return; 
+  
         const escalaDoMedico = escalas.find(e => e.medicoId === medicoId);
         const itemAlocado = escalaDoMedico?.itens?.find(i => 
-            (i.hora?.substring(0, 5) || i.hora) === hora
+            (i.hora?.substring(0, 5) || i.hora) === (hora?.substring(0, 5) || hora)
         );
-
+  
         if (itemAlocado) {
+            // AQUI ESTÁ O SEGREDO: 
+            // Criamos um objeto de clínica consistente para o "pincel"
             setActivePaintingClinica({
-                id: itemAlocado.estabelecimentoId,
+                id: itemAlocado.estabelecimentoId, // Sempre usamos o ID do estabelecimento
                 cor: itemAlocado.cor,
                 icone: itemAlocado.icone
             } as Estabelecimento);
             
+            setIsDraggingWithinGrid(true);
         }
-
-        setIsDraggingWithinGrid(true);
     }
   };
 
@@ -452,11 +490,36 @@ export const SudokuView = () => {
   return (
     <div className="sudoku-container">
       {/* Regra 1: Removido botão Novo passando onAdd como undefined */}
-      <CrudHeader title="Quadro Sudoku" onAdd={undefined} />
+      <CrudHeader 
+        // title="Quadro Sudoku" 
+        title={
+          <div className="flex items-center gap-3">
+            <span>Quadro Sudoku</span>
+            {isSyncing && (
+              <span className="flex items-center gap-1 text-xs font-normal text-blue-500 animate-pulse">
+                <i className="pi pi-spin pi-spinner text-[10px]"></i>
+                Sincronizando...
+              </span>
+            )}
+            {!isSyncing && hasChangesToSave && (
+              <span className="text-[10px] font-normal text-amber-500">
+                Alterações pendentes
+              </span>
+            )}
+          </div>
+        }
+        onAdd={undefined} 
+      />
 
       <DndContext 
         sensors={sensors} 
         collisionDetection={closestCorners} 
+        measuring={{
+          droppable: {
+              strategy: MeasuringStrategy.Always,
+          }
+        }}
+        modifiers={[]}
         onDragStart={onDragStart} 
         onDragEnd={onDragEnd}
       >
@@ -495,7 +558,14 @@ export const SudokuView = () => {
           <Accordion 
             className="custom-accordion"
             activeIndex={accordionActiveIndex} 
-            onTabChange={(e) => setAccordionActiveIndex(e.index as number)}
+            onTabChange={(e) => {
+              // SE estiver no modo pintura, não permite alterar o índice (não abre nem fecha)
+              if (isPaintingMode) {
+                return;
+              } 
+              
+              setAccordionActiveIndex(e.index as number);
+            }}
           >
             <AccordionTab 
               header={
@@ -528,6 +598,7 @@ export const SudokuView = () => {
                   </div>
                 </div>
               }
+              headerClassName={isPaintingMode ? "cursor-default pointer-events-none-except-button" : ""}
             >
               <ClinicasPanel clinicas={clinicas} />
             </AccordionTab>
@@ -537,7 +608,7 @@ export const SudokuView = () => {
             key={isPaintingMode ? 'painting-on' : 'painting-off'}
             className={clsx(
                 "flex-grow overflow-hidden bg-white border rounded-xl shadow-inner",
-                isPaintingMode ? "touch-none cursor-cell overflow-hidden" : "overflow-auto"
+                isPaintingMode ? "touch-none cursor-cell overflow-hidden select-none" : "overflow-auto"
             )}
             // Eventos para Desktop
             onMouseDown={(e) => handleStartPainting(e.clientX, e.clientY, e)}
@@ -556,12 +627,10 @@ export const SudokuView = () => {
             onMouseUp={() => { 
               setIsDraggingWithinGrid(false); 
               setActivePaintingClinica(null); 
-              persistirAlteracoesPintura();
             }}
             onMouseLeave={() => { 
               setIsDraggingWithinGrid(false); 
               setActivePaintingClinica(null); 
-              persistirAlteracoesPintura();
             }}
             
             // Eventos para Mobile (Onde o problema estava)
@@ -570,8 +639,13 @@ export const SudokuView = () => {
             onTouchEnd={() => { 
               setIsDraggingWithinGrid(false); 
               setActivePaintingClinica(null); 
-              persistirAlteracoesPintura();
             }}    
+            style={{ 
+              overflowAnchor: 'none', 
+              height: '100%', // Garante que o container tenha altura para o scroll funcionar
+              display: 'flex',
+              flexDirection: 'column'
+            }}
           >
             <DataTable 
               key={`grid-${lastUpdate}`}
@@ -669,9 +743,7 @@ export const SudokuView = () => {
                   className="w-full h-full object-contain" 
                 />
               ) : (
-                <span className="text-[10px] text-white font-bold uppercase">
-                    {activeDragData.sigla || activeDragData.nome?.substring(0, 2)}
-                </span>
+                <i className=" text-white text-[11px]" />
               )}
             </div>
           ) : null}

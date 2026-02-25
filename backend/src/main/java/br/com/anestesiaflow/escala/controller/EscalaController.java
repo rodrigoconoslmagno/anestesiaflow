@@ -48,13 +48,13 @@ public class EscalaController {
 	}
 	
 	@PostMapping
-    public ResponseEntity<EscalaResponseDTO> criar(@Validated @RequestBody EscalaSemanaDTO dto) {
-        EscalaResponseDTO novEscala = escalaService.salvar(dto);
+    public ResponseEntity<List<EscalaResponseDTO>> criar(@Validated @RequestBody EscalaSemanaDTO dto) {
+        List<EscalaResponseDTO> novEscala = escalaService.salvar(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(novEscala);
     }
 	
 	@PostMapping("/sudoku")
-    public ResponseEntity<EscalaResponseDTO> criar(@Validated @RequestBody List<EscalaResponseDTO> dto) {
+    public ResponseEntity<List<EscalaResponseDTO>> criar(@Validated @RequestBody List<EscalaResponseDTO> dto) {
 		EscalaSemanaDTO semana = new EscalaSemanaDTO(
 				0,
 			    null,
@@ -62,8 +62,8 @@ public class EscalaController {
 				null,
 				null,
 				dto);
-		escalaService.salvar(semana);
-        return ResponseEntity.status(HttpStatus.CREATED).body(null);
+		List<EscalaResponseDTO> escalass = escalaService.salvar(semana);
+        return ResponseEntity.status(HttpStatus.CREATED).body(escalass);
     }
 	
 	@DeleteMapping("/{id}")

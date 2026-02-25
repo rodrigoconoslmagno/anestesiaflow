@@ -108,6 +108,15 @@
     padding: 0.25rem;
 }
 
+.pointer-events-none-except-button button {
+    pointer-events: auto !important;
+}
+
+/* Opcional: Esconder a seta do Accordion quando em modo pintura para reforçar o bloqueio */
+.p-accordion-tab-active.p-disabled .p-accordion-toggle-icon {
+    display: none;
+}
+
 /* Mobile FAB */
 .mobile-exit-fab {
     position: fixed;

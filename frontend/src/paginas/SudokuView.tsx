@@ -3,12 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Button } from 'primereact/button';
-import { Accordion, AccordionTab } from 'primereact/accordion';
 
 // DND-KIT (Regra 10)
 import { MeasuringStrategy, DndContext, PointerSensor, TouchSensor, useSensor, useSensors, DragOverlay, closestCorners, useDraggable, useDroppable } from '@dnd-kit/core';
 
-import { CrudHeader } from '@/componentes/crud/CrudHeader';
 import { server } from '@/api/server';
 import { getIntervalosEscala } from '@/types/escalaHelper';
 import { ClinicasPanel } from '@/componentes/sudoku/ClinicasPanel';
@@ -18,10 +16,10 @@ import type { Escala, EscalaItem } from '@/types/escala';
 import { DateUtils } from '@/utils/DateUtils';
 import clsx from 'clsx';
 
-const DroppableCell = ({ id, alocacao, bloqueado, isPaintingMode, onMouseDown, onMouseEnter, }: any) => {
+const DroppableCell = ({ id, alocacao, bloqueado, isPaintingMode, onMouseDown, onMouseEnter, disabled}: any) => {
   const { isOver, setNodeRef } = useDroppable({ 
     id, 
-    disabled: bloqueado
+    disabled: bloqueado || disabled
   });
 
   const [medicoId, hora] = id.split('|');
@@ -46,6 +44,7 @@ const DroppableCell = ({ id, alocacao, bloqueado, isPaintingMode, onMouseDown, o
           horaOriginal={hora} 
           isPaintingMode={isPaintingMode}
           bloqueado={bloqueado}
+          disabled={disabled}
         />
       ) : (
         bloqueado && <div className="w-[14px] h-[14px] bg-slate-200 rounded-full opacity-50" />
@@ -55,10 +54,11 @@ const DroppableCell = ({ id, alocacao, bloqueado, isPaintingMode, onMouseDown, o
   );
 };
 
-const DraggableItem = ({ alocacao, medicoId, horaOriginal, isPaintingMode, bloqueado }: any) => {
+const DraggableItem = ({ alocacao, medicoId, horaOriginal, isPaintingMode, bloqueado, disabled }: any) => {
+  console.log("analise", bloqueado || disabled)
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `alocado|${medicoId}|${horaOriginal}`,
-    disabled: bloqueado,
+    disabled: bloqueado || disabled,
     data: { 
         isFromGrid: true, 
         alocacao,
@@ -109,8 +109,8 @@ export const SudokuView = () => {
   const [activePaintingClinica, setActivePaintingClinica] = useState<Estabelecimento | null>(null);
   const [isDraggingWithinGrid, setIsDraggingWithinGrid] = useState(false);
   const [hasChangesToSave, setHasChangesToSave] = useState(false);
-  const [accordionActiveIndex, setAccordionActiveIndex] = useState<number | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, useMemo(() => ({
@@ -175,12 +175,6 @@ export const SudokuView = () => {
     window.addEventListener('mouseup', stopDragging);
     return () => window.removeEventListener('mouseup', stopDragging);
   }, []);
-
-  useEffect(() => {
-    if (isPaintingMode) {
-        setAccordionActiveIndex(null); // Fecha o Accordion (null desativa todos os tabs)
-    } 
-  }, [isPaintingMode]);
 
   useEffect(() => {
     // Condição para salvar:
@@ -487,29 +481,79 @@ export const SudokuView = () => {
     }
   };
 
+  const renderTableHeader = () => {
+    return (
+        <div className="flex items-center justify-between  bg-slate-50">
+            <div className="flex items-center gap-2">
+                <i className="pi pi-th-large text-slate-400 text-sm" />
+                <span className="text-xs font-bold text-slate-600 uppercase">Grade de Alocação</span>
+            </div>
+            
+            {/* O Pincel fica aqui: colado no Grid */}
+            {isEditing && <Button 
+                label={isPaintingMode ? "Finalizar Rápidor" : "Preencher Rápidor"}
+                icon={isPaintingMode ? "pi pi-check" : "pi pi-palette"} 
+                severity={isPaintingMode ? "success" : "info"}
+                raised={isPaintingMode}
+                className={clsx(
+                    "transition-all p-1", 
+                    !isPaintingMode && "bg-blue-500 border-blue-500 text-white",
+                    isPaintingMode && "bg-green-500 border-green-500 text-white",
+                    
+                )}
+                onClick={() => setIsPaintingMode(!isPaintingMode)}
+            />
+            }
+        </div>
+    );
+  };
+
   return (
-    <div className="sudoku-container">
-      {/* Regra 1: Removido botão Novo passando onAdd como undefined */}
-      <CrudHeader 
-        // title="Quadro Sudoku" 
-        title={
-          <div className="flex items-center gap-3">
-            <span>Quadro Sudoku</span>
-            {isSyncing && (
-              <span className="flex items-center gap-1 text-xs font-normal text-blue-500 animate-pulse">
-                <i className="pi pi-spin pi-spinner text-[10px]"></i>
-                Sincronizando...
-              </span>
-            )}
-            {!isSyncing && hasChangesToSave && (
-              <span className="text-[10px] font-normal text-amber-500">
-                Alterações pendentes
-              </span>
-            )}
-          </div>
-        }
-        onAdd={undefined} 
-      />
+    // <div className="sudoku-container">
+    <div className="sudoku-container flex flex-col h-screen bg-slate-50 overflow-hidden">
+      
+      {/* 1. HEADER GLOBAL (Fixo no topo) */}
+      {/* <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-slate-200 shadow-sm z-20"> */}
+      <header className={clsx(
+          "flex items-center justify-between px-4 py-3 bg-white border-b transition-all duration-300 relative overflow-hidden",
+          isPaintingMode ? "border-blue-200" : "border-slate-200"
+      )}>
+        {/* O GLOW DE ATIVIDADE: Aparece se estiver sincronizando ou com mudanças */}
+        {(isSyncing || hasChangesToSave) && <div className="sync-glow-bar" />}
+
+        <div className="flex items-center gap-4">
+          {/* O botão sair sai do FAB e vem para o padrão mobile/tablet: Canto superior esquerdo */}
+          <Button 
+            icon="pi pi-times" 
+            label="Sair"
+            text
+            severity="danger" // Vermelho para indicar saída/fechamento
+            className="hidden md:flex h-11 px-4 border-red-200 text-red-500 hover:bg-red-50"
+            onClick={() => navigate(-1)} 
+          />
+          <Button 
+            icon="pi pi-arrow-left" 
+            className="p-button-rounded p-button-text p-button-secondary md:hidden border-red-200 text-red-500" 
+            onClick={() => navigate(-1)} 
+          />
+          <h1 className="text-lg md:text-xl font-black text-slate-700 m-0">
+            Escala Sudoku
+          </h1>
+        </div>
+
+        {/* Botão Principal de Ação: Alterna entre ver e editar */}
+        <Button 
+          icon={isSyncing ? "pi pi-spin pi-spinner" : (isEditing ? "pi pi-check" : "pi pi-pencil")}
+          label={isEditing ? "Concluir" : "Editar Escala"}          
+          className={clsx(
+            "p-button-sm shadow-sm transition-all p-1",
+            !isEditing && "bg-blue-600 border-blue-600 text-white",
+            isEditing && !hasChangesToSave && "bg-green-600 border-green-600 text-white",
+            isEditing && hasChangesToSave && "bg-red-400 border-red-400 text-white opacity-70"
+          )}
+          onClick={() => setIsEditing(!isEditing)} // Variável hipotética para controlar a UI
+        />
+      </header>
 
       <DndContext 
         sensors={sensors} 
@@ -523,9 +567,8 @@ export const SudokuView = () => {
         onDragStart={onDragStart} 
         onDragEnd={onDragEnd}
       >
-        <div className="flex flex-col p-2 gap-2 flex-grow overflow-hidden">
+        <div className="flex flex-col p-1 gap-2 flex-grow overflow-hidden">
           
-          {/* Regra 2: Visual igual ao AppEscalaDiaria */}
           <div className="flex items-center justify-between bg-slate-50 p-1 border-b border-slate-200">
               <Button 
                   icon="pi pi-chevron-left" 
@@ -555,162 +598,137 @@ export const SudokuView = () => {
               />
           </div>
 
-          <Accordion 
-            className="custom-accordion"
-            activeIndex={accordionActiveIndex} 
-            onTabChange={(e) => {
-              // SE estiver no modo pintura, não permite alterar o índice (não abre nem fecha)
-              if (isPaintingMode) {
-                return;
-              } 
+          {isEditing && !isPaintingMode  && (
+            <div className="bg-indigo-50 border-b border-indigo-100 p-2 shadow-inner transition-all z-10 animate-fadein">
+              <div className="flex items-center justify-between mb-2 px-2">
+                <span className="text-xs font-bold text-indigo-800 uppercase tracking-wider">
+                  <i className="pi pi-th-large mr-2"></i> Clínicas Disponíveis
+                </span>
+              </div>
               
-              setAccordionActiveIndex(e.index as number);
-            }}
-          >
-            <AccordionTab 
-              header={
-                <div className="flex items-center justify-between w-full pr-4">
-                  <span>Clínicas / Hospitais</span>
-                  
-                  {/* Botão visível apenas no Desktop dentro do Header do Accordion */}
-                  <div className="hidden md:flex items-center gap-2" onClick={(e) => e.stopPropagation()}> 
-                    <span className={clsx(
-                      "text-[10px] font-bold uppercase tracking-widest transition-opacity",
-                      isPaintingMode ? "text-blue-600 opacity-100" : "text-slate-400 opacity-0"
-                    )}>
-                      Modo Pintura Ativo
-                    </span>
-                    <Button 
-                      icon={isPaintingMode ? "pi pi-check" : "pi pi-palette"} 
-                      label={isPaintingMode ? "Finalizar" : "Ativar Pincel"}
-                      className={clsx(
-                        "p-button-rounded p-button-sm shadow-sm transition-all",
-                        isPaintingMode ? "p-button-primary" : "p-button-outlined p-button-secondary"
-                      )}
-                      onClick={() => {
-                        setIsPaintingMode(!isPaintingMode);
-                        if (isPaintingMode) {
-                          setIsDraggingWithinGrid(false);
-                          setActivePaintingClinica(null);
-                        }
-                      }}
-                    />
-                  </div>
-                </div>
-              }
-              headerClassName={isPaintingMode ? "cursor-default pointer-events-none-except-button" : ""}
-            >
-              <ClinicasPanel clinicas={clinicas} />
-            </AccordionTab>
-          </Accordion>
+              {/* Container das clínicas - Com scroll horizontal suave nativo */}
+              <div className="overflow-x-auto pb-1 hide-scrollbar">
+                {/* Substitua isso pelo seu componente <ClinicasPanel clinicas={clinicas} /> se ele suportar scroll horizontal flex */}
+                <ClinicasPanel clinicas={clinicas} />
+              </div>
+            </div>
+          )}
 
-          <div 
-            key={isPaintingMode ? 'painting-on' : 'painting-off'}
-            className={clsx(
-                "flex-grow overflow-hidden bg-white border rounded-xl shadow-inner",
-                isPaintingMode ? "touch-none cursor-cell overflow-hidden select-none" : "overflow-auto"
-            )}
-            // Eventos para Desktop
-            onMouseDown={(e) => handleStartPainting(e.clientX, e.clientY, e)}
-            // ADICIONE ESTE HANDLER PARA DESKTOP
-            onMouseMove={(e) => {
-                if (isPaintingMode && isDraggingWithinGrid && activePaintingClinica) {
-                    const element = document.elementFromPoint(e.clientX, e.clientY);
-                    const cell = element?.closest('[data-medico]');
-                    if (cell) {
-                        const mId = Number(cell.getAttribute('data-medico'));
-                        const h = cell.getAttribute('data-hora');
-                        if (mId && h) marcarCelulaTouch(mId, h);
-                    }
-                }
-            }}
-            onMouseUp={() => { 
-              setIsDraggingWithinGrid(false); 
-              setActivePaintingClinica(null); 
-            }}
-            onMouseLeave={() => { 
-              setIsDraggingWithinGrid(false); 
-              setActivePaintingClinica(null); 
-            }}
-            
-            // Eventos para Mobile (Onde o problema estava)
-            onTouchStart={(e) => isPaintingMode && handleStartPainting(e.touches[0].clientX, e.touches[0].clientY)}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={() => { 
-              setIsDraggingWithinGrid(false); 
-              setActivePaintingClinica(null); 
-            }}    
-            style={{ 
-              overflowAnchor: 'none', 
-              height: '100%', // Garante que o container tenha altura para o scroll funcionar
-              display: 'flex',
-              flexDirection: 'column'
-            }}
-          >
-            <DataTable 
-              key={`grid-${lastUpdate}`}
-              value={escalas}
-              dataKey="medicoId" 
-              loading={loading} 
-              scrollable 
-              scrollHeight="flex" 
-              className="sudoku-table-custom"
-              emptyMessage={`Nenhuma escala encontrado.`}
-            >
-              <Column 
-                frozen 
-                header="MÉD" 
-                align="center" 
-                style={{ width: '55px' }} 
-                body={(escala: Escala) => (
-                  <div className="text-[11px] font-black text-slate-700">{escala.medicoSigla?.substring(0, 3).toUpperCase()}</div>
-                )} 
-              />
+          <div className={clsx(
+                "flex-1 overflow-hidden bg-slate-50",
+                isPaintingMode ? "p-1" : ""
+          )}>
+          
+            <div 
+              key={isPaintingMode || isEditing? 'painting-on' : 'painting-off'}
+              className={clsx(
+                "h-full rounded-xl overflow-hidden border shadow-sm transition-all",
+                isEditing ? "border-indigo-200" : "border-slate-200",
+                isPaintingMode ? "ring-2 ring-indigo-400 cursor-cell" : ""
+              )}
+              onMouseDown={(e) => handleStartPainting(e.clientX, e.clientY, e)}
+              // ADICIONE ESTE HANDLER PARA DESKTOP
+              onMouseMove={(e) => {
+                  if (isPaintingMode && isDraggingWithinGrid && activePaintingClinica) {
+                      const element = document.elementFromPoint(e.clientX, e.clientY);
+                      const cell = element?.closest('[data-medico]');
+                      if (cell) {
+                          const mId = Number(cell.getAttribute('data-medico'));
+                          const h = cell.getAttribute('data-hora');
+                          if (mId && h) marcarCelulaTouch(mId, h);
+                      }
+                  }
+              }}
+              onMouseUp={() => { 
+                setIsDraggingWithinGrid(false); 
+                setActivePaintingClinica(null); 
+              }}
+              onMouseLeave={() => { 
+                setIsDraggingWithinGrid(false); 
+                setActivePaintingClinica(null); 
+              }}
               
-              {HORARIOS.map(h => {
-                const bloqueado = isHoraBloqueada(h.field);
-                return (
-                  <Column 
-                      key={h.field} 
-                      header={(
-                        <div className="flex justify-center items-center">
-                            <span className={`text-[13px] font-bold tracking-tight ${bloqueado ? 'text-slate-400' : 'text-blue-600'}`}>
-                                {h.header}
-                            </span>
-                        </div>
-                    )}
-                    headerClassName="bg-slate-50 border-b border-r border-slate-300 p-0 h-full min-w-[28px]"
-                    headerStyle={{ justifyContent: 'center' }} 
-                    pt={{
-                        headerContent: { className: 'justify-center' } // Força o alinhamento central no PrimeReac
-                    }}
-                    className='p-0'
-                    body={(escala: Escala) => {
-                      const itemAlocado: EscalaItem | undefined = escala.itens?.find((i: EscalaItem) => {
-                        const hItem = i.hora?.substring(0, 5) || i.hora;
-                        return hItem === h.field;
-                      });
-                      
-                      return (
-                        <DroppableCell 
-                          id={`${escala.medicoId}|${h.field}`} 
-                          alocacao={itemAlocado}
-                          sigla={escala.medicoSigla}
-                          bloqueado={bloqueado}
-                          isPaintingMode={isPaintingMode}
-                          // Quando clica na célula, chama a função que busca o que tem nela
-                          onMouseDown={isPaintingMode ? (e: any) => handleStartPainting(e.clientX, e.clientY) : undefined}
-                          onMouseEnter={isPaintingMode ? () => {
-                            if (isDraggingWithinGrid && activePaintingClinica) {
-                                marcarCelulaTouch(escala.medicoId, h.field);
-                            }
-                          } : undefined}
-                        />
-                        )}
-                    } />
-                )}
-              )} 
-            </DataTable>
+              // Eventos para Mobile (Onde o problema estava)
+              onTouchStart={(e) => isPaintingMode && handleStartPainting(e.touches[0].clientX, e.touches[0].clientY)}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={() => { 
+                setIsDraggingWithinGrid(false); 
+                setActivePaintingClinica(null); 
+              }}    
+              style={{ 
+                overflowAnchor: 'none', 
+                height: '100%', // Garante que o container tenha altura para o scroll funcionar
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
+              <DataTable 
+                key={`grid-${lastUpdate}`}
+                value={escalas}
+                dataKey="medicoId" 
+                loading={loading} 
+                scrollable 
+                scrollHeight="flex" 
+                className="sudoku-table-custom"
+                emptyMessage={`Nenhuma escala encontrado.`}
+                header={renderTableHeader()}
+              >
+                <Column 
+                  frozen 
+                  header="MÉD" 
+                  align="center" 
+                  style={{ width: '55px' }} 
+                  body={(escala: Escala) => (
+                    <div className="text-[11px] font-black text-slate-700">{escala.medicoSigla?.substring(0, 3).toUpperCase()}</div>
+                  )} 
+                />
+                
+                {HORARIOS.map(h => {
+                  const bloqueado = isHoraBloqueada(h.field);
+                  return (
+                    <Column 
+                        key={h.field} 
+                        header={(
+                          <div className="flex justify-center items-center">
+                              <span className={`text-[13px] font-bold tracking-tight ${bloqueado ? 'text-slate-400' : 'text-blue-600'}`}>
+                                  {h.header}
+                              </span>
+                          </div>
+                      )}
+                      headerClassName="bg-slate-50 border-b border-r border-slate-300 p-0 h-full min-w-[28px]"
+                      headerStyle={{ justifyContent: 'center' }} 
+                      pt={{
+                          headerContent: { className: 'justify-center' } // Força o alinhamento central no PrimeReac
+                      }}
+                      className='p-0'
+                      body={(escala: Escala) => {
+                        const itemAlocado: EscalaItem | undefined = escala.itens?.find((i: EscalaItem) => {
+                          const hItem = i.hora?.substring(0, 5) || i.hora;
+                          return hItem === h.field;
+                        });
+                        
+                        return (
+                          <DroppableCell 
+                            id={`${escala.medicoId}|${h.field}`} 
+                            alocacao={itemAlocado}
+                            sigla={escala.medicoSigla}
+                            bloqueado={bloqueado}
+                            isPaintingMode={isPaintingMode}
+                            // Quando clica na célula, chama a função que busca o que tem nela
+                            onMouseDown={isPaintingMode ? (e: any) => handleStartPainting(e.clientX, e.clientY) : undefined}
+                            onMouseEnter={isPaintingMode ? () => {
+                              if (isDraggingWithinGrid && activePaintingClinica) {
+                                  marcarCelulaTouch(escala.medicoId, h.field);
+                              }
+                            } : undefined}
+                            disabled={!isEditing}
+                          />
+                          )}
+                      } />
+                  )}
+                )} 
+              </DataTable>
+            </div>
           </div>
         </div>
 
@@ -749,32 +767,6 @@ export const SudokuView = () => {
           ) : null}
         </DragOverlay>
       </DndContext>
-
-      <button className="mobile-exit-fab md:hidden" onClick={() => navigate(-1)}>
-        <i className="pi pi-times" />
-      </button>
-
-      <button 
-        className={clsx(
-          "fixed bottom-24 right-4 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center border-none z-50 transition-all md:hidden",
-          isPaintingMode ? "bg-blue-600 text-white" : "bg-white text-gray-500 border border-gray-200"
-        )}
-        onClick={() => {
-          const novoModo = !isPaintingMode;
-          setIsPaintingMode(novoModo);
-          
-          // RESET TOTAL: Limpa tudo que pode travar o mouse/touch
-          setIsDraggingWithinGrid(false);
-          setActivePaintingClinica(null);
-          
-          // Isso força o React a limpar o estado de movimento
-          if (!novoModo) {
-              document.body.style.cursor = 'default';
-          }
-        }}
-      >
-        <i className={clsx("pi", isPaintingMode ? "pi-pencil" : "pi-palette", "text-xl")}></i>
-      </button>
     </div>
   );
 };

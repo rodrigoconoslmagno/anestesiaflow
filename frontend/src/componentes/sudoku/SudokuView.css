@@ -1,5 +1,29 @@
 /* SudokuView.css */
 
+/* Container do Header precisa de position relative para a barra */
+.header-contextual {
+    position: relative;
+    overflow: hidden;
+}
+
+/* A barra de progresso sutil (Glow) */
+.sync-glow-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    width: 100%;
+    background: linear-gradient(to right, #10b981, #3b82f6, #10b981);
+    background-size: 200% 100%;
+    animation: glow-move 2s linear infinite;
+    z-index: 50;
+}
+
+@keyframes glow-move {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
 .sudoku-container {
     display: flex;
     flex-direction: column;
@@ -38,6 +62,33 @@
 /* Garante que o container do grid não bloqueie o toque nos draggables */
 .sudoku-table-custom .p-datatable-wrapper {
     touch-action: pan-x pan-y; /* Permite scroll na tabela, mas... */
+}
+
+/* Remove o padding excessivo do container do header do DataTable */
+.sudoku-table-custom .p-datatable-header {
+    padding: 4px 8px !important; /* Reduz de 1rem para quase nada */
+    background: #f8fafc !important; /* Cor suave para não pesar */
+    border-bottom: 1px solid #e2e8f0 !important;
+}
+
+/* Deixa o conteúdo interno mais baixo */
+.sudoku-table-custom .p-datatable-header > div {
+    min-height: 32px; /* Altura mínima baixa para caber apenas o botão */
+}
+
+/* Eleva a máscara de loading do PrimeReact para ficar acima de tudo na tabela */
+.sudoku-table-custom .p-datatable-loading-overlay {
+    z-index: 100 !important; /* Valor alto para superar o z-index do header */
+    /* Trocamos o branco (255,255,255) por um cinza ardósia (15, 23, 42) com baixa opacidade */
+    background-color: rgba(15, 23, 42, 0.45) !important;
+    backdrop-filter: blur(2px); /* Efeito moderno de desfoque opcional */
+}
+
+/* Garante que o ícone de loading também esteja visível */
+.sudoku-table-custom .p-datatable-loading-icon {
+    z-index: 101 !important;
+    font-size: 2rem;
+    color: #3b82f6; /* Azul consistente com seu app */
 }
 
 /* Bolinhas */
@@ -108,13 +159,8 @@
     padding: 0.25rem;
 }
 
-.pointer-events-none-except-button button {
-    pointer-events: auto !important;
-}
-
-/* Opcional: Esconder a seta do Accordion quando em modo pintura para reforçar o bloqueio */
-.p-accordion-tab-active.p-disabled .p-accordion-toggle-icon {
-    display: none;
+.custom-accordion .p-disabled .p-accordion-header-link {
+    cursor: not-allowed !important;
 }
 
 /* Mobile FAB */

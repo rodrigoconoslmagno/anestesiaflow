@@ -55,7 +55,6 @@ const DroppableCell = ({ id, alocacao, bloqueado, isPaintingMode, onMouseDown, o
 };
 
 const DraggableItem = ({ alocacao, medicoId, horaOriginal, isPaintingMode, bloqueado, disabled }: any) => {
-  console.log("analise", bloqueado || disabled)
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `alocado|${medicoId}|${horaOriginal}`,
     disabled: bloqueado || disabled,
@@ -71,7 +70,7 @@ const DraggableItem = ({ alocacao, medicoId, horaOriginal, isPaintingMode, bloqu
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     zIndex: isDragging ? 999 : 1,
     opacity: isDragging ? 0.5 : (bloqueado ? 0.6 : 1),
-    cursor: bloqueado ? 'not-allowed' : (isPaintingMode ? 'cell' : 'grab'),
+    cursor: disabled ? "default" : (bloqueado ? 'not-allowed' : (isPaintingMode ? 'cell' : 'grab')),
     backgroundColor: alocacao.cor?.startsWith('#') ? alocacao.cor : `#${alocacao.cor}`,
     touchAction: 'none', 
     WebkitUserSelect: 'none' as const,
@@ -620,7 +619,7 @@ export const SudokuView = () => {
           )}>
           
             <div 
-              key={isPaintingMode || isEditing? 'painting-on' : 'painting-off'}
+              key={`cell-${isPaintingMode}-${isEditing}`} 
               className={clsx(
                 "h-full rounded-xl overflow-hidden border shadow-sm transition-all",
                 isEditing ? "border-indigo-200" : "border-slate-200",

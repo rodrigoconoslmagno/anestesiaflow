@@ -9,7 +9,7 @@ import { AppEscalaSemanal } from "@/componentes/escala/AppEscalaSemanal";
 import type { EscalaSemana } from "@/types/escala";
 import { server } from "@/api/server";
 import { DateUtils } from "@/utils/DateUtils";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export const EscalaMedicoView = () => {
     const navigate = useNavigate();
@@ -17,10 +17,19 @@ export const EscalaMedicoView = () => {
     const isPublicRoute = location.pathname.startsWith('/view/escala');
     const [loading, setLoading] = useState(false);
     const [exibirGrid, setExibirGrid] = useState(false);
+    const [ inicio, setInicio ] = useState<boolean>(true);
+
     const methods = useForm<EscalaSemana[]>({    
     });
     const [ medicoId, setMedicoId] = useState<Number | undefined>(undefined);
     const { control } = methods;
+
+    useEffect(() => {
+        if (sigla && medicoId && inicio) {
+            handleSearch();
+            setInicio(false);
+        }
+    }, [medicoId, sigla]);
 
     const medicoTemplate = (option: Medico) => {
         if (!option) {

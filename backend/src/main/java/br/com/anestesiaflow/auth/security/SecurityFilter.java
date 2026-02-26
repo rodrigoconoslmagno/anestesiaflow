@@ -38,6 +38,11 @@ public class SecurityFilter extends OncePerRequestFilter {
     	
     	String path = request.getRequestURI();
     	
+    	if (path.startsWith("/api/public/")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+    	
     	if (path.startsWith("/static/") ||
                 path.startsWith("/js/") ||
                 path.startsWith("/css/") ||

@@ -2,11 +2,15 @@ package br.com.anestesiaflow.escala.service;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-
+import java.util.TreeMap;
+import java.util.stream.Collectors;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -15,7 +19,6 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import br.com.anestesiaflow.escala.dto.EscalaItemResponseDTO;
-import br.com.anestesiaflow.escala.dto.EscalaRequestDTO;
 import br.com.anestesiaflow.escala.dto.EscalaResponseDTO;
 import br.com.anestesiaflow.escala.dto.EscalaSemanaDTO;
 import br.com.anestesiaflow.escala.dto.EscalaSemanaSummaryDTO;
@@ -97,6 +100,33 @@ public class EscalaService {
 	        .toList();
 
 	    return new EscalaSemanaDTO(medicoId, null, null, segunda, domingo, itensDTO);
+	}
+	
+	public List<EscalaSemanaDTO> listarSemanasMedicos(int medicoId, LocalDate dataAlvo) {
+		
+		LocalDate segunda = dataAlvo.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
+		List<Escala> todasEscalas = escalaRepository.findByMedico_IdAndDataGreaterThanEqualOrderByDataAsc(medicoId, segunda);
+		
+		Map<LocalDate, List<Escala>> agrupadoPorSemana = todasEscalas.stream()
+		        .collect(Collectors.groupingBy(
+		            escala -> escala.getData().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)),
+		            TreeMap::new,
+		            Collectors.toList()
+		        ));
+		
+		return agrupadoPorSemana.entrySet().stream()
+		        .map(entry -> {
+		        	LocalDate inicioSemana = entry.getKey();
+		            List<Escala> escalasDaquelaSemana = entry.getValue();
+
+		            // Transforma a lista de entidades Escala em EscalaResponseDTO
+		            List<EscalaResponseDTO> dtosDaSemana = escalasDaquelaSemana.stream()
+		                .map(escala -> mapperToDto(escala))
+		                .collect(Collectors.toList());
+
+		            return new EscalaSemanaDTO(medicoId, null, null, inicioSemana, null, dtosDaSemana);
+		        })
+		        .collect(Collectors.toList());
 	}
 	
 	public List<EscalaResponseDTO> salvar(EscalaSemanaDTO dto) {

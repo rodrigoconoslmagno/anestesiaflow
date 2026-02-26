@@ -1,4 +1,3 @@
-import { Controller, type Control, type FieldValues, type Path } from 'react-hook-form';
 import { Dropdown, type DropdownProps } from 'primereact/dropdown';
 import { classNames } from 'primereact/utils';
 import { FieldWrapper } from '@/componentes/FieldWrapper';
@@ -7,91 +6,96 @@ import { FloatLabel } from 'primereact/floatlabel';
 import { useEffect, useState } from 'react';
 import { server } from '@/api/server';
 
-interface AppSelectProps<T extends FieldValues> extends Omit<DropdownProps, 'value' | 'onChange'> {
-  name: Path<T>;
-  control: Control<T>;
+export interface AppSelectProps extends Omit<DropdownProps, 'onChange'> {
+  name: string;
   label: string;
   url?: string;         // A URL base da entidade (ex: '/medicos')
   filterParams?: any;   // Filtros adicionais para o body do POST
   options?: any[];      // Possibilidade de passar options estáticos
   colSpan?: ColSpan;
   required?: boolean;
+  public_back?: boolean;
+  errorMessage?: string;
   onObjectChange?: (obj: any | null | undefined) => void;
+  filterFn?: (item: any) => boolean;
+  onChange?: (e: { value: any }) => void;
 }
 
-export const AppSelect = <T extends FieldValues>({ 
-  name, 
-  control, 
+export const AppSelect = ({ 
+  name,
   label, 
   url,
   filterParams = null, // Default: busca apenas ativos
   colSpan = 12, 
   required,
+  public_back,
+  errorMessage,
   onObjectChange,
-  ...props }: AppSelectProps<T>) => {
+  filterFn,
+  onChange,
+  value,
+  ...props }: AppSelectProps) => {
 
     const [data, setData] = useState<any[]>(props.options || []);
     const [loading, setLoading] = useState(false);
 
+    // 1. Lógica de Busca e Auto-seleção (filterFn)
     useEffect(() => {
-        // Só dispara a busca se houver uma URL e não houver options manuais
-        if (url && (!props.options || props.options.length === 0)) {
-            setLoading(true);
-            
-            // Utilizando seu método listar que faz POST
-            server.api.listar<any>(url, filterParams)
-            .then(res => {
-                setData(res);
-            })
-            .catch(err => {
-                console.error(`Erro ao carregar dados de ${url}:`, err);
-            })
-            .finally(() => setLoading(false));
+      if (url && (!props.options || props.options.length === 0)) {
+          setLoading(true);
+          const fetchMethod = public_back ? server.api_public.listar : server.api.listar;
+
+          fetchMethod<any>(url, filterParams)
+              .then(res => {
+                  const lista = res || [];
+                  setData(lista);
+
+                  if (filterFn && lista.length > 0) {
+                    const itemAlvo = lista.find(filterFn);
+                    if (itemAlvo) {
+                        const id = itemAlvo[props.optionValue || 'id'];
+                        onChange?.({ value: id });
+                        onObjectChange?.(itemAlvo);
+                    }
+                  }
+              })
+              .finally(() => setLoading(false));
+      }
+    }, [url, JSON.stringify(filterParams)]);
+
+    // 2. Lógica de Sincronização do Objeto (onObjectChange)
+    // Funciona tanto para o useState local quanto para o field.value do Form
+    useEffect(() => {
+      if (onObjectChange) {
+        if (!value) {
+          onObjectChange(null);
+        } else if (data.length > 0) {
+          const selectedObj = data.find(item => item[props.optionValue || 'id'] === value);
+          onObjectChange(selectedObj || null);
+        } else {
+          onObjectChange(null);
         }
-     }, [url, JSON.stringify(filterParams)]); // Recarrega se a URL ou filtros mudarem
+      }
+    }, [value, data, onObjectChange, props.optionValue]);
 
-
-  // Template para os 25 médicos: Nome em destaque + CRM/Especialidade discreto
-  const defaultItemTemplate = (option: any) => (
-    <div className="flex flex-col py-1">
-      <span className="font-semibold text-gray-800 leading-tight">{option.nome}</span>
-    </div>
-  );
+    // Template para os 25 médicos: Nome em destaque + CRM/Especialidade discreto
+    const defaultItemTemplate = (option: any) => (
+      <div className="flex flex-col py-1">
+        <span className="font-semibold text-gray-800 leading-tight">{option.nome}</span>
+      </div>
+    );
 
   return (
-    <Controller
-      name={name}
-      control={control}
-      render={({ field, fieldState: { error } }) => {
-
-      // Efeito para sincronizar o objeto quando o valor do formulário muda externamente (ex: Reset)
-      useEffect(() => {
-        if (onObjectChange) {
-          if (!field.value) {
-            onObjectChange(null);
-          } else if (data.length > 0) {
-            const selectedObj = data.find(item => item[props.optionValue || 'id'] === field.value);
-            if (selectedObj) {
-              onObjectChange(selectedObj);
-            }
-          } else {
-            onObjectChange(null);
-          }
-        }
-      }, [field.value, data]);
-
-        return (
         <FieldWrapper 
           label=""
-          error={error?.message} 
+          error={errorMessage} 
           className={getColSpanClass(colSpan)}
         >
           <FloatLabel className="custom-app-select-float-label">
             <Dropdown 
-              {...field} 
               {...props} 
               id={name}
-              value={field.value?? null}
+              value={value?? null}
               options={data || []} // Garante que options seja sempre um array
               filter
               showClear
@@ -102,22 +106,15 @@ export const AppSelect = <T extends FieldValues>({
               className={classNames(
                   'w-full border border-gray-500 rounded-lg outline-none transition-all duration-200 text-lg', 
                   props.className, 
-                  { 'p-invalid border-red-500': error })} 
+                  { 'p-invalid border-red-500': errorMessage })} 
               onChange={(e) => {
-                // 1. Atualiza o react-hook-form (com o ID)
-               // 1. Atualiza o react-hook-form
-                const valorParaForm = e.value ?? null;
-                field.onChange(valorParaForm);
-
-                // 2. Notifica o pai
+                // Notifica o pai (EscalaMedicoView) sobre a mudança
+                onChange?.(e); 
+                
+                // Se houver lógica de objeto, executa também
                 if (onObjectChange) {
-                  const selectedObj = data.find(item => item[props.optionValue || 'id'] === e.value);
-                  onObjectChange(selectedObj || null);
-                }
-              }}
-              onHide={() => {
-                if (field.value === null || field.value === undefined) {
-                    // Garante que o estado visual de "aberto" não permaneça
+                    const selectedObj = data.find(item => item[props.optionValue || 'id'] === e.value);
+                    onObjectChange(selectedObj || null);
                 }
               }}
             />
@@ -174,8 +171,5 @@ export const AppSelect = <T extends FieldValues>({
             }
           `}</style>
         </FieldWrapper>
-        );
-      }}
-    />
   );
 };

@@ -24,6 +24,13 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         window.addEventListener('server-offline', handleOffline);
 
         async function validate() {
+            const isPublicRoute = window.location.pathname.startsWith('/view/');
+
+            if (isPublicRoute) {
+                setLoading(false); // Apenas para o loading e permite renderizar a página
+                return;
+            }
+
             try {
                 // DESCOMENTADO: Necessário para recuperar a sessão via Cookie
                 const data = await server.auth.me();

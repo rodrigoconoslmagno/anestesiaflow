@@ -16,6 +16,9 @@ public interface EscalaRepository extends JpaRepository<Escala, Integer> {
 	@EntityGraph(attributePaths = {"medico", "itens", "itens.estabelecimento"})
 	List<Escala> findByMedico_IdAndDataBetweenOrderByDataAsc(Integer medicoId, LocalDate inicio, LocalDate fim);
 	
+	@EntityGraph(attributePaths = {"medico", "itens", "itens.estabelecimento"})
+	List<Escala> findByMedico_IdAndDataGreaterThanEqualOrderByDataAsc(Integer medicoId, LocalDate inicio);
+	
 	@EntityGraph(attributePaths = {"itens", "itens.estabelecimento", "medico"})
 	List<Escala> findByData(LocalDate data);
 	

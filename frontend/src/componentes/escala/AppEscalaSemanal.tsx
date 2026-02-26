@@ -8,15 +8,55 @@ import { getIntervalosEscala } from '@/types/escalaHelper';
 import { DateUtils } from '@/utils/DateUtils';
 
 interface AppEscalaSemanalProps {
-    control: Control<EscalaSemana>;
+    control: Control<EscalaSemana[]>;
     onAgendar?: (data: Date) => void;
 }
 
 export const AppEscalaSemanal = ({ control, onAgendar }: AppEscalaSemanalProps) => {
-    const medicoId = useWatch({ control, name: 'medicoId' });
-    const listaDeEscalas = useWatch({ control, name: 'escala' }) || [];
     const [dataReferencia, setDataReferencia] = useState(new Date());
-    const dataInicioEscala = useWatch({ control, name: 'dataInicio' });
+
+    const watchValue = useWatch({ control })
+
+    const semanas = useMemo(() => {
+        if (Array.isArray(watchValue)) return watchValue;
+        
+        // Se vier como objeto (comum no RHF ao usar reset em array raiz), 
+        // extraímos os valores que são do tipo objeto/escala
+        if (watchValue && typeof watchValue === 'object') {
+            return Object.values(watchValue).filter(item => 
+                item && typeof item === 'object' && 'dataInicio' in item
+            ) as EscalaSemana[];
+        }
+        return [] as EscalaSemana[];
+    }, [watchValue]);
+    
+    const { medicoId, dataInicioEscala } = useMemo(() => {
+        if (semanas.length > 0) {
+            // Como todos os itens são do mesmo médico, pegamos do primeiro
+            return {
+                medicoId: semanas[0].medicoId,
+                dataInicioEscala: semanas[0].dataInicio
+            };
+        }
+        return { medicoId: undefined, dataInicioEscala: undefined };
+    }, [semanas]); // Só recalcula se a lista de semanas mudar
+
+    const listaDeEscalasVisivel = useMemo(() => {
+        const base = new Date(dataReferencia);
+        const diaSemana = base.getDay(); 
+        const diff = base.getDate() - diaSemana + (diaSemana === 0 ? -6 : 1);
+        const segundaVisivel = new Date(base.setDate(diff));
+        const segundaISO = DateUtils.paraISO(segundaVisivel);
+    
+        // Proteção contra o erro 'find is not a function'
+        if (!Array.isArray(semanas)) return [];
+    
+        // Busca a semana que corresponde à segunda-feira exibida na tela
+        const semanaEncontrada = semanas.find(s => s.dataInicio === segundaISO);
+        
+        // Conforme o seu console, os dias estão dentro de 's.escala'
+        return semanaEncontrada ? semanaEncontrada.escala : [];
+    }, [dataReferencia, semanas]);
 
     useEffect(() => {
         // Se houver uma data vinda do banco (Edição), sincroniza o calendário
@@ -128,7 +168,7 @@ export const AppEscalaSemanal = ({ control, onAgendar }: AppEscalaSemanalProps) 
 
     // --- RENDERIZADOR DE CÉLULA COM UX MODERNA ---
     const renderCelulaHorario = (rowData: any, hora: string) => {
-        const escalaDoDia = listaDeEscalas.find((e: any) => e.data === rowData.data);
+        const escalaDoDia = listaDeEscalasVisivel?.find((e: any) => e.data === rowData.data);
         const alocacao = escalaDoDia?.itens?.find((item: any) => {
             const hItem = item.hora?.substring(0, 5) || item.hora;
             return hItem === hora;
@@ -174,10 +214,27 @@ export const AppEscalaSemanal = ({ control, onAgendar }: AppEscalaSemanalProps) 
                 }}
             >
                 {/* Ícone de "vazio" mais visível (sem opacity-20) */}
-                <i className="pi pi-minus-circle text-[14px] text-slate-400 group-hover:hidden animate-fadein"></i>
+                {/* {onAgendar && <i className="pi pi-minus-circle text-[14px] text-slate-400 group-hover:hidden animate-fadein"></i>} */}
                 
                 {/* Ícone de "adicionar" no hover */}
-                <i className="pi pi-plus-circle text-[20px] text-blue-600 hidden group-hover:block font-bold animate-fadein"></i>
+                {/* {onAgendar && <i className="pi pi-plus-circle text-[20px] text-blue-600 hidden group-hover:block font-bold animate-fadein"></i>} */}
+
+                <div className="relative flex items-center justify-center">
+                    {onAgendar ? (
+                        <>
+                            {/* Visual padrão: um "mais" bem discreto ou ponto azulado */}
+                            <i className="pi pi-plus text-[10px] text-slate-300 group-hover:hidden transition-all"></i>
+                            
+                            {/* Visual Hover: Botão de ação completo */}
+                            <div className="hidden group-hover:flex items-center justify-center w-6 h-6 bg-blue-600 rounded-full shadow-lg shadow-blue-200 animate-scalein">
+                                <i className="pi pi-plus text-white text-[12px] font-bold"></i>
+                            </div>
+                        </>
+                    ) : (
+                        // Se for apenas visualização (sem onAgendar), mostra uma tag discreta de "Livre"
+                        <div className="w-6 h-1 bg-slate-200 rounded-full group-hover:bg-emerald-100 transition-colors" title="Livre"></div>
+                    )}
+                </div>
             </div>
         );
     };

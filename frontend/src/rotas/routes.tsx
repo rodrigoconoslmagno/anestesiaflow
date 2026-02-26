@@ -9,6 +9,7 @@ import { MedicoView } from '@/paginas/MedicoView';
 import { EstabelecimentoView  } from '@/paginas/EstabelecimentoView';
 import { EscalaView } from '@/paginas/EscalaView';
 import { SudokuView } from '@/paginas/SudokuView';
+import { EscalaMedicoView } from '@/paginas/EscalaMedioView';
 // import { TelaPlanilhaMedica } from '@/paginas/TelaPlanilhaMedica';
 
 export const AppRoutes = () => {
@@ -17,6 +18,7 @@ export const AppRoutes = () => {
       <Routes>
         {/* ROTA PÚBLICA */}
         <Route path="/login" element={<Login />} />
+        <Route path="/view/escala/:sigla?" element={<EscalaMedicoView />} />
 
         {/* Rotas protegidas com Layout */}
         <Route element={<ProtectedRoute />}>
@@ -28,6 +30,7 @@ export const AppRoutes = () => {
             <Route path="/estabelecimento" element={<EstabelecimentoView />} />
             <Route path="/escala" element={<EscalaView />} />
             <Route path="/sudokuview" element={<SudokuView />} />
+            <Route path="/escalamedicoview" element={<EscalaMedicoView />} />
             {/* <Route path="/planilha" element={<TelaPlanilhaMedica />} /> */}
           </Route>
         </Route>

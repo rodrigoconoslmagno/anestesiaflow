@@ -1,5 +1,5 @@
 import { CrudBase } from '@/componentes/crud/CrudBase';
-import { AppSelect } from '@/componentes/select/AppSelect';
+import { AppSelectForm } from '@/componentes/select/AppSelectForm';
 import { AppStepperEscala } from '@/componentes/stepper/AppStepper';
 import { escalaSemanaSchema, type EscalaSemana } from '@/types/escala';
 import type { Medico } from '@/types/medico';
@@ -44,7 +44,7 @@ export const EscalaView = () => {
         >
             {(control ) => {
                 return (<>
-                    <AppSelect
+                    <AppSelectForm
                         name='medicoId'
                         label='Médico'
                         url="/medico"

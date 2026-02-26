@@ -38,6 +38,11 @@ export const server = {
     },  
   },
 
+  api_public: {
+    listar: <T>(url: string, filtros: any = {}) => 
+    httpClient.get<T[]>(`${url}`, { params: filtros }).then(res => res.data),
+  },
+
   // --- AUTENTICAÇÃO (Refatorada) ---
   auth: {
     async login(credentials: any) {

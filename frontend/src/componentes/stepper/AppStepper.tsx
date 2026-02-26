@@ -4,7 +4,6 @@ import { FieldWrapper } from '@/componentes/FieldWrapper';
 import { getColSpanClass } from '@/utils/GridUtils';
 import { useState } from 'react';
 import { useAppToast } from '@/context/ToastContext';
-import { AppEscalaSemanal } from '@/componentes/escala/AppEscalaSemanal';
 import { useWatch, type Control } from 'react-hook-form';
 import type { EscalaSemana } from '@/types/escala';
 import { AppEscalaDiaria } from '@/componentes/escala/AppEscalaDiaria';
@@ -30,12 +29,12 @@ export const AppStepperEscala = ({
         return !!medicoId; // Só vai para o 1 ou 2 se tiver médico
     };
 
-    const handleIrParaDia = (data: Date) => {
-        if (podeNavegar(1)) {
-            setDataNavegacao(data);
-            setActiveStep(1);
-        }
-    };
+    // const handleIrParaDia = (data: Date) => {
+    //     if (podeNavegar(1)) {
+    //         setDataNavegacao(data);
+    //         setActiveStep(1);
+    //     }
+    // };
 
     const handleStepChange = (e: {index: number}) => {
         if (!podeNavegar(e.index)) {
@@ -66,7 +65,7 @@ export const AppStepperEscala = ({
                 <StepperPanel header="Resumo">
                     <div className="w-full">
                         <div className="flex-1 w-full h-full min-h-[400px]">
-                            <AppEscalaSemanal control={control} onAgendar={handleIrParaDia}/>
+                            {/* <AppEscalaSemanal control={control_escala} onAgendar={handleIrParaDia}/> */}
                         </div>
                     </div>
                 </StepperPanel>

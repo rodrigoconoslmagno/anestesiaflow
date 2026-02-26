@@ -33,6 +33,7 @@ public class SecurityConfig {
 				.authorizeHttpRequests(authorize -> authorize.requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
 															 .requestMatchers(HttpMethod.POST, "/auth/logout").permitAll()
 															 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+															 .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
 															 .requestMatchers(
 																	    "/", 
 																	    "/login",
@@ -48,6 +49,7 @@ public class SecurityConfig {
 																	    "/static/**",
 																	    "/assets/**"												                
 													                ).permitAll()
+															 .requestMatchers("/**").authenticated()
 															 .requestMatchers("/{path:[^\\.]*}", "/*/{path:[^\\.]*}", "/**/{path:[^\\.]*}").permitAll()
 															 .anyRequest()
 															 .authenticated()

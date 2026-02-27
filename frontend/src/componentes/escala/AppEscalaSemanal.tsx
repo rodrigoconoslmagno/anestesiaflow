@@ -177,11 +177,12 @@ export const AppEscalaSemanal = ({ control, onAgendar }: AppEscalaSemanalProps) 
         });
 
         const bloqueado = !medicoId || verificarBloqueio(rowData.data, hora);
-
+        const almoco = hora === "11:00" || hora === "12:00"
         if (alocacao) {
             const iconeBase64 = formatarIcone(alocacao.icone);
             return (
-                <div className={`flex items-center justify-center mx-auto sm:w-[28px] sm:h-[28px] h-[24px] sm:min-w-[28px] min-w-[24px] ${bloqueado ? 'cursor-not-allowed' : ''}`}>
+                <div className={`flex items-center justify-center mx-auto sm:w-full] sm:h-[28px] h-[24px] sm:min-w-[28px] min-w-[24px] 
+                    ${bloqueado ? 'cursor-not-allowed' : ''} ${almoco ? 'bg-red-100' : 'bg-white'}`}>
                     <div 
                         className={`sm:w-[28px] sm:h-[28px]  w-[24px] h-[24px] rounded-full shadow-md flex items-center justify-center border-2 border-white transition-transform shadow-inne overflow-hidden
                                     ${bloqueado ? 'opacity-65' : 'hover:scale-110 shadow-md'}`}
@@ -199,15 +200,18 @@ export const AppEscalaSemanal = ({ control, onAgendar }: AppEscalaSemanalProps) 
 
         if (bloqueado) {
             return (
-                <div className="flex items-center justify-center w-full h-full bg-slate-50/50 cursor-not-allowed">
-                    <div className="w-[14px] h-[14px] bg-slate-200 rounded-full" />
+                <div className={`flex items-center justify-center w-full h-full cursor-not-allowed
+                        ${almoco ? 'bg-red-100' : ' bg-slate-50/50'} `}>
+                    <div className={`w-[14px] h-[14px]  rounded-full ${almoco ? 'bg-slate-300' : 'bg-slate-200'} `} />
                 </div>
             );
         }
 
         // Slot Vazio Moderno (Ghost Slot)
         return (
-            <div className="flex items-center justify-center w-full h-full group cursor-pointer"
+            <div className={`flex items-center justify-center w-full h-full group cursor-pointer
+                     ${almoco ? 'bg-red-100' :  'bg-white'}
+                `}
                 onClick={() => {
                     // Converte a string YYYY-MM-DD da linha para objeto Date
                     const [ano, mes, dia] = rowData.data.split('-').map(Number);
@@ -234,7 +238,8 @@ export const AppEscalaSemanal = ({ control, onAgendar }: AppEscalaSemanalProps) 
                         </>
                     ) : (
                         // Se for apenas visualização (sem onAgendar), mostra uma tag discreta de "Livre"
-                        <div className="sm:w-6 w-4 h-1 px-1 bg-slate-200 rounded-full group-hover:bg-emerald-100 transition-colors" title="Livre"></div>
+                        <div className={`sm:w-6 w-4 h-1 px-1 ${almoco ? 'bg-slate-300' : 'bg-slate-200'}  rounded-full group-hover:bg-emerald-100 transition-colors`}
+                            title="Livre"/>
                     )}
                 </div>
             </div>
@@ -269,9 +274,10 @@ export const AppEscalaSemanal = ({ control, onAgendar }: AppEscalaSemanalProps) 
                         style={{ minWidth: '15px' }} 
                         frozen // FIXA A COLUNA
                         alignFrozen="left"  
-                        bodyClassName="!p-1.8 sm:!p-2"
+                        bodyClassName="!p-1.8 sm:!p-2 w-1"
                         body={(rowData) => (
-                            <div className={`flex flex-row items-center justify-center gap-2 ${rowData.isHoje ? 'text-blue-600' : 'text-slate-500'}`}>
+                            <div className={`flex flex-row items-center justify-center gap-2 
+                                    ${rowData.isHoje ? 'text-blue-600' : 'text-slate-500'}`}>
                                 <span className="sm:text-[12px] text-[10px] font-black leading-none">
                                     {rowData.nomeDia}
                                 </span>
@@ -282,20 +288,20 @@ export const AppEscalaSemanal = ({ control, onAgendar }: AppEscalaSemanalProps) 
                         <Column 
                             key={hora.field} 
                             header={(
-                                <div className="flex justify-center items-center">
+                                <div className="flex justify-center items-center bg-slate-200">
                                     <span className={`sm:text-[12px] text-[10px] font-bold tracking-tight`}>
                                         {hora.header}
                                     </span>
                                 </div>
                             )}
                             bodyClassName="!p-0 !text-center"
-                            headerClassName="bg-slate-50 border-b border-slate-100 p-0 sm:min-w-[28px] min-w-[24px]"
+                            headerClassName="bg-slate-200 border-b border-slate-100 sm:p-1.5 p-0 sm:min-w-[28px] min-w-[24px]"
                             headerStyle={{ justifyContent: 'center' }}  
                             align="center" 
                             alignHeader="center"
                             pt={{
                                 headerContent: { className: 'justify-center' }, // Força o alinhamento central no PrimeReact
-                                bodyCell: { className: 'text-center' }
+                                bodyCell: { className: 'text-center sm:min-w-[28px] sm:min-h-[28px] w-[24px] h-[24px]' }
                             }}
                             className='p-0'
                             body={(rowData) => renderCelulaHorario(rowData, hora.field)}

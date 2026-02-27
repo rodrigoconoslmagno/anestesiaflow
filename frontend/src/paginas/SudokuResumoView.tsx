@@ -2,17 +2,23 @@ import { server } from "@/api/server";
 import type { Escala, EscalaItem } from "@/types/escala";
 import { getIntervalosEscala } from "@/types/escalaHelper";
 import { DateUtils } from "@/utils/DateUtils";
+import clsx from "clsx";
 import { Button } from "primereact/button";
 import { Column } from "primereact/column";
 import { DataTable } from "primereact/datatable";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const StaticCell = ({ alocacao }: { alocacao?: EscalaItem }) => {
+const StaticCell = ({ alocacao, hora }: { alocacao?: EscalaItem, hora: string }) => {
+    const almoco = hora === "11:00" || hora === "12:00"
     if (!alocacao) {
       return (
-        <div className="flex items-center justify-center sm:min-h-[28px] sm:min-w-[28px] min-h-[24px] min-w-[24px] border-r border-b border-slate-300 bg-white">
-          <div className="w-1 h-1 bg-slate-300 rounded-full opacity-40"></div>
+        <div className={clsx(
+            "flex items-center justify-center sm:min-h-[28px] sm:min-w-[28px] min-h-[24px] min-w-[24px] ",
+            "border-r border-b border-slate-300 ",
+            almoco ? "bg-red-100" : "bg-white"
+        )}>
+          <div className="sm:w-6 w-4 h-1 px-1 bg-slate-200 rounded-full group-hover:bg-emerald-100 transition-colors" title="Livre"></div>
         </div>
       );
     }
@@ -20,7 +26,10 @@ const StaticCell = ({ alocacao }: { alocacao?: EscalaItem }) => {
     const bgColor = alocacao.cor?.startsWith('#') ? alocacao.cor : `#${alocacao.cor}`;
   
     return (
-      <div className="flex items-center justify-center s;:min-h-[28px] sm:min-w-[28px] min-h-[24px] min-w-[24px] border-r border-b border-slate-300 bg-white">
+      <div className={clsx(
+        "flex items-center justify-center s;:min-h-[28px] sm:min-w-[28px] min-h-[24px] min-w-[24px] border-r border-b border-slate-300",
+        almoco ? "bg-red-100" : "bg-white"
+      )} >
         <div 
           style={{ backgroundColor: bgColor }}
           className="sm:w-[28px] sm:h-[28px] w-[24px] h-[24px] rounded-full border border-white shadow-sm flex items-center justify-center overflow-hidden"
@@ -45,6 +54,7 @@ export const SudokuResumoView = () => {
     const [loading, setLoading] = useState(false);
 
     const HORARIOS = useMemo(() => getIntervalosEscala(), []);
+    const isHoje = useMemo(() => new Date().toDateString() === dataAtiva.toDateString(), [dataAtiva]);
 
     useEffect(() => {
         const carregarDados = async () => {
@@ -62,17 +72,11 @@ export const SudokuResumoView = () => {
         carregarDados();
       }, [dataAtiva]);
 
-    const navegar = (dias: number) => {
-        const novaData = new Date(dataAtiva);
-        novaData.setDate(novaData.getDate() + dias);
-        setDataAtiva(novaData);
-      };
-
     return (
         <div className="flex flex-col h-screen bg-slate-50 overflow-hidden">
-            <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-slate-200 shadow-sm z-20">
+            <header className="flex items-center justify-between sm:px-4 sm:py-3 px-2 py-1 bg-white border-b border-slate-200 shadow-sm z-20">
                 {/* {(isSyncing || hasChangesToSave) && <div className="sync-glow-bar" />} */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 w-full">
                     {/* O botão sair sai do FAB e vem para o padrão mobile/tablet: Canto superior esquerdo */}
                     {!isPublicRoute && (
                         <>
@@ -91,21 +95,42 @@ export const SudokuResumoView = () => {
                         />
                         </> 
                     )}
-                    <h1 className="text-lg md:text-xl font-black text-slate-700 m-0">
+                    <h1 className="text-[9px] sm:text-xl font-black text-slate-700 m-0">
                         Sudoku Ddiário
                     </h1>
 
-                    <div className="flex items-center gap-2 bg-slate-100 rounded-lg p-1">
-                        <Button icon="pi pi-chevron-left" text className="p-button-sm" onClick={() => navegar(-1)} />
-                        <span className="text-xs font-bold px-2 whitespace-nowrap">
-                            {dataAtiva.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
-                        </span>
-                        <Button icon="pi pi-chevron-right" text className="p-button-sm" onClick={() => navegar(1)} />
+                    <div className="flex items-center gap-3 bg-slate-100 rounded-lg w-full">
+                        <Button 
+                            icon="pi pi-chevron-left" 
+                            className="p-button-rounded p-button-text text-slate-500 h-full" 
+                            onClick={() => { const d = new Date(dataAtiva); d.setDate(d.getDate() - 1); setDataAtiva(d); }} 
+                            disabled={isHoje} 
+                        />
+                        <div className="text-center flex flex-col items-center w-full">
+                            <div className="flex items-center gap-2">
+                                <span className="sm:text-[12px] text-[7px] uppercase font-bold text-slate-400 tracking-widest">
+                                    Escala Diária
+                                </span>
+                                {isHoje && (
+                                    <span className="bg-emerald-500 text-white sm:text-[10px] text-[7px] font-black px-1 py-0.25 rounded-full shadow-sm uppercase tracking-tighter">
+                                        Hoje
+                                    </span>
+                                )}
+                            </div>
+                            <span className="sm:text-lg text-[7px] font-black text-slate-700 capitalize leading-none">
+                                {dataAtiva.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
+                            </span>
+                        </div>
+                        <Button 
+                            icon="pi pi-chevron-right" 
+                            className="p-button-rounded p-button-text text-slate-500 h-full" 
+                            onClick={() => { const d = new Date(dataAtiva); d.setDate(d.getDate() + 1); setDataAtiva(d); }} 
+                        />
                     </div>
                 </div>
             </header>
 
-            <main className="flex-grow p-1 overflow-hidden">
+            <main className="flex-grow sm:!p-2 !p-0 overflow-hidden">
                 <div className="h-full rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">
                 <DataTable 
                     value={escalas}
@@ -126,11 +151,12 @@ export const SudokuResumoView = () => {
                             // Alvo: O elemento TH (Header)
                             headerCell: { 
                                 className: '!bg-slate-200 !border-r-2 !border-blue-500',
-                                style: { padding: '0px' } 
+                                style: { padding: '0px'  } 
                             },
                             // Alvo: O texto dentro do Header
                             headerTitle: { 
-                                className: 'sm:!text-[12px] !text-[9px] !font-black !text-slate-700' 
+                                className: 'sm:!text-[12px] !text-[9px] !font-black !text-slate-700', 
+                                style: { padding: '0px' } 
                             },
                             // Alvo: A célula TD (Corpo)
                             bodyCell: { 
@@ -138,7 +164,7 @@ export const SudokuResumoView = () => {
                             }
                         }}
                         body={(escala: Escala) => (
-                            <div className="flex flex-row items-center justify-center gap-2 text-slate-500">
+                            <div className="flex flex-row items-center justify-center gap-2 text-slate-500 bg-slate-100">
                                 <span className="sm:text-[12px] text-[8px] font-black leading-none">
                                     {escala.medicoSigla?.substring(0, 3).toUpperCase()}
                                 </span>
@@ -148,22 +174,22 @@ export const SudokuResumoView = () => {
                     
                     {/* Colunas de Horários Dinâmicas */}
                     {HORARIOS.map(h => (
-                    <Column 
-                        key={h.field} 
-                        header={
-                            <span className="sm:text-[12px] text-[9px] font-bold text-blue-600">{h.header}</span>
-                        }
-                        headerClassName="bg-slate-50 border-b border-r border-slate-300 p-0"
-                        className='p-0'
-                        body={(escala: Escala) => {
-                        const itemAlocado = escala.itens?.find((i: EscalaItem) => {
-                            const hItem = i.hora?.substring(0, 5) || i.hora;
-                            return hItem === h.field;
-                        });
-                        return <StaticCell alocacao={itemAlocado} />;
-                        }} 
-                    />
-                    ))} 
+                        <Column 
+                            key={h.field} 
+                            header={
+                                <span className="sm:text-[12px] text-[9px] font-bold text-blue-600">{h.header}</span>
+                            }
+                            headerClassName="bg-slate-50 border-b border-r border-slate-300 p-0"
+                            className='p-0'
+                            body={(escala: Escala) => {
+                                const itemAlocado = escala.itens?.find((i: EscalaItem) => {
+                                    const hItem = i.hora?.substring(0, 5) || i.hora;
+                                    return hItem === h.field;
+                                });
+                                return <StaticCell alocacao={itemAlocado} hora={h.field} />;
+                            }} 
+                        />
+                        ))} 
                 </DataTable>
                 </div>
             </main>

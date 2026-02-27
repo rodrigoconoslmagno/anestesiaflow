@@ -41,9 +41,17 @@
     background: #f1f5f9 !important;
     color: #475569 !important;
     font-size: 11px !important;
-    padding: 10px 2px !important;
+    padding: 2px 2px !important;
     border: 1px solid #e2e8f0 !important;
     text-align: center !important;
+}
+
+/* ESTILO PARA DESKTOP (Equivalente ao sm: do Tailwind) */
+@media (min-width: 640px) {
+    .sudoku-table-custom .p-datatable-thead > tr > th {
+        font-size: 10px !important; /* Fonte maior no desktop */
+        padding: 10px 2px !important;  /* Mais respiro no desktop */
+    }
 }
 
 .sudoku-table-custom .p-column-header-content {

@@ -181,7 +181,7 @@ export const AppEscalaSemanal = ({ control, onAgendar }: AppEscalaSemanalProps) 
         if (alocacao) {
             const iconeBase64 = formatarIcone(alocacao.icone);
             return (
-                <div className={`flex items-center justify-center mx-auto sm:w-full] sm:h-[28px] h-[24px] sm:min-w-[28px] min-w-[24px] 
+                <div className={`flex items-center justify-center mx-auto sm:w-full sm:h-[28px] h-[24px] sm:min-w-[28px] min-w-[24px] 
                     ${bloqueado ? 'cursor-not-allowed' : ''} ${almoco ? 'bg-red-100' : 'bg-white'}`}>
                     <div 
                         className={`sm:w-[28px] sm:h-[28px]  w-[24px] h-[24px] rounded-full shadow-md flex items-center justify-center border-2 border-white transition-transform shadow-inne overflow-hidden

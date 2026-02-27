@@ -23,7 +23,8 @@ const DroppableCell = ({ id, alocacao, bloqueado, isPaintingMode, onMouseDown, o
   });
 
   const [medicoId, hora] = id.split('|');
-
+  const almoco = hora === "11:00" || hora === "12:00"
+  console.log("analise hora", hora)
   return (
     <div 
       ref={setNodeRef} 
@@ -33,8 +34,9 @@ const DroppableCell = ({ id, alocacao, bloqueado, isPaintingMode, onMouseDown, o
       onMouseDown={(e) => isPaintingMode && onMouseDown?.(e)}
       onMouseEnter={(e) => isPaintingMode && onMouseEnter?.(e)}
       className={`flex items-center justify-center min-h-[28px] min-w-[28px] border-r border-b border-slate-300 transition-colors
-          ${bloqueado ? 'bg-slate-50/50 cursor-not-allowed' : 'hover:bg-blue-50/50'}
-          ${isOver && !bloqueado ? 'bg-blue-200' : ''}`}
+          ${bloqueado ? (almoco ? 'bg-red-100' : 'bg-slate-50/50 cursor-not-allowed' ) : 'hover:bg-blue-50/50'}
+          ${isOver && !bloqueado ? 'bg-blue-200' : ''}
+          ${almoco ? 'bg-red-100' : ''}`}
       style={{ touchAction: isPaintingMode ? 'none' : 'auto' }}
     >
       {alocacao ? (
@@ -47,9 +49,9 @@ const DroppableCell = ({ id, alocacao, bloqueado, isPaintingMode, onMouseDown, o
           disabled={disabled}
         />
       ) : (
-        bloqueado && <div className="w-[14px] h-[14px] bg-slate-200 rounded-full opacity-50" />
+        bloqueado && <div className={`w-[14px] h-[14px] ${almoco ? 'bg-slate-300' : 'bg-slate-200'} rounded-full opacity-50`}/>
       )}
-      {!alocacao && !bloqueado && <div className="w-1 h-1 bg-slate-300 rounded-full opacity-40"></div>}
+        {!alocacao && !bloqueado && <div className={`w-2 h-2 ${almoco ? 'bg-slate-300': 'bg-slate-200'} rounded-full opacity-40`}/>}
     </div>
   );
 };
@@ -64,8 +66,6 @@ const DraggableItem = ({ alocacao, medicoId, horaOriginal, isPaintingMode, bloqu
         origem: { medicoId, hora: horaOriginal }
     }
   });
-
-  // Consolidamos os estilos aqui
   const styleFinal = {
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     zIndex: isDragging ? 999 : 1,
@@ -84,8 +84,8 @@ const DraggableItem = ({ alocacao, medicoId, horaOriginal, isPaintingMode, bloqu
       {...(isPaintingMode ? {} : listeners)} 
       {...(isPaintingMode ? {} : attributes)}
       onDragStart={(e) => (isPaintingMode || bloqueado) && e.preventDefault()}  
-      className="w-[28px] h-[28px] rounded-full border border-white shadow-sm flex items-center justify-center overflow-hidden active:cursor-grabbing"
-    >
+      className="w-[28px] h-[28px] rounded-full border border-white shadow-sm flex items-center
+                 justify-center overflow-hidden active:cursor-grabbing">
       {alocacao.icone && (
         <img 
           src={alocacao.icone.startsWith('data:') ? alocacao.icone : `data:image/png;base64,${alocacao.icone}`} 
@@ -677,8 +677,26 @@ export const SudokuView = () => {
                   header="MÉD" 
                   align="center" 
                   style={{ width: '55px' }} 
+                  pt={{
+                    // Alvo: O elemento TH (Header)
+                    headerCell: { 
+                        className: '!bg-slate-200 !border-r-2 !border-blue-500',
+                        style: { padding: '0px'  } 
+                    },
+                    // Alvo: O texto dentro do Header
+                    headerTitle: { 
+                        className: 'sm:!text-[12px] !text-[9px] !font-black !text-slate-700', 
+                        style: { padding: '0px' } 
+                    },
+                    // Alvo: A célula TD (Corpo)
+                    bodyCell: { 
+                        className: '!bg-slate-200 !border-r-2 !border-blue-500 !p-0' 
+                    }
+                  }}
                   body={(escala: Escala) => (
-                    <div className="text-[11px] font-black text-slate-700">{escala.medicoSigla?.substring(0, 3).toUpperCase()}</div>
+                    <div className="text-[11px] font-black text-slate-700 bg-slate-100">
+                      {escala.medicoSigla?.substring(0, 3).toUpperCase()}
+                    </div>
                   )} 
                 />
                 

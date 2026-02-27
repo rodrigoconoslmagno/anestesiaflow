@@ -43,14 +43,32 @@
     font-size: 11px !important;
     padding: 10px 2px !important;
     border: 1px solid #e2e8f0 !important;
+    text-align: center !important;
+}
+
+.sudoku-table-custom .p-column-header-content {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
 }
 
 .sudoku-table-custom .p-datatable-tbody > tr > td {
     padding: 0 !important;
+    vertical-align: middle !important;
+    text-align: center !important;
     width: 28px !important;
     min-width: 28px !important;
     height: 28px !important;
     border: 1px solid #e2e8f0 !important;
+}
+
+/* Garante que o container interno da célula seja um flex centralizado */
+.sudoku-table-custom .p-datatable-tbody > tr > td > div {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 100% !important;
+    width: 100% !important;
 }
 
 /* Coluna Médico */
@@ -62,6 +80,7 @@
 /* Garante que o container do grid não bloqueie o toque nos draggables */
 .sudoku-table-custom .p-datatable-wrapper {
     touch-action: pan-x pan-y; /* Permite scroll na tabela, mas... */
+    overflow-x: auto !important;
 }
 
 /* Remove o padding excessivo do container do header do DataTable */
@@ -79,8 +98,7 @@
 /* Eleva a máscara de loading do PrimeReact para ficar acima de tudo na tabela */
 .sudoku-table-custom .p-datatable-loading-overlay {
     z-index: 100 !important; /* Valor alto para superar o z-index do header */
-    /* Trocamos o branco (255,255,255) por um cinza ardósia (15, 23, 42) com baixa opacidade */
-    background-color: rgba(15, 23, 42, 0.45) !important;
+    background-color: rgba(255, 255, 255, 0.7); /* Deixa um pouco transparente para ver o fundo */
     backdrop-filter: blur(2px); /* Efeito moderno de desfoque opcional */
 }
 
@@ -96,16 +114,18 @@
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    margin: auto;
+    margin: 0 auto;
     display: flex;
     align-items: center;
     justify-content: center;
+    box-sizing: border-box;
     color: white;
     font-size: 10px;
     font-weight: 800;
     cursor: grab;
     box-shadow: inset 0 -2px 0 rgba(0,0,0,0.2);
     touch-action: none;
+    overflow: hidden;
 }
 
 /* No item que você arrasta */
@@ -151,6 +171,11 @@
 /* Impede que a imagem dentro da bolinha "roube" o toque */
 .clinica-dot img, 
 .rounded-full img {
+    width: 100%;       /* Preenche toda a largura da bolinha */
+    height: 100%;      /* Preenche toda a altura da bolinha */
+    margin: 0 !important;
+    padding: 0 !important;
+    object-fit: cover;
     pointer-events: none !important;
     -webkit-user-drag: none !important;
 }

@@ -22,7 +22,7 @@ export interface MenuItem {
       children: [
         { label: 'Escalas', icon: 'pi pi-user-edit', to: '/escala' },
         { label: 'Escala Médica', icon: 'pi pi-globe', to: '/escalamedicoview' },
-        // { label: 'Planilha', icon: 'pi pi-user-edit', to: '/planilha' },
+        { label: 'Sudoku Resumo', icon: 'pi pi-user-edit', to: '/sudokuresumoview' },
         { label: 'Sudoku', icon: 'pi pi-globe', to: '/sudokuview' },
       ]
     }

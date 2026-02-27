@@ -181,14 +181,14 @@ export const AppEscalaSemanal = ({ control, onAgendar }: AppEscalaSemanalProps) 
         if (alocacao) {
             const iconeBase64 = formatarIcone(alocacao.icone);
             return (
-                <div className={`flex items-center justify-center h-[30px] min-w-[30px] ${bloqueado ? 'cursor-not-allowed' : ''}`}>
+                <div className={`flex items-center justify-center mx-auto sm:w-[28px] sm:h-[28px] h-[24px] sm:min-w-[28px] min-w-[24px] ${bloqueado ? 'cursor-not-allowed' : ''}`}>
                     <div 
-                        className={`w-[30px] h-[30px] rounded-full shadow-md flex items-center justify-center border-2 border-white transition-transform shadow-inne overflow-hidden
+                        className={`sm:w-[28px] sm:h-[28px]  w-[24px] h-[24px] rounded-full shadow-md flex items-center justify-center border-2 border-white transition-transform shadow-inne overflow-hidden
                                     ${bloqueado ? 'opacity-65' : 'hover:scale-110 shadow-md'}`}
                         style={{ backgroundColor: alocacao.cor?.startsWith('#') ? alocacao.cor : `#${alocacao.cor}` }}
                     >
                         {iconeBase64 ? (
-                            <img src={iconeBase64} className="w-[32px] h-[32px] object-contain" alt="Hosp" />
+                            <img src={iconeBase64} className="sm:w-[32px] sm:h-[32px] w-[28px] h-[28px] object-contain" alt="Hosp" />
                         ) : (
                             <i className=" text-white text-[11px]" />
                         )}
@@ -234,7 +234,7 @@ export const AppEscalaSemanal = ({ control, onAgendar }: AppEscalaSemanalProps) 
                         </>
                     ) : (
                         // Se for apenas visualização (sem onAgendar), mostra uma tag discreta de "Livre"
-                        <div className="w-6 h-1 bg-slate-200 rounded-full group-hover:bg-emerald-100 transition-colors" title="Livre"></div>
+                        <div className="sm:w-6 w-4 h-1 px-1 bg-slate-200 rounded-full group-hover:bg-emerald-100 transition-colors" title="Livre"></div>
                     )}
                 </div>
             </div>
@@ -268,10 +268,11 @@ export const AppEscalaSemanal = ({ control, onAgendar }: AppEscalaSemanalProps) 
                         className="bg-slate-200 border-r" 
                         style={{ minWidth: '15px' }} 
                         frozen // FIXA A COLUNA
-                        alignFrozen="left"
+                        alignFrozen="left"  
+                        bodyClassName="!p-1.8 sm:!p-2"
                         body={(rowData) => (
                             <div className={`flex flex-row items-center justify-center gap-2 ${rowData.isHoje ? 'text-blue-600' : 'text-slate-500'}`}>
-                                <span className="text-base font-black leading-none">
+                                <span className="sm:text-[12px] text-[10px] font-black leading-none">
                                     {rowData.nomeDia}
                                 </span>
                             </div>
@@ -282,15 +283,19 @@ export const AppEscalaSemanal = ({ control, onAgendar }: AppEscalaSemanalProps) 
                             key={hora.field} 
                             header={(
                                 <div className="flex justify-center items-center">
-                                    <span className={`text-[12px] font-bold tracking-tight`}>
+                                    <span className={`sm:text-[12px] text-[10px] font-bold tracking-tight`}>
                                         {hora.header}
                                     </span>
                                 </div>
                             )}
-                            headerClassName="bg-slate-50 border-b border-slate-100 p-0 min-w-[28px]"
+                            bodyClassName="!p-0 !text-center"
+                            headerClassName="bg-slate-50 border-b border-slate-100 p-0 sm:min-w-[28px] min-w-[24px]"
                             headerStyle={{ justifyContent: 'center' }}  
+                            align="center" 
+                            alignHeader="center"
                             pt={{
-                                headerContent: { className: 'justify-center' } // Força o alinhamento central no PrimeReact
+                                headerContent: { className: 'justify-center' }, // Força o alinhamento central no PrimeReact
+                                bodyCell: { className: 'text-center' }
                             }}
                             className='p-0'
                             body={(rowData) => renderCelulaHorario(rowData, hora.field)}

@@ -47,7 +47,8 @@ public class SecurityConfig {
 																	    "/favicon.ico",
 																	    "/manifest.json",
 																	    "/static/**",
-																	    "/assets/**"												                
+																	    "/assets/**",	
+																	    "/view/**"
 													                ).permitAll()
 															 .requestMatchers("/**").authenticated()
 															 .requestMatchers("/{path:[^\\.]*}", "/*/{path:[^\\.]*}", "/**/{path:[^\\.]*}").permitAll()

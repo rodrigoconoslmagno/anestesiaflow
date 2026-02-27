@@ -143,11 +143,13 @@ export const AppEscalaSemanal = ({ control, onAgendar }: AppEscalaSemanalProps) 
             const dataDia = new Date(segundaRef);
             dataDia.setDate(segundaRef.getDate() + i);
             const dataISO = DateUtils.paraISO(dataDia);
-    
+            const inicialDia = dataDia.toLocaleDateString('pt-BR', { weekday: 'short' })
+            .charAt(0)
+            .toUpperCase();
             return {
                 id: i,
                 data: dataISO,
-                nomeDia: dataDia.toLocaleDateString('pt-BR', { weekday: 'short' }).toUpperCase(),
+                nomeDia: inicialDia,
                 dataExibicao: dataDia.getDate(),
                 isHoje: DateUtils.paraISO(new Date()) === dataISO,
                 _medicoAtivo: medicoId
@@ -262,15 +264,15 @@ export const AppEscalaSemanal = ({ control, onAgendar }: AppEscalaSemanalProps) 
                            scrollable
                 >
                     <Column 
-                        header="S/D" 
+                        header="" 
                         className="bg-slate-200 border-r" 
-                        style={{ minWidth: '40px' }} 
+                        style={{ minWidth: '15px' }} 
                         frozen // FIXA A COLUNA
                         alignFrozen="left"
                         body={(rowData) => (
                             <div className={`flex flex-row items-center justify-center gap-2 ${rowData.isHoje ? 'text-blue-600' : 'text-slate-500'}`}>
                                 <span className="text-base font-black leading-none">
-                                    {rowData.dataExibicao}
+                                    {rowData.nomeDia}
                                 </span>
                             </div>
                         )}

@@ -3,11 +3,25 @@ import type { Escala, EscalaItem } from "@/types/escala";
 import { getIntervalosEscala } from "@/types/escalaHelper";
 import { DateUtils } from "@/utils/DateUtils";
 import clsx from "clsx";
+import { addLocale, locale } from "primereact/api";
 import { Button } from "primereact/button";
+import { Calendar } from "primereact/calendar";
 import { Column } from "primereact/column";
 import { DataTable } from "primereact/datatable";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+addLocale('pt-BR', {
+    firstDayOfWeek: 0,
+    dayNames: ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'],
+    dayNamesShort: ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'],
+    dayNamesMin: ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'],
+    monthNames: ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'],
+    monthNamesShort: ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'],
+    today: 'Hoje',
+    clear: 'Limpar',
+  });
+  locale('pt-BR');
 
 const StaticCell = ({ alocacao, hora }: { alocacao?: EscalaItem, hora: string }) => {
     const almoco = hora === "11:00" || hora === "12:00"
@@ -107,19 +121,48 @@ export const SudokuResumoView = () => {
                             disabled={isHoje} 
                         />
                         <div className="text-center flex flex-col items-center w-full">
-                            <div className="flex items-center gap-2">
-                                <span className="sm:text-[12px] text-[7px] uppercase font-bold text-slate-400 tracking-widest">
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">
                                     Escala Diária
                                 </span>
                                 {isHoje && (
-                                    <span className="bg-emerald-500 text-white sm:text-[10px] text-[7px] font-black px-1 py-0.25 rounded-full shadow-sm uppercase tracking-tighter">
+                                    <span className="bg-emerald-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-sm uppercase">
                                         Hoje
                                     </span>
                                 )}
                             </div>
-                            <span className="sm:text-lg text-[7px] font-black text-slate-700 capitalize leading-none">
-                                {dataAtiva.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
-                            </span>
+
+                            <div className="relative group">
+                                {/* Camada Visual */}
+                                <div className="flex items-center gap-2 px-3 py-1 rounded-lg group-hover:bg-slate-100 transition-all cursor-pointer border border-transparent group-hover:border-slate-200">
+                                    <span className="text-lg font-black text-slate-700 capitalize leading-none">
+                                        {dataAtiva.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
+                                    </span>
+                                    <i className="pi pi-calendar text-blue-600 text-lg" />
+                                </div>
+
+                                {/* Calendar realçado e resetado por KEY para evitar travamento */}
+                                <div className="absolute inset-0 opacity-0">
+                                    <Calendar 
+                                        key={dataAtiva.getTime()} // Força o refresh do componente interno
+                                        value={dataAtiva} 
+                                        onChange={(e) => {
+                                            if (e.value) {
+                                                setDataAtiva(e.value as Date);
+                                            }
+                                        }} 
+                                        minDate={new Date()} 
+                                        showButtonBar // ATIVA O BOTÃO HOJE E LIMPAR
+                                        hideOnDateTimeSelect={true} // Fecha ao selecionar
+                                        locale="pt-BR"
+                                        appendTo={document.body}
+                                        touchUI={window.innerWidth < 768}
+                                        readOnlyInput
+                                        className="w-full h-full"
+                                        inputClassName="w-full h-full cursor-pointer"
+                                    />
+                                </div>
+                            </div>
                         </div>
                         <Button 
                             icon="pi pi-chevron-right" 

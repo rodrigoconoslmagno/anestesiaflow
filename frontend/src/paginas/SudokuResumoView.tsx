@@ -104,7 +104,7 @@ export const SudokuResumoView = () => {
                         />
                         <Button 
                             icon="pi pi-arrow-left" 
-                            className="p-button-rounded p-button-text p-button-secondary md:hidden border-red-200 text-red-500" 
+                            className="p-button-rounded p-button-text p-button-secondary h-full md:hidden border-red-200 text-red-500" 
                             onClick={() => navigate(-1)} 
                         />
                         </> 
@@ -121,12 +121,12 @@ export const SudokuResumoView = () => {
                             disabled={isHoje} 
                         />
                         <div className="text-center flex flex-col items-center w-full">
-                            <div className="flex items-center gap-2 mb-1">
-                                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">
+                            <div className="flex items-center gap-2">
+                                <span className="sm:text-[12px] text-[7px] uppercase font-bold text-slate-400 tracking-widest">
                                     Escala Diária
                                 </span>
                                 {isHoje && (
-                                    <span className="bg-emerald-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-sm uppercase">
+                                    <span className="bg-emerald-500 text-white sm:text-[10px] text-[7px] font-black px-1 py-0.25 rounded-full shadow-sm uppercase">
                                         Hoje
                                     </span>
                                 )}
@@ -135,10 +135,10 @@ export const SudokuResumoView = () => {
                             <div className="relative group">
                                 {/* Camada Visual */}
                                 <div className="flex items-center gap-2 px-3 py-1 rounded-lg group-hover:bg-slate-100 transition-all cursor-pointer border border-transparent group-hover:border-slate-200">
-                                    <span className="text-lg font-black text-slate-700 capitalize leading-none">
+                                    <span className="sm:text-lg text-[9px] font-black text-slate-700 capitalize leading-none">
                                         {dataAtiva.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
                                     </span>
-                                    <i className="pi pi-calendar text-blue-600 text-lg" />
+                                    <i className="pi pi-calendar text-blue-600 sm:text-lg text-[9px]" />
                                 </div>
 
                                 {/* Calendar realçado e resetado por KEY para evitar travamento */}

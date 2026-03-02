@@ -1,6 +1,8 @@
 package br.com.anestesiaflow.usuario.controller;
 
 import java.util.List;
+import java.util.Map;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -31,6 +33,11 @@ public class UsuarioController {
         return ResponseEntity.ok(usuarioService.listarTodos());
     }
 
+	@PostMapping("/buscarid")
+	public ResponseEntity<UsuarioResponseDTO> buscaPorId(@RequestBody Map<String, Integer> payload) {
+		Integer id = payload.get("id");
+		return ResponseEntity.ok(usuarioService.buscaId(id));
+	}
 	
 	@PostMapping
     public ResponseEntity<UsuarioResponseDTO> criar(@Validated @RequestBody UsuarioRequestDTO dto) {

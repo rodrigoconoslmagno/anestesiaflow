@@ -27,6 +27,11 @@ public class UsuarioService {
                 .toList();
     }
 	
+	public UsuarioResponseDTO buscaId(Integer id) {
+		Usuario usuario = usuarioRepository.findById(id).orElseThrow(() -> new BusinessException("Usuário não encontrado")); 
+		return mapperToResponseDTO(usuario);
+	}
+	
 	public UsuarioResponseDTO salvar(UsuarioRequestDTO dto) {
 		Usuario usuario = mapperToUsuario(dto);
 		

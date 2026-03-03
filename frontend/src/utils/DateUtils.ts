@@ -28,12 +28,18 @@ export class DateUtils {
      * Útil para transformações no Zod ou antes do envio via API.
      */
     static paraISO(data: Date | string): string {
-      if (!data) {
-        return '';
+      if (!data) return '';
+  
+      // Se for string, evitamos o 'new Date(string)' que causa o atraso de um dia
+      if (typeof data === 'string') {
+        // Se vier do banco como '2024-03-02T03:00:00Z', pegamos só a data
+        const apenasData = data.split('T')[0]; 
+        if (apenasData.includes('-')) return apenasData; // Já está no formato YYYY-MM-DD
       }
-      const d = typeof data === 'string' ? new Date(data) : data;
+    
+      const d = data instanceof Date ? data : new Date(data);
       const ano = d.getFullYear();
-      const mes = String(d.getMonth() + 1).padStart(2, '0'); // Meses começam em 0
+      const mes = String(d.getMonth() + 1).padStart(2, '0');
       const dia = String(d.getDate()).padStart(2, '0');
       
       return `${ano}-${mes}-${dia}`;

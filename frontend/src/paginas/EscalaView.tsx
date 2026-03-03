@@ -1,14 +1,27 @@
 import { CrudBase } from '@/componentes/crud/CrudBase';
+import { AppSelect } from '@/componentes/select/AppSelect';
 import { AppSelectForm } from '@/componentes/select/AppSelectForm';
 import { AppStepperEscala } from '@/componentes/stepper/AppStepper';
-import { escalaSemanaSchema, type EscalaSemana } from '@/types/escala';
+import { type EscalaEdicao, escalaEdicaoSchema } from '@/types/escala';
 import type { Medico } from '@/types/medico';
 import { DateUtils } from '@/utils/DateUtils';
+import { useState } from 'react';
 
 export const EscalaView = () => {
 
-    // 1. Criamos uma Ref para manter o rastro do médico "ao vivo"
     const RESOURCE_PATH = '/escala';
+
+    const [filtroMedicoId, setFiltroMedicoId] = useState<number | undefined>(undefined);
+    const [paramsBusca, setParamsBusca] = useState({});
+
+    const handleApply = () => {
+        setParamsBusca({ medicoId: filtroMedicoId });
+    };
+
+    const handleClear = () => {
+        setFiltroMedicoId(undefined);
+        setParamsBusca({});
+    };
 
     // Template para o médico
     const medicoTemplate = (option: Medico) => {
@@ -17,15 +30,36 @@ export const EscalaView = () => {
     };
 
     return (
-        <CrudBase<EscalaSemana>
+        <CrudBase<EscalaEdicao>
             title="Escala"
-            // filterContent={<p>Teste de Filtro</p>}
+            filterContent={(
+                <div className="p-fluid grid grid-cols-12 w-full">
+                    <AppSelect
+                        className='mb-0 mt-2'
+                        name="filtroMedico"
+                        label=""
+                        url="/medico"
+                        value={filtroMedicoId}
+                        onChange={(e) => setFiltroMedicoId(e.value)}
+                        colSpan={12} // No mobile ocupa tudo, no desktop podemos ajustar
+                        showClear // Permite limpar o filtro para ver todos
+                        filter // Habilita busca interna no select
+                        valueTemplate={medicoTemplate}
+                        itemTemplate={medicoTemplate}
+                        optionLabel="nome"
+                        optionValue="id"
+                        placeholder="Todos os médicos"
+                    />
+                </div>
+            )}
+            onApplyFilters={handleApply}
+            filterParams={paramsBusca}
+            onClearFilters={handleClear}
             resourcePath={RESOURCE_PATH}
-            schema={escalaSemanaSchema}
+            schema={escalaEdicaoSchema}
             defaultValues={{ 
                 medicoId: undefined,
-                escala: [],
-                dataInicio: undefined
+                semana: []
             }}
             columns={[
                 { field: 'medicoNome',
@@ -42,7 +76,7 @@ export const EscalaView = () => {
                 }
             ]}
         >
-            {(control ) => {
+            {(control) => {
                 return (<>
                     <AppSelectForm
                         name='medicoId'
@@ -56,12 +90,6 @@ export const EscalaView = () => {
                         itemTemplate={medicoTemplate}
                         colSpan={12}
                     />
-
-                    {/* <AppFileUpload 
-                        label='Selecione uma planilha'
-                        url={RESOURCE_PATH + '/upload'}
-                        colSpan={6}
-                    /> */}
 
                     <AppStepperEscala 
                         control={control}

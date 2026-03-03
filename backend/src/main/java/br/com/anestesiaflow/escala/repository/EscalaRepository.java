@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
-
+import org.springframework.data.repository.query.Param;
 import br.com.anestesiaflow.escala.dto.EscalaSemanaSummaryDTO;
 import br.com.anestesiaflow.escala.entidade.Escala;
 import jakarta.transaction.Transactional;
@@ -31,6 +31,7 @@ public interface EscalaRepository extends JpaRepository<Escala, Integer> {
 			        (date_trunc('week', e.data) + interval '6 days')::date as dataFim
 			    FROM Escala e
 			    INNER JOIN Medico m ON e.medicoid = m.id
+			    WHERE (:medicoId IS NULL OR e.medicoid = :medicoId)
 			    GROUP BY 
 			        e.medicoid, 
 			        m.nome, 
@@ -39,7 +40,7 @@ public interface EscalaRepository extends JpaRepository<Escala, Integer> {
 			        dataFim
 			    ORDER BY dataInicio DESC, m.nome ASC
 		    """, nativeQuery = true)
-	List<EscalaSemanaSummaryDTO> findEscalasAgrupadasComMedico();
+	List<EscalaSemanaSummaryDTO> findEscalasAgrupadasComMedico(@Param("medicoId") Integer medicoId);
 	
 	@Modifying
     @Transactional

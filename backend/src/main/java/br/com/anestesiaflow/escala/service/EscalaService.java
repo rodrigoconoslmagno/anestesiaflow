@@ -18,6 +18,7 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import br.com.anestesiaflow.escala.dto.EscalaEdicaoDTO;
 import br.com.anestesiaflow.escala.dto.EscalaItemResponseDTO;
 import br.com.anestesiaflow.escala.dto.EscalaResponseDTO;
 import br.com.anestesiaflow.escala.dto.EscalaSemanaDTO;
@@ -50,8 +51,13 @@ public class EscalaService {
 		this.entityManager = entityManager;
 	}
 	
-	public List<EscalaSemanaSummaryDTO> listarTodos(){
-		return escalaRepository.findEscalasAgrupadasComMedico();
+	public List<EscalaSemanaSummaryDTO> listarTodos(Map<String, Object> filtros){
+		if (filtros != null) {
+			if (filtros.get("medicoId") != null) {
+				return escalaRepository.findEscalasAgrupadasComMedico((Integer) filtros.get("medicoId"));
+			}
+		}
+		return escalaRepository.findEscalasAgrupadasComMedico(null);
 	}
 	
 	public List<EscalaResponseDTO> listarPorData(LocalDate data){
@@ -74,32 +80,18 @@ public class EscalaService {
 						data,
 						new ArrayList<>());
 		}).toList();
-		
-		//return escalas.stream().map(this::mapperToDto).toList();
 	}
 	
-	public EscalaSemanaDTO buscarId(int id) {
-		// 1. Busca a escala original para saber o médico e a data
+	public EscalaEdicaoDTO buscarId(int id) {
 	    Escala escalaReferencia = escalaRepository.findById(id)
 	        .orElseThrow(() -> new BusinessException("Escala não encontrada"));
 
 	    LocalDate dataAlvo = escalaReferencia.getData();
 	    Integer medicoId = escalaReferencia.getMedico().getId();
 
-	    // 2. Lógica para pegar o Domingo (Início da Semana) e Sábado (Fim)
-	    // No Java, Sunday é o 7º dia ou 1º dependendo da config, vamos forçar:
 	    LocalDate segunda = dataAlvo.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
-	    LocalDate domingo = segunda.plusDays(6);
 
-	    // 3. Busca todos os registros do médico nesse intervalo
-	    List<Escala> escalasDaSemana = escalaRepository.findByMedico_IdAndDataBetweenOrderByDataAsc(medicoId, segunda, domingo);
-
-	    // 4. Converte para o DTO que o Front espera (EscalaSemanaDTO)
-	    List<EscalaResponseDTO> itensDTO = escalasDaSemana.stream()
-	        .map(this::mapperToDto) // Você já tem lógica similar
-	        .toList();
-
-	    return new EscalaSemanaDTO(medicoId, null, null, segunda, domingo, itensDTO);
+	    return new EscalaEdicaoDTO(medicoId, listarSemanasMedicos(medicoId, segunda));
 	}
 	
 	public List<EscalaSemanaDTO> listarSemanasMedicos(int medicoId, LocalDate dataAlvo) {
@@ -129,9 +121,17 @@ public class EscalaService {
 		        .collect(Collectors.toList());
 	}
 	
+	public List<EscalaResponseDTO> salvar(EscalaEdicaoDTO dto) {
+		List<EscalaResponseDTO> resultados = new ArrayList<>();
+		for(EscalaSemanaDTO edicao : dto.semana()) {
+			resultados.addAll(salvar(edicao));
+		}
+		
+		return resultados;
+	}
+	
 	public List<EscalaResponseDTO> salvar(EscalaSemanaDTO dto) {
 		List<EscalaResponseDTO> resultados = new ArrayList<>();
-		
 		for (var escalaDto : dto.escala()) {
 	        Escala entidadeEscala;
 	
@@ -159,7 +159,7 @@ public class EscalaService {
 	            resultados.add(mapperToDto(salva)); // Adiciona com o ID gerado/mantido
 	        }
 	    }
-		
+	
 		return resultados;
 	}
 	
@@ -226,7 +226,7 @@ public class EscalaService {
 	
 	private Escala mapperToEscala(EscalaResponseDTO dto) {
 		Escala escala = new Escala();
-		escala.setMedico(entityManager.getReference(Medico.class, dto.medicoId()));
+		escala.setMedico(entityManager.getReference(Medico.class, dto.medicoId()));		
 		escala.setData(dto.data());
 		return escala;
 	}
@@ -245,7 +245,7 @@ public class EscalaService {
 	}
 	
 	private Escala mapperToEscala(EscalaResponseDTO dto, Escala escala) {
-		escala.getMedico().setId(dto.medicoId());
+//		escala.getMedico().setId(dto.medicoId());
 		escala.setData(dto.data());
 		return escala;
 	}

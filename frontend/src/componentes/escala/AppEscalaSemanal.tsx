@@ -2,44 +2,58 @@ import { useState, useMemo, useEffect } from 'react';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Button } from 'primereact/button';
-import { useWatch, type Control } from 'react-hook-form';
+import { useWatch, type Control, type FieldValues } from 'react-hook-form';
 import type { EscalaSemana } from '@/types/escala';
 import { getIntervalosEscala } from '@/types/escalaHelper';
 import { DateUtils } from '@/utils/DateUtils';
 
-interface AppEscalaSemanalProps {
-    control: Control<EscalaSemana[]>;
+interface AppEscalaSemanalProps<T extends FieldValues> {
+    control: Control<T>;
     onAgendar?: (data: Date) => void;
 }
 
-export const AppEscalaSemanal = ({ control, onAgendar }: AppEscalaSemanalProps) => {
+export const AppEscalaSemanal = <T extends FieldValues>({ control, onAgendar }: AppEscalaSemanalProps<T>) => {
     const [dataReferencia, setDataReferencia] = useState(new Date());
-
-    const watchValue = useWatch({ control })
+    const watchValue = useWatch({ control });
+    const medicoIdForm = watchValue?.medicoId;
 
     const semanas = useMemo(() => {
-        if (Array.isArray(watchValue)) return watchValue;
-        
-        // Se vier como objeto (comum no RHF ao usar reset em array raiz), 
-        // extraímos os valores que são do tipo objeto/escala
-        if (watchValue && typeof watchValue === 'object') {
-            return Object.values(watchValue).filter(item => 
-                item && typeof item === 'object' && 'dataInicio' in item
-            ) as EscalaSemana[];
+        if (watchValue?.semana && Array.isArray(watchValue.semana)) {
+            return [...watchValue.semana]; 
         }
+    
+        if (Array.isArray(watchValue)) {
+            return [...watchValue];
+        }
+        
+        if (watchValue && typeof watchValue === 'object') {
+            const valores = Object.values(watchValue);
+            const ehArrayDeSemanas = valores.some(v => v && typeof v === 'object' && 'dataInicio' in v);
+            if (ehArrayDeSemanas) {
+                return valores as EscalaSemana[];
+            }
+        }
+    
         return [] as EscalaSemana[];
     }, [watchValue]);
     
-    const { medicoId, dataInicioEscala } = useMemo(() => {
-        if (semanas.length > 0) {
-            // Como todos os itens são do mesmo médico, pegamos do primeiro
-            return {
-                medicoId: semanas[0].medicoId,
-                dataInicioEscala: semanas[0].dataInicio
-            };
+    const medicoAtivo = useMemo(() => {
+        if (medicoIdForm) {
+            return medicoIdForm;
         }
-        return { medicoId: undefined, dataInicioEscala: undefined };
-    }, [semanas]); // Só recalcula se a lista de semanas mudar
+
+        if (semanas.length > 0) {
+            return semanas[0].medicoId;
+        }
+        return undefined;
+    }, [medicoIdForm, semanas]);
+
+    const dataInicioEscala  = useMemo(() => {
+        if (semanas.length > 0) {
+            return semanas[0].dataInicio
+        }
+        return undefined;
+    }, [semanas]);
 
     const listaDeEscalasVisivel = useMemo(() => {
         const base = new Date(dataReferencia);
@@ -48,46 +62,35 @@ export const AppEscalaSemanal = ({ control, onAgendar }: AppEscalaSemanalProps) 
         const segundaVisivel = new Date(base.setDate(diff));
         const segundaISO = DateUtils.paraISO(segundaVisivel);
     
-        // Proteção contra o erro 'find is not a function'
         if (!Array.isArray(semanas)) return [];
-    
-        // Busca a semana que corresponde à segunda-feira exibida na tela
+
         const semanaEncontrada = semanas.find(s => s.dataInicio === segundaISO);
-        
-        // Conforme o seu console, os dias estão dentro de 's.escala'
+
         return semanaEncontrada ? semanaEncontrada.escala : [];
     }, [dataReferencia, semanas]);
 
     useEffect(() => {
-        // Se houver uma data vinda do banco (Edição), sincroniza o calendário
         if (dataInicioEscala) {
             const novaData = new Date(dataInicioEscala + 'T12:00:00');
             
-            // Evita atualização infinita se a data for a mesma
             if (novaData.getTime() !== dataReferencia.getTime()) {
                 setDataReferencia(novaData);
             }
         }
-        // Se dataInicioEscala for null/undefined, o dataReferencia 
-        // permanece como o 'new Date()' definido no useState.
     }, [dataInicioEscala]);
 
-    // --- FUNÇÃO DE CONVERSÃO PARA BASE64 ---
     const formatarIcone = (icone: any): string => {
         if (!icone) {
             return '';
         }
         
-        // 1. Se já for string (Base64 pronta)
         if (typeof icone === 'string') {
-            if (icone.length < 10) return ''; // String vazia ou inválida
+            if (icone.length < 10) return ''; 
             return icone.startsWith('data:') ? icone : `data:image/png;base64,${icone}`;
         }
         
-        // 2. Se for Array de Números (Byte Array)
         if (Array.isArray(icone) || icone instanceof Uint8Array) {
             try {
-                // Forma moderna e segura de converter Byte Array para Base64
                 const uint8Array = new Uint8Array(icone);
                 let binary = '';
                 const len = uint8Array.byteLength;
@@ -115,23 +118,15 @@ export const AppEscalaSemanal = ({ control, onAgendar }: AppEscalaSemanalProps) 
     };
 
     const verificarBloqueio = (dataISO: string, horaStr: string) => {
-        // 1. Pegamos o momento exato do "agora"
         const agora = new Date();
             
-        // 2. Criamos a data de início do intervalo para aquela célula específica
-        // Concatenamos a data (YYYY-MM-DD) com a hora (HH:mm)
         const dataInicioIntervalo = new Date(`${dataISO}T${horaStr}:00`);
 
-        // 3. Bloqueio:
-        // Se a data de início do intervalo for menor ou igual ao agora, bloqueia.
-        // Exemplo: Se são 07:05 e o intervalo começa as 07:00, já está bloqueado.
         return dataInicioIntervalo <= agora;
     };
 
     const linhasDias = useMemo(() => {
         const base = new Date(dataReferencia);
-        // Ajuste para Segunda-feira como dia 1 (ISO 8601)
-        // No JS: Dom=0, Seg=1, Ter=2...
         const diaSemana = base.getDay(); 
         const diff = base.getDate() - diaSemana + (diaSemana === 0 ? -6 : 1);
         
@@ -152,10 +147,10 @@ export const AppEscalaSemanal = ({ control, onAgendar }: AppEscalaSemanalProps) 
                 nomeDia: inicialDia,
                 dataExibicao: dataDia.getDate(),
                 isHoje: DateUtils.paraISO(new Date()) === dataISO,
-                _medicoAtivo: medicoId
+                _medicoAtivo: medicoAtivo
             };
         });
-    }, [dataReferencia, medicoId]);
+    }, [dataReferencia, medicoAtivo]);
 
     const isSemanaAtual = useMemo(() => {
         const hojeISO = DateUtils.paraISO(new Date());
@@ -168,7 +163,6 @@ export const AppEscalaSemanal = ({ control, onAgendar }: AppEscalaSemanalProps) 
         return `${inicio.getDate()} a ${fim.getDate()} de ${inicio.toLocaleDateString('pt-BR', { month: 'long' })}`;
     }, [linhasDias]);
 
-    // --- RENDERIZADOR DE CÉLULA COM UX MODERNA ---
     const renderCelulaHorario = (rowData: any, hora: string) => {
         const escalaDoDia = listaDeEscalasVisivel?.find((e: any) => e.data === rowData.data);
         const alocacao = escalaDoDia?.itens?.find((item: any) => {
@@ -176,7 +170,7 @@ export const AppEscalaSemanal = ({ control, onAgendar }: AppEscalaSemanalProps) 
             return hItem === hora;
         });
 
-        const bloqueado = !medicoId || verificarBloqueio(rowData.data, hora);
+        const bloqueado = !medicoAtivo || verificarBloqueio(rowData.data, hora);
         const almoco = hora === "11:00" || hora === "12:00"
         if (alocacao) {
             const iconeBase64 = formatarIcone(alocacao.icone);
@@ -207,37 +201,26 @@ export const AppEscalaSemanal = ({ control, onAgendar }: AppEscalaSemanalProps) 
             );
         }
 
-        // Slot Vazio Moderno (Ghost Slot)
         return (
             <div className={`flex items-center justify-center w-full h-full group cursor-pointer
                      ${almoco ? 'bg-red-100' :  'bg-white'}
                 `}
                 onClick={() => {
-                    // Converte a string YYYY-MM-DD da linha para objeto Date
                     const [ano, mes, dia] = rowData.data.split('-').map(Number);
                     const dataSelecionada = new Date(ano, mes - 1, dia, 12, 0, 0);
                     onAgendar?.(dataSelecionada);
                 }}
             >
-                {/* Ícone de "vazio" mais visível (sem opacity-20) */}
-                {/* {onAgendar && <i className="pi pi-minus-circle text-[14px] text-slate-400 group-hover:hidden animate-fadein"></i>} */}
-                
-                {/* Ícone de "adicionar" no hover */}
-                {/* {onAgendar && <i className="pi pi-plus-circle text-[20px] text-blue-600 hidden group-hover:block font-bold animate-fadein"></i>} */}
-
                 <div className="relative flex items-center justify-center">
                     {onAgendar ? (
                         <>
-                            {/* Visual padrão: um "mais" bem discreto ou ponto azulado */}
                             <i className="pi pi-plus text-[10px] text-slate-300 group-hover:hidden transition-all"></i>
                             
-                            {/* Visual Hover: Botão de ação completo */}
                             <div className="hidden group-hover:flex items-center justify-center w-6 h-6 bg-blue-600 rounded-full shadow-lg shadow-blue-200 animate-scalein">
                                 <i className="pi pi-plus text-white text-[12px] font-bold"></i>
                             </div>
                         </>
                     ) : (
-                        // Se for apenas visualização (sem onAgendar), mostra uma tag discreta de "Livre"
                         <div className={`sm:w-6 w-4 h-1 px-1 ${almoco ? 'bg-slate-300' : 'bg-slate-200'}  rounded-full group-hover:bg-emerald-100 transition-colors`}
                             title="Livre"/>
                     )}
@@ -272,7 +255,7 @@ export const AppEscalaSemanal = ({ control, onAgendar }: AppEscalaSemanalProps) 
                         header="" 
                         className="bg-slate-200 border-r" 
                         style={{ minWidth: '15px' }} 
-                        frozen // FIXA A COLUNA
+                        frozen
                         alignFrozen="left"  
                         bodyClassName="!p-1.8 sm:!p-2 w-1"
                         body={(rowData) => (
@@ -300,7 +283,7 @@ export const AppEscalaSemanal = ({ control, onAgendar }: AppEscalaSemanalProps) 
                             align="center" 
                             alignHeader="center"
                             pt={{
-                                headerContent: { className: 'justify-center' }, // Força o alinhamento central no PrimeReact
+                                headerContent: { className: 'justify-center' },
                                 bodyCell: { className: 'text-center sm:min-w-[28px] sm:min-h-[28px] w-[24px] h-[24px]' }
                             }}
                             className='p-0'

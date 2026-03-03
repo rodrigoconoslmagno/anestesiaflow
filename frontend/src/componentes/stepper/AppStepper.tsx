@@ -4,37 +4,33 @@ import { FieldWrapper } from '@/componentes/FieldWrapper';
 import { getColSpanClass } from '@/utils/GridUtils';
 import { useState } from 'react';
 import { useAppToast } from '@/context/ToastContext';
-import { useWatch, type Control } from 'react-hook-form';
-import type { EscalaSemana } from '@/types/escala';
+import { useWatch, type Control, type FieldValues, type Path } from 'react-hook-form';
 import { AppEscalaDiaria } from '@/componentes/escala/AppEscalaDiaria';
+import { AppEscalaSemanal } from '../escala/AppEscalaSemanal';
 
-interface AppStepperProps {
-    control: Control<EscalaSemana>;
+interface AppStepperProps<T extends FieldValues> {
+    control: Control<T>;
 }
 
-export const AppStepperEscala = ({
+export const AppStepperEscala = <T extends FieldValues>({
     control
-}: AppStepperProps) => {
-    // 1. Observa a data e o médico "ao vivo"
+}: AppStepperProps<T>) => {
     const [ dataNavegacao, setDataNavegacao] = useState<Date | null>(null);
     const [activeStep, setActiveStep] = useState(0);
-    const medicoId = useWatch({ control, name: 'medicoId' });
-
-    // const [ diaAtual, setDiaAtual ] = useState<any>();
+    const medicoId = useWatch({ control, name: 'medicoId' as Path<T>});
     const { showError } = useAppToast();
 
-    // Regra de negócio: pode navegar se tiver médico OU se estiver voltando para o Resumo (step 0)
     const podeNavegar = (targetStep: number) => {
-        if (targetStep === 0) return true; // Sempre pode voltar para o resumo
-        return !!medicoId; // Só vai para o 1 ou 2 se tiver médico
+        if (targetStep === 0) return true; 
+        return !!medicoId; 
     };
 
-    // const handleIrParaDia = (data: Date) => {
-    //     if (podeNavegar(1)) {
-    //         setDataNavegacao(data);
-    //         setActiveStep(1);
-    //     }
-    // };
+    const handleIrParaDia = (data: Date) => {
+        if (podeNavegar(1)) {
+            setDataNavegacao(data);
+            setActiveStep(1);
+        }
+    };
 
     const handleStepChange = (e: {index: number}) => {
         if (!podeNavegar(e.index)) {
@@ -49,15 +45,12 @@ export const AppStepperEscala = ({
     }
 
     return (
-        /* O segredo para ocupar a tela toda no CrudBase é o col-span-12 */
         <FieldWrapper label="" className={getColSpanClass(12)}>
             <Stepper activeStep={activeStep} 
                      onChangeStep={handleStepChange} 
-                     //  linear //porperty que desabilita a navegacao pelo titulo do step
-                     // Força os containers internos do Stepper a ocuparem a altura toda
                      pt={{
-                        root: { className: 'p-0 flex-1 flex flex-col' }, // Remove o padding do p-stepper-content
-                        panelContainer: { className: 'p-0 flex-1 flex flex-col' } // Remove o padding do container de painéis
+                        root: { className: 'p-0 flex-1 flex flex-col' }, 
+                        panelContainer: { className: 'p-0 flex-1 flex flex-col' } 
                     }}
                      className="flex-1 flex flex-col min-h-[400px]"
                     
@@ -65,7 +58,7 @@ export const AppStepperEscala = ({
                 <StepperPanel header="Resumo">
                     <div className="w-full">
                         <div className="flex-1 w-full h-full min-h-[400px]">
-                            {/* <AppEscalaSemanal control={control_escala} onAgendar={handleIrParaDia}/> */}
+                            <AppEscalaSemanal control={control} onAgendar={handleIrParaDia}/>
                         </div>
                     </div>
                 </StepperPanel>
@@ -78,7 +71,11 @@ export const AppStepperEscala = ({
                     }}
                 >
                     <div className="h-full">
-                        <AppEscalaDiaria control={control} dataAtivaExterno={dataNavegacao}/>
+                        <AppEscalaDiaria
+                                control={control}
+                                dataAtivaExterno={dataNavegacao}
+                                medicoId={medicoId}
+                            />
                     </div>
                 </StepperPanel>
             </Stepper>

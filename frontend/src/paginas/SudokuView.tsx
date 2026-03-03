@@ -730,7 +730,7 @@ export const SudokuView = () => {
                     // Alvo: O texto dentro do Header
                     headerTitle: { 
                         className: 'sm:!text-[12px] !text-[9px] !font-black !text-slate-700', 
-                        style: { padding: '0px' } 
+                        style: { padding: '0px' }  
                     },
                     // Alvo: A célula TD (Corpo)
                     bodyCell: { 

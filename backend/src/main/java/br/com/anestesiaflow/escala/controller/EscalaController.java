@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import br.com.anestesiaflow.escala.dto.EscalaEdicaoDTO;
 import br.com.anestesiaflow.escala.dto.EscalaResponseDTO;
 import br.com.anestesiaflow.escala.dto.EscalaSemanaDTO;
 import br.com.anestesiaflow.escala.dto.EscalaSemanaSummaryDTO;
@@ -30,7 +31,7 @@ public class EscalaController {
 	
 	@PostMapping("/listar")
 	public ResponseEntity<List<EscalaSemanaSummaryDTO>> listar(@RequestBody(required = false) Map<String, Object> filtros) {
-        return ResponseEntity.ok(escalaService.listarTodos());
+        return ResponseEntity.ok(escalaService.listarTodos(filtros));
     }
 	
 	@PostMapping("/listardia")
@@ -42,13 +43,13 @@ public class EscalaController {
 	}
 	
 	@PostMapping("/buscarid")
-	public ResponseEntity<EscalaSemanaDTO> buscaPorId(@RequestBody Map<String, Integer> payload) {
+	public ResponseEntity<EscalaEdicaoDTO> buscaPorId(@RequestBody Map<String, Integer> payload) {
 		Integer id = payload.get("id");
 		return ResponseEntity.ok(escalaService.buscarId(id));
 	}
 	
 	@PostMapping
-    public ResponseEntity<List<EscalaResponseDTO>> criar(@Validated @RequestBody EscalaSemanaDTO dto) {
+    public ResponseEntity<List<EscalaResponseDTO>> criar(@Validated @RequestBody EscalaEdicaoDTO dto) {
         List<EscalaResponseDTO> novEscala = escalaService.salvar(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(novEscala);
     }

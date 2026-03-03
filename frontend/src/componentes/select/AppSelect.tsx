@@ -9,9 +9,9 @@ import { server } from '@/api/server';
 export interface AppSelectProps extends Omit<DropdownProps, 'onChange'> {
   name: string;
   label: string;
-  url?: string;         // A URL base da entidade (ex: '/medicos')
-  filterParams?: any;   // Filtros adicionais para o body do POST
-  options?: any[];      // Possibilidade de passar options estáticos
+  url?: string;        
+  filterParams?: any;   
+  options?: any[];      
   colSpan?: ColSpan;
   required?: boolean;
   public_back?: boolean;
@@ -25,7 +25,7 @@ export const AppSelect = ({
   name,
   label, 
   url,
-  filterParams = null, // Default: busca apenas ativos
+  filterParams = null, 
   colSpan = 12, 
   required,
   public_back,
@@ -39,7 +39,6 @@ export const AppSelect = ({
     const [data, setData] = useState<any[]>(props.options || []);
     const [loading, setLoading] = useState(false);
 
-    // 1. Lógica de Busca e Auto-seleção (filterFn)
     useEffect(() => {
       if (url && (!props.options || props.options.length === 0)) {
           setLoading(true);
@@ -63,8 +62,6 @@ export const AppSelect = ({
       }
     }, [url, JSON.stringify(filterParams)]);
 
-    // 2. Lógica de Sincronização do Objeto (onObjectChange)
-    // Funciona tanto para o useState local quanto para o field.value do Form
     useEffect(() => {
       if (onObjectChange) {
         if (!value) {
@@ -78,7 +75,6 @@ export const AppSelect = ({
       }
     }, [value, data, onObjectChange, props.optionValue]);
 
-    // Template para os 25 médicos: Nome em destaque + CRM/Especialidade discreto
     const defaultItemTemplate = (option: any) => (
       <div className="flex flex-col py-1">
         <span className="font-semibold text-gray-800 leading-tight">{option.nome}</span>
@@ -89,14 +85,14 @@ export const AppSelect = ({
         <FieldWrapper 
           label=""
           error={errorMessage} 
-          className={getColSpanClass(colSpan)}
+          className={classNames(getColSpanClass(colSpan), props.className)}
         >
           <FloatLabel className="custom-app-select-float-label">
             <Dropdown 
               {...props} 
               id={name}
               value={value?? null}
-              options={data || []} // Garante que options seja sempre um array
+              options={data || []}
               filter
               showClear
               filterPlaceholder="Buscar..."
@@ -108,10 +104,7 @@ export const AppSelect = ({
                   props.className, 
                   { 'p-invalid border-red-500': errorMessage })} 
               onChange={(e) => {
-                // Notifica o pai (EscalaMedicoView) sobre a mudança
                 onChange?.(e); 
-                
-                // Se houver lógica de objeto, executa também
                 if (onObjectChange) {
                     const selectedObj = data.find(item => item[props.optionValue || 'id'] === e.value);
                     onObjectChange(selectedObj || null);
@@ -168,6 +161,29 @@ export const AppSelect = ({
             .p-dropdown:not(.p-disabled).p-focus {
               box-shadow: 0 0 0 2px rgba(55, 65, 81, 0.2);
               border-color: #374151 !important;
+            }
+
+            @media screen and (max-width: 767px) {
+              /* 1. Removemos qualquer transição de movimento para evitar o 'salto' */
+              .p-connected-overlay-enter {
+                  opacity: 0 !important;
+                  transform: none !important;
+              }
+          
+              /* 2. Forçamos a posição ANTES mesmo da animação terminar */
+              .p-dropdown-panel {
+                  left: 4vw !important;
+                  width: 92vw !important;
+                  min-width: 92vw !important;
+                  /* Evita que o transform-origin do JS desloque o componente */
+                  transform-origin: center top !important; 
+                  transition: none !important; /* Remove o deslize visual */
+              }
+          
+              /* 3. Ajuste para o Safari não tentar 'adivinhar' a largura */
+              .p-dropdown-items-wrapper {
+                  width: 100% !important;
+              }
             }
           `}</style>
         </FieldWrapper>

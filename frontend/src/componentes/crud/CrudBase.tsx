@@ -23,12 +23,16 @@ interface CrudBaseProps<T extends BaseEntity> {
   defaultValues: DefaultValues<T>;
   columns: { field: string; header: string; body?: (item: any) => React.ReactNode }[];
   filterContent?: React.ReactNode;
+  filterParams?: any;
+  onApplyFilters?: () => void;
+  onClearFilters?: () => void;
   children: (control: Control<T>, errors: FieldErrors<T>) => React.ReactNode;
   initialValues?: Partial<T> | null;
 }
 
 export const CrudBase = <T extends { id?: any }>({
-  title, resourcePath, schema, defaultValues, columns, filterContent, children, initialValues
+  title, resourcePath, schema, defaultValues, columns, filterContent, 
+  filterParams, onApplyFilters, onClearFilters, children, initialValues
 }: CrudBaseProps<T>) => {
   const { setFormData, getFormData, clearFormData } = useCrudStore();
   const [data, setData] = useState<T[]>([]);
@@ -119,16 +123,19 @@ export const CrudBase = <T extends { id?: any }>({
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      // Chamada via POST para o endpoint de listagem
-      // Enviamos um objeto vazio {} como filtros iniciais
-      const result = await server.api.listar<T>(resourcePath, {}); 
+      const result = await server.api.listar<T>(resourcePath, filterParams); 
       setData(result);
     } catch (err) {
       showError('Erro', 'Erro ao carregar lista de registros.');
     } finally {
       setLoading(false);
     }
-  }, [resourcePath, showError]);
+  }, [resourcePath, showError, filterParams]);
+
+  const handleApply = () => {
+    if (onApplyFilters) onApplyFilters(); 
+    loadData();
+  };
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -136,11 +143,9 @@ export const CrudBase = <T extends { id?: any }>({
     setLoading(true);
     try {
       if (formData.id) {
-        // PUT /recurso/id
         await server.api.atualizar(resourcePath, formData.id, formData);
         showSuccess('Sucesso', 'Registro atualizado.');
       } else {
-        // POST /recurso
         await server.api.criar(resourcePath, formData);
         showSuccess('Sucesso', 'Registro criado.');
       }
@@ -158,7 +163,6 @@ export const CrudBase = <T extends { id?: any }>({
   const confirmDelete = (item: T) => {
     confirmDialog({
       header: 'Confirmação de Exclusão',
-      // Customizamos a mensagem para ter uma hierarquia visual clara
       message: (
         <div className="flex flex-col items-center gap-3">
           <i className="pi pi-exclamation-triangle text-red-500 text-5xl"></i>
@@ -172,16 +176,13 @@ export const CrudBase = <T extends { id?: any }>({
           </div>
         </div>
       ),
-      icon: 'hidden', // Ocultamos o ícone padrão para usar o nosso customizado acima
+      icon: 'hidden',
       acceptLabel: 'Sim, Excluir',
       rejectLabel: 'Não, Cancelar',
       
-      // Classes de Estilo para os Botões
-      // 'p-button-danger' é a classe padrão do Prime para vermelho
       acceptClassName: 'bg-red-600 hover:bg-red-700 text-white border-none px-6 py-2.5 font-bold shadow-md transition-all',
       rejectClassName: 'p-button-text p-button-secondary text-gray-600 hover:text-gray-800 px-6 py-2.5 font-bold',
       
-      // Estilo do container do Diálogo
       className: 'max-w-[480px] rounded-2xl border-none shadow-2xl',
       
       accept: async () => {
@@ -197,11 +198,9 @@ export const CrudBase = <T extends { id?: any }>({
     });
   };
 
-  // 2. Tenta recuperar o cache ao abrir o formulário
   const handleAdd = () => {
     setIsEditMode(true);
-    
-    // Se houver rascunho, usa ele, senão usa o defaultValues
+
     reset(defaultValues);
     setFormVisible(true);
   };
@@ -209,10 +208,7 @@ export const CrudBase = <T extends { id?: any }>({
   const handleEdit = async (item: T) => {
     setIsEditMode(true);
     try {
-      // Busca o objeto FULL (com listas, itens, etc) pelo ID
       const fullItem = await server.api.buscarId<T>(resourcePath, item.id);
-      
-      // Agora o reset preenche o formulário com TODOS os dados (incluindo itens)
       reset(fullItem as any);
       setFormVisible(true);
     } catch (err) {
@@ -270,9 +266,11 @@ export const CrudBase = <T extends { id?: any }>({
                   title={title} 
                   onAdd={handleAdd} 
                   filterContent={filterContent}
+                  onApplyFilters={handleApply} 
+                  onClearFilters={onClearFilters}
                   onClose={() => {
-                    clearFormData(resourcePath); // Limpa o rascunho do Zustand
-                    navigate('/dashboard');      // Navega para a home
+                    clearFormData(resourcePath);
+                    navigate('/dashboard');
                   }}
                 />
               </div>
@@ -382,8 +380,11 @@ export const CrudBase = <T extends { id?: any }>({
                   <Button 
                     label="Aplicar Filtros" 
                     icon="pi pi-check" 
-                    className="w-full bg-blue-600 border-none py-3.5 shadow-md font-bold mt-2 text-white" 
-                    onClick={() => setMobileFiltersVisible(false)} 
+                    className="w-full bg-blue-600 border-none py-3.5 text-white font-bold"                  
+                    onClick={() => {
+                      handleApply();
+                      setMobileFiltersVisible(false);
+                    }} 
                   />
                 </div>
               </Sidebar>

@@ -78,7 +78,10 @@ export const AppStepperEscala = ({
                     }}
                 >
                     <div className="h-full">
-                        <AppEscalaDiaria control={control} dataAtivaExterno={dataNavegacao}/>
+                        <AppEscalaDiaria
+                            control={control}
+                            dataAtivaExterno={dataNavegacao}
+                        />
                     </div>
                 </StepperPanel>
             </Stepper>

@@ -5,7 +5,7 @@ import { Column } from 'primereact/column';
 import { Button } from 'primereact/button';
 
 // DND-KIT (Regra 10)
-import { MeasuringStrategy, DndContext, PointerSensor, TouchSensor, useSensor, useSensors, DragOverlay, closestCorners, useDraggable, useDroppable } from '@dnd-kit/core';
+import { MeasuringStrategy, DndContext, PointerSensor, TouchSensor, useSensor, useSensors, DragOverlay, rectIntersection, useDraggable, useDroppable } from '@dnd-kit/core';
 
 import { server } from '@/api/server';
 import { getIntervalosEscala } from '@/types/escalaHelper';
@@ -110,6 +110,18 @@ const DraggableItem = ({ alocacao, medicoId, horaOriginal, isPaintingMode, bloqu
   );
 };
 
+const DroppableTrashZone = ({ children }: any) => {
+  const { setNodeRef } = useDroppable({ 
+    id: 'painel-clinicas-trash' 
+  });
+
+  return (
+    <div ref={setNodeRef} className="w-full h-full">
+      {children}
+    </div>
+  );
+};
+
 export const SudokuView = () => {
   const navigate = useNavigate();
   const [dataAtiva, setDataAtiva] = useState(new Date());
@@ -124,6 +136,7 @@ export const SudokuView = () => {
   const [hasChangesToSave, setHasChangesToSave] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isOverTrash, setIsOverTrash] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, useMemo(() => ({
@@ -190,10 +203,6 @@ export const SudokuView = () => {
   }, []);
 
   useEffect(() => {
-    // Condição para salvar:
-    // - Temos mudanças pendentes (hasChangesToSave)
-    // - O usuário NÃO está no meio de um arraste de pintura (isDraggingWithinGrid)
-    // - O usuário NÃO está no meio de um arraste de item (activeDragData === null)
     const interacaoFinalizada = !isDraggingWithinGrid && activeDragData === null;
 
     if (hasChangesToSave && interacaoFinalizada) {
@@ -202,43 +211,32 @@ export const SudokuView = () => {
           setIsSyncing(true);
           
           const payload = escalas.map(p => ({
-            // Se a escala não tem itens, enviamos o ID dela para o backend saber QUAL deletar
-            // Se enviarmos sem ID e sem itens, o backend ignora.
             id: p.id || null, 
             medicoId: p.medicoId,
             data: dataStr,
             itens: p.itens?.map(i => ({
-              // O ITEM movido NUNCA deve levar o ID antigo, senão o JPA tenta dar update 
-              // em vez de criar um novo e gera conflito de Unique Key (Médico/Hora)
               id: i.id || null, 
               estabelecimentoId: i.estabelecimentoId,
               hora: (i.hora?.substring(0, 5) || i.hora),
             })) || [] 
           }));
-          
-          // Dica: Tente enviar apenas as escalas que foram modificadas ou todas, 
-          // mas garanta que o 'id' do item movido seja nulo.
+
           const response = await server.api.criar<Escala[]>('/escala/sudoku', payload as Escala[]);
 
           if (response && Array.isArray(response)) {
-            // 1. Criamos um Mapa para acesso rápido
             const mapaBack = new Map(response.map(e => [e.medicoId, e]));
 
-            // 2. Usamos a função de atualização para garantir o estado mais recente (prev)
             setEscalas((prev) => {
               const novoEstado = prev.map((escalaLocal) => {
                 const escalaDoBanco = mapaBack.get(escalaLocal.medicoId);
 
                 if (escalaDoBanco) {
-                  // Retornamos o objeto completo vindo do banco (com os IDs reais)
                   return {
                     ...escalaDoBanco,
-                    // Garantimos que campos visuais que talvez o back não retorne sejam mantidos
                     medicoSigla: escalaLocal.medicoSigla 
                   };
                 }
 
-                // Se o médico não está no retorno, limpamos as marcações dele no grid
                 return { 
                   ...escalaLocal, 
                   id: undefined, 
@@ -277,22 +275,48 @@ export const SudokuView = () => {
 
   const onDragEnd = (event: any) => {
     const { active, over } = event;
+    console.log("ITEM ARRASTADO:", active.id);
+    console.log("ALVO DO DROP:", over?.id);
     setActiveDragData(null);
-    if (!over) return;
+    if (!over) {
+      return;
+    }
   
     const dragData = active.data.current;
+    console.log("analise", dragData, over);
+    if (dragData.isFromGrid && over.id === 'painel-clinicas-trash') {
+      const { medicoId: oMedId, hora: oHora } = dragData.origem;
+      const oHoraNorm = oHora.substring(0, 5);
+  
+      setEscalas(prev => {
+        const novoEstado = prev.map(e => {
+          if (e.medicoId === oMedId) {
+            return {
+              ...e,
+              itens: e.itens?.filter(i => (i.hora?.substring(0, 5) || i.hora) !== oHoraNorm) || []
+            };
+          }
+          return e;
+        });
+        console.log("removendo item", prev);
+        setHasChangesToSave(true);
+        return novoEstado;
+      });
+      return;
+    }
+
+    console.log("inserindo item");
+
     const [destMedicoIdStr, destHora] = over.id.split('|');
     const destMedicoId = Number(destMedicoIdStr);
     const horaDestNorm = destHora.substring(0, 5);
   
     setEscalas(prev => {
-      // 1. Cópia profunda
       let tempEscalas = prev.map(e => ({
         ...e,
         itens: e.itens ? [...e.itens] : []
       }));
-  
-      // 2. REMOÇÃO DA ORIGEM
+
       if (dragData.isFromGrid) {
         const { medicoId: oMedId, hora: oHora } = dragData.origem;
         const oHoraNorm = oHora.substring(0, 5);
@@ -307,18 +331,16 @@ export const SudokuView = () => {
           return e;
         });
       }
-  
-      // 3. PREPARAÇÃO DO ITEM
+
       const clinica = dragData.isFromGrid ? dragData.alocacao : dragData.clinica;
       const novoItem: EscalaItem = {
-        id: undefined, // SEMPRE undefined para o novo local
+        id: undefined,
         estabelecimentoId: clinica.estabelecimentoId || clinica.id,
         hora: horaDestNorm,
         cor: clinica.cor,
         icone: clinica.icone
       };
   
-      // 4. ADIÇÃO NO DESTINO
       const idxDest = tempEscalas.findIndex(e => e.medicoId === destMedicoId);
   
       if (idxDest === -1) {
@@ -326,7 +348,7 @@ export const SudokuView = () => {
           medicoId: destMedicoId, 
           data: dataStr, 
           itens: [novoItem], 
-          medicoSigla: '' // O backend deve preencher ou você pode buscar do objeto clinica se necessário
+          medicoSigla: ''
         });
       } else {
         tempEscalas[idxDest] = {
@@ -345,45 +367,36 @@ export const SudokuView = () => {
 
   const onDragStart = (event: any) => {
     const { active } = event;
-    // Pega os dados que injetamos no useDraggable (seja do painel ou do DraggableItem)
     const data = active.data.current;
     
     if (data.isFromGrid) {
-        // Se vem do grid, usamos os dados da alocação para o "fantasma" que voa
         setActiveDragData(data.alocacao);
     } else {
-        // Se vem do painel lateral
         setActiveDragData(data.clinica);
     }
   };
 
   const isHoraBloqueada = (horaStr: string) => {
     if (!isHoje) {
-        // Se a data ativa for anterior a hoje, bloqueia tudo
         const hoje = new Date();
         hoje.setHours(0,0,0,0);
         return dataAtiva < hoje;
     }
     
     const agora = new Date();
-    // Criamos a data de início do intervalo para hoje
     const dataInicioIntervalo = new Date(`${dataStr}T${horaStr}:00`);
-    
-    // Bloqueia se o início do intervalo já passou
+
     return dataInicioIntervalo <= agora;
   };
 
-  // Função para marcar a célula (reaproveitando a lógica de salvamento que você já tem)
   const marcarCelulaTouch = (medicoId: number, hora: string) => {
     if (!activePaintingClinica || !isPaintingMode) return;
   
     const horaNormalizada = hora.substring(0, 5);
   
     setEscalas(prevEscalas => {
-      // 1. Localiza a escala do médico no estado mais atualizado possível
       const escalaIndex = prevEscalas.findIndex(e => e.medicoId === medicoId);
-      
-      // 2. Se não existe, cria uma nova
+
       if (escalaIndex === -1) {
         const novaEscala: Escala = { 
           medicoId, 
@@ -401,7 +414,6 @@ export const SudokuView = () => {
         return [...prevEscalas, novaEscala];
       }
   
-      // 3. Verifica se a célula já tem EXATAMENTE a mesma clínica (evita re-render à toa)
       const escalaAtual = prevEscalas[escalaIndex];
       const jaExiste = escalaAtual.itens?.find(i => 
         (i.hora?.substring(0, 5) || i.hora) === horaNormalizada && 
@@ -410,7 +422,6 @@ export const SudokuView = () => {
   
       if (jaExiste) return prevEscalas;
   
-      // 4. Cria a nova lista de itens substituindo o que houver na hora
       const novosItens = [
         ...(escalaAtual.itens || []).filter(i => (i.hora?.substring(0, 5) || i.hora) !== horaNormalizada),
         {
@@ -421,8 +432,7 @@ export const SudokuView = () => {
           icone: activePaintingClinica.icone
         }
       ];
-  
-      // 5. Retorna o novo array de escalas (Imutabilidade Total)
+
       const novasEscalas = [...prevEscalas];
       novasEscalas[escalaIndex] = { ...escalaAtual, itens: novosItens };
       
@@ -458,10 +468,8 @@ export const SudokuView = () => {
         );
   
         if (itemAlocado) {
-            // AQUI ESTÁ O SEGREDO: 
-            // Criamos um objeto de clínica consistente para o "pincel"
             setActivePaintingClinica({
-                id: itemAlocado.estabelecimentoId, // Sempre usamos o ID do estabelecimento
+                id: itemAlocado.estabelecimentoId,
                 cor: itemAlocado.cor,
                 icone: itemAlocado.icone
             } as Estabelecimento);
@@ -471,7 +479,6 @@ export const SudokuView = () => {
     }
   };
 
-  // 2. Função para o movimento no Mobile (Touch)
   const handleTouchMove = (e: React.TouchEvent) => {
     if (isPaintingMode && isDraggingWithinGrid && e.cancelable) {
       e.preventDefault(); 
@@ -489,7 +496,7 @@ export const SudokuView = () => {
         const mId = Number(cell.getAttribute('data-medico'));
         const h = cell.getAttribute('data-hora');
         if (mId && h) {
-            marcarCelulaTouch(mId, h); // Executa a cópia
+            marcarCelulaTouch(mId, h);
         }
     }
   };
@@ -502,7 +509,6 @@ export const SudokuView = () => {
                 <span className="text-xs font-bold text-slate-600 uppercase">Grade de Alocação</span>
             </div>
             
-            {/* O Pincel fica aqui: colado no Grid */}
             {isEditing && <Button 
                 label={isPaintingMode ? "Finalizar Rápidor" : "Preencher Rápidor"}
                 icon={isPaintingMode ? "pi pi-check" : "pi pi-palette"} 
@@ -522,25 +528,20 @@ export const SudokuView = () => {
   };
 
   return (
-    // <div className="sudoku-container">
     <div className="sudoku-container flex flex-col h-screen bg-slate-50 overflow-hidden">
       
-      {/* 1. HEADER GLOBAL (Fixo no topo) */}
-      {/* <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-slate-200 shadow-sm z-20"> */}
       <header className={clsx(
           "flex items-center justify-between px-4 py-3 bg-white border-b transition-all duration-300 relative overflow-hidden",
           isPaintingMode ? "border-blue-200" : "border-slate-200"
       )}>
-        {/* O GLOW DE ATIVIDADE: Aparece se estiver sincronizando ou com mudanças */}
         {(isSyncing || hasChangesToSave) && <div className="sync-glow-bar" />}
 
         <div className="flex items-center gap-4">
-          {/* O botão sair sai do FAB e vem para o padrão mobile/tablet: Canto superior esquerdo */}
           <Button 
             icon="pi pi-times" 
             label="Sair"
             text
-            severity="danger" // Vermelho para indicar saída/fechamento
+            severity="danger"
             className="hidden md:flex h-11 px-4 border-red-200 text-red-500 hover:bg-red-50"
             onClick={() => navigate(-1)} 
           />
@@ -554,7 +555,6 @@ export const SudokuView = () => {
           </h1>
         </div>
 
-        {/* Botão Principal de Ação: Alterna entre ver e editar */}
         <Button 
           icon={isSyncing ? "pi pi-spin pi-spinner" : (isEditing ? "pi pi-check" : "pi pi-pencil")}
           label={isEditing ? "Concluir" : "Editar Escala"}          
@@ -564,13 +564,13 @@ export const SudokuView = () => {
             isEditing && !hasChangesToSave && "bg-green-600 border-green-600 text-white",
             isEditing && hasChangesToSave && "bg-red-400 border-red-400 text-white opacity-70"
           )}
-          onClick={() => setIsEditing(!isEditing)} // Variável hipotética para controlar a UI
+          onClick={() => setIsEditing(!isEditing)}
         />
       </header>
 
       <DndContext 
         sensors={sensors} 
-        collisionDetection={closestCorners} 
+        collisionDetection={rectIntersection} 
         measuring={{
           droppable: {
               strategy: MeasuringStrategy.Always,
@@ -578,7 +578,14 @@ export const SudokuView = () => {
         }}
         modifiers={[]}
         onDragStart={onDragStart} 
-        onDragEnd={onDragEnd}
+        onDragEnd={(event) => {
+          setIsOverTrash(false);
+          onDragEnd(event);
+        }}
+        onDragOver={(event) => {
+          const { over } = event;
+          setIsOverTrash(over?.id === 'painel-clinicas-trash');
+        }}
       >
         <div className="flex flex-col p-1 gap-2 flex-grow overflow-hidden">
           
@@ -602,7 +609,6 @@ export const SudokuView = () => {
                 </div>
 
                 <div className="relative group">
-                    {/* Camada Visual */}
                     <div className="flex items-center gap-2 px-3 py-1 rounded-lg group-hover:bg-slate-100 transition-all cursor-pointer border border-transparent group-hover:border-slate-200">
                         <span className="text-lg font-black text-slate-700 capitalize leading-none">
                             {dataAtiva.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
@@ -610,10 +616,9 @@ export const SudokuView = () => {
                         <i className="pi pi-calendar text-blue-600 text-lg" />
                     </div>
 
-                    {/* Calendar realçado e resetado por KEY para evitar travamento */}
                     <div className="absolute inset-0 opacity-0">
                         <Calendar 
-                            key={dataAtiva.getTime()} // Força o refresh do componente interno
+                            key={dataAtiva.getTime()} 
                             value={dataAtiva} 
                             onChange={(e) => {
                                 if (e.value) {
@@ -622,8 +627,8 @@ export const SudokuView = () => {
                                 }
                             }} 
                             minDate={new Date()} 
-                            showButtonBar // ATIVA O BOTÃO HOJE E LIMPAR
-                            hideOnDateTimeSelect={true} // Fecha ao selecionar
+                            showButtonBar
+                            hideOnDateTimeSelect={true}
                             locale="pt-BR"
                             appendTo={document.body}
                             touchUI={window.innerWidth < 768}
@@ -643,17 +648,25 @@ export const SudokuView = () => {
 
           {isEditing && !isPaintingMode  && (
             <div className="bg-indigo-50 border-b border-indigo-100 p-2 shadow-inner transition-all z-10 animate-fadein">
-              <div className="flex items-center justify-between mb-2 px-2">
+              <div className="flex items-center justify-between px-2">
                 <span className="text-xs font-bold text-indigo-800 uppercase tracking-wider">
                   <i className="pi pi-th-large mr-2"></i> Clínicas Disponíveis
                 </span>
+                <span className="text-[10px] font-bold text-red-800 uppercase mb-1 ml-1">
+                  <i className="pi pi-trash mr-1"></i> Arraste aqui para remover
+                </span>
               </div>
               
-              {/* Container das clínicas - Com scroll horizontal suave nativo */}
-              <div className="overflow-x-auto pb-1 hide-scrollbar">
-                {/* Substitua isso pelo seu componente <ClinicasPanel clinicas={clinicas} /> se ele suportar scroll horizontal flex */}
-                <ClinicasPanel clinicas={clinicas} />
-              </div>
+              {/* <div className="overflow-x-auto pb-1 hide-scrollbar"> */}
+              {isEditing && !isPaintingMode && (
+                <div className="p-2 animate-fadein"> 
+                  <DroppableTrashZone>
+                    <div className="flex flex-col p-1">
+                      <ClinicasPanel clinicas={clinicas} />
+                    </div>
+                  </DroppableTrashZone>
+                </div>
+              )}
             </div>
           )}
 
@@ -667,10 +680,10 @@ export const SudokuView = () => {
               className={clsx(
                 "h-full rounded-xl overflow-hidden border shadow-sm transition-all",
                 isEditing ? "border-indigo-200" : "border-slate-200",
-                isPaintingMode ? "ring-2 ring-indigo-400 cursor-cell" : ""
+                isPaintingMode && "ring-2 ring-indigo-400 cursor-cell",
+                isOverTrash && "opacity-60 transition-all grayscale-[0.5]"
               )}
               onMouseDown={(e) => handleStartPainting(e.clientX, e.clientY, e)}
-              // ADICIONE ESTE HANDLER PARA DESKTOP
               onMouseMove={(e) => {
                   if (isPaintingMode && isDraggingWithinGrid && activePaintingClinica) {
                       const element = document.elementFromPoint(e.clientX, e.clientY);
@@ -691,7 +704,6 @@ export const SudokuView = () => {
                 setActivePaintingClinica(null); 
               }}
               
-              // Eventos para Mobile (Onde o problema estava)
               onTouchStart={(e) => isPaintingMode && handleStartPainting(e.touches[0].clientX, e.touches[0].clientY)}
               onTouchMove={handleTouchMove}
               onTouchEnd={() => { 

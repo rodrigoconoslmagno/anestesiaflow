@@ -11,10 +11,7 @@ interface CrudFooterProps {
 }
 
 export const CrudFooter = ({ onCancel, onSave, loading, auditData }: CrudFooterProps) => {
-  
-  // Função auxiliar para formatar a data ISO vinda do Java para o padrão BR
   const formatarData = (dataIso?: string) => {
-    console.log("aut", auditData)
     if (!dataIso) return '';
     try {
       const data = new Date(dataIso);
@@ -26,14 +23,13 @@ export const CrudFooter = ({ onCancel, onSave, loading, auditData }: CrudFooterP
         minute: '2-digit',
       }).format(data);
     } catch (e) {
-      return dataIso; // Caso ocorra erro, retorna o valor original
+      return dataIso;
     }
   };
 
   return (
     <div className="flex flex-col md:flex-row justify-between items-center gap-4 py-4 px-6 border-t bg-gray-50 shrink-0 z-10">
       
-      {/* Área de Auditoria: Exibe as datas formatadas */}
       <div className="flex flex-row md:flex-col gap-4 md:gap-1 w-full md:w-auto text-[10px] text-gray-500 uppercase tracking-tight font-medium">
         {auditData?.criacao && (
           <div className="flex gap-1.5 items-center">
@@ -54,7 +50,6 @@ export const CrudFooter = ({ onCancel, onSave, loading, auditData }: CrudFooterP
         )}
       </div>
 
-      {/* Botões de Ação */}
       <div className="flex flex-row gap-3 w-full md:w-auto">
         <Button 
           label="Cancelar" 

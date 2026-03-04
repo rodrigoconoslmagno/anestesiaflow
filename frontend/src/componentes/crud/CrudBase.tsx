@@ -26,13 +26,15 @@ interface CrudBaseProps<T extends BaseEntity> {
   filterParams?: any;
   onApplyFilters?: () => void;
   onClearFilters?: () => void;
+  onAdd?: (item: T) => void
+  onEdit?: (item: T) => void;
   children: (control: Control<T>, errors: FieldErrors<T>) => React.ReactNode;
   initialValues?: Partial<T> | null;
 }
 
 export const CrudBase = <T extends { id?: any }>({
   title, resourcePath, schema, defaultValues, columns, filterContent, 
-  filterParams, onApplyFilters, onClearFilters, children, initialValues
+  filterParams, onApplyFilters, onClearFilters, onAdd, onEdit ,children, initialValues
 }: CrudBaseProps<T>) => {
   const { setFormData, getFormData, clearFormData } = useCrudStore();
   const [data, setData] = useState<T[]>([]);
@@ -202,6 +204,9 @@ export const CrudBase = <T extends { id?: any }>({
     setIsEditMode(true);
 
     reset(defaultValues);
+    if (onAdd){
+      onAdd(defaultValues as T);
+    }
     setFormVisible(true);
   };
 
@@ -210,6 +215,9 @@ export const CrudBase = <T extends { id?: any }>({
     try {
       const fullItem = await server.api.buscarId<T>(resourcePath, item.id);
       reset(fullItem as any);
+      if (onEdit) {
+        onEdit(fullItem as T);
+      }
       setFormVisible(true);
     } catch (err) {
       showError('Erro', 'Não foi possível carregar os detalhes do registro.' + err);
@@ -223,14 +231,12 @@ export const CrudBase = <T extends { id?: any }>({
     const extrairMensagemParaToast = (errs: any): string | null => {
       for (const key in errs) {
           const error = errs[key];
-          // console.log("analise detalhada", error, key)
           if (!error) continue;
 
           // Se o erro está na raiz do campo (comum em refinamentos de listas/objetos)
           // e esse campo é um objeto complexo (como sua array de escala), 
           // mostramos o Toast.
           if (error.message && (key === 'root' || Array.isArray(error.ref) || !error.ref)) {
-            console.log("analise detalhada", error, key)
               return error.message;
           }
 
@@ -404,7 +410,7 @@ export const CrudBase = <T extends { id?: any }>({
                 }/>
               </div>
 
-              <div className="flex-grow overflow-y-auto p-4 md:p-8 bg-white custom-scrollbar">
+              <div className="flex-grow overflow-y-auto p-4 md:p-2 bg-white custom-scrollbar">
                 <div className="max-w-1xl mx-auto pb-10 grid grid-cols-12 gap-4">
                   <FormProvider {...methods}>
                     {children(Object.assign(control, { setValue, watch }), errors)}

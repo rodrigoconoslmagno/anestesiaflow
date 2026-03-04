@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import br.com.anestesiaflow.escala.dto.EscalaResumoAnualClinicaResponseDTO;
 import br.com.anestesiaflow.escala.dto.EscalaResumoAnualMedicoResponseDTO;
+import br.com.anestesiaflow.escala.dto.EscalaSimetriaEstResponseDTO;
 import br.com.anestesiaflow.escala.service.EscalaRelatorioService;
 
 @RestController
@@ -32,5 +33,10 @@ public class EscalaRelatorioController {
 	@PostMapping("/resumo-anual-clinica")
 	public ResponseEntity<List<EscalaResumoAnualClinicaResponseDTO>> resumoAnualClinica(@RequestBody(required = false) Map<String, Object> filtros){
 		return ResponseEntity.ok(escalaService.resumoAnoClinica(filtros));
+	}
+	
+	@PostMapping("/simetria")
+	public ResponseEntity<List<EscalaSimetriaEstResponseDTO>> resumoSimetria(@RequestBody(required = false) Map<String, Object> filtros){
+		return ResponseEntity.ok(escalaService.resumoAssimetria());
 	}
 }

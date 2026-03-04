@@ -223,7 +223,8 @@ export const EstabelecimentoView = () => {
                                             thead: { className: 'bg-gray-50' },
                                             headerRow: { className: 'sticky top-0 z-10' },
                                             column: {
-                                                headerCell: { className: 'bg-gray-50 text-gray-500 text-[10px] font-bold py-3' },
+                                                headerCell: { className: 'bg-gray-50 text-gray-500 text-[15px] font-bold' },
+                                                bodyCell: { className: '!p-0' }
                                             },
                                             row: {
                                                 root: {className: 'h-auto'}
@@ -233,7 +234,7 @@ export const EstabelecimentoView = () => {
                                         <Column header="MED"
                                                 frozen
                                                 style={{ minWidth: '10px' }}
-                                                className="bg-slate-100 font-bold px-0 py-0"
+                                                className="bg-slate-100 font-bold border-r border-slate-300 !p-0"
                                                 headerClassName='text-[15px]'
                                                 headerStyle={{ justifyContent: 'center' }}  
                                                 pt={{
@@ -277,7 +278,13 @@ export const EstabelecimentoView = () => {
                                                 }}
                                             />
                                         ))}
-                                        <Column field="total_ano" header="TOTAL" className="bg-blue-50 font-bold" headerClassName='text-[15px] font-bold]' />
+                                        <Column 
+                                            field="total_ano" 
+                                            header="TOTAL" 
+                                            className="bg-blue-50 font-bold" 
+                                            headerClassName='text-[15px] font-bold]' 
+                                            bodyClassName='text-center'
+                                        />
                                     </DataTable>
                                 </div>
                             </TabPanel>

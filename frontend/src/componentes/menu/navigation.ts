@@ -24,6 +24,7 @@ export interface MenuItem {
         { label: 'Escala Médica', icon: 'pi pi-globe', to: '/escalamedicoview' },
         { label: 'Sudoku Resumo', icon: 'pi pi-user-edit', to: '/sudokuresumoview' },
         { label: 'Sudoku', icon: 'pi pi-globe', to: '/sudokuview' },
+        { label: 'Simetria Escala', icon: 'pi pi-globe', to: '/simetriaview' },
       ]
     }
   ];

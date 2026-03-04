@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
@@ -17,6 +17,7 @@ import { DateUtils } from '@/utils/DateUtils';
 import clsx from 'clsx';
 import { Calendar } from 'primereact/calendar';
 import { addLocale, locale } from 'primereact/api';
+import { Menu } from 'primereact/menu';
 
 addLocale('pt-BR', {
   firstDayOfWeek: 0,
@@ -137,6 +138,12 @@ export const SudokuView = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isOverTrash, setIsOverTrash] = useState(false);
+  const menu = useRef<Menu>(null); // Ref para o menu de transbordamento
+
+  const menuItems = [
+    { label: 'Arquivar', icon: 'pi pi-box', command: () => { console.log('PDF'); } },
+    { label: 'Notificar', icon: 'pi pi-send', command: () => { console.log('Avisos'); } }
+  ];
 
   const sensors = useSensors(
     useSensor(PointerSensor, useMemo(() => ({
@@ -531,7 +538,7 @@ export const SudokuView = () => {
     <div className="sudoku-container flex flex-col h-screen bg-slate-50 overflow-hidden">
       
       <header className={clsx(
-          "flex items-center justify-between px-4 py-3 bg-white border-b transition-all duration-300 relative overflow-hidden",
+          "flex items-center justify-between sm:px-4 sm:py-3 px-2 py-1 bg-white border-b transition-all duration-300 relative overflow-hidden",
           isPaintingMode ? "border-blue-200" : "border-slate-200"
       )}>
         {(isSyncing || hasChangesToSave) && <div className="sync-glow-bar" />}
@@ -542,30 +549,55 @@ export const SudokuView = () => {
             label="Sair"
             text
             severity="danger"
-            className="hidden md:flex h-11 px-4 border-red-200 text-red-500 hover:bg-red-50"
+            className="hidden md:flex px-4 h-auto border-red-200 text-red-500 hover:bg-red-50"
             onClick={() => navigate(-1)} 
           />
           <Button 
             icon="pi pi-arrow-left" 
-            className="p-button-rounded p-button-text p-button-secondary md:hidden border-red-200 text-red-500" 
+            className="p-button-rounded p-button-text p-button-secondary h-auto md:hidden border-red-200 text-red-500" 
             onClick={() => navigate(-1)} 
           />
           <h1 className="text-lg md:text-xl font-black text-slate-700 m-0">
-            Escala Sudoku
+            Sudoku
           </h1>
         </div>
 
-        <Button 
-          icon={isSyncing ? "pi pi-spin pi-spinner" : (isEditing ? "pi pi-check" : "pi pi-pencil")}
-          label={isEditing ? "Concluir" : "Editar Escala"}          
-          className={clsx(
-            "p-button-sm shadow-sm transition-all p-1",
-            !isEditing && "bg-blue-600 border-blue-600 text-white",
-            isEditing && !hasChangesToSave && "bg-green-600 border-green-600 text-white",
-            isEditing && hasChangesToSave && "bg-red-400 border-red-400 text-white opacity-70"
-          )}
-          onClick={() => setIsEditing(!isEditing)}
-        />
+        <div className="flex items-center gap-2">
+          <div className="hidden md:flex gap-2">
+            <Button icon="pi pi-box" 
+                    // label="Arquivar"
+                    tooltip="Arquivar" 
+                    className="p-button-outlined p-button-secondary p-button-sm transition-all p-1 border-amber-500 text-amber-600 hover:bg-amber-50" 
+            />
+            <Button icon="pi pi-send" 
+                    // label="Notificar" 
+                    tooltip="Notificar" 
+                    className="p-button-outlined p-button-secondary p-button-sm transition-all p-1 border-slate-400 text-slate-500 hover:bg-slate-50" 
+            />
+          </div>
+
+          <Button 
+            icon={isSyncing ? "pi pi-spin pi-spinner" : (isEditing ? "pi pi-check" : "pi pi-pencil")}
+            label={isEditing ? "Concluir" : "Editar"}          
+            className={clsx(
+              "p-button-sm shadow-sm transition-all p-1",
+              !isEditing && "bg-blue-600 border-blue-600 text-white",
+              isEditing && !hasChangesToSave && "bg-green-600 border-green-600 text-white",
+              isEditing && hasChangesToSave && "bg-red-400 border-red-400 text-white opacity-70"
+            )}
+            onClick={() => setIsEditing(!isEditing)}
+          />
+
+          <div className="md:hidden h-auto w-auto">
+                <Button 
+                  icon="pi pi-ellipsis-v" 
+                  disabled={isEditing}
+                  className="p-button-rounded p-button-text p-button-secondary h-auto w-auto" 
+                  onClick={(e) => menu.current?.toggle(e)}
+                />
+                <Menu model={menuItems} popup ref={menu} id="popup_menu_left" />
+          </div>
+        </div>
       </header>
 
       <DndContext 
@@ -587,17 +619,17 @@ export const SudokuView = () => {
           setIsOverTrash(over?.id === 'painel-clinicas-trash');
         }}
       >
-        <div className="flex flex-col p-1 gap-2 flex-grow overflow-hidden">
+        <div className="flex flex-col sm:p-1 p-0 gap-2 flex-grow overflow-hidden">
           
-          <div className="flex items-center justify-between bg-slate-50 p-1 border-b border-slate-200">
+          <div className="flex items-center justify-between bg-slate-50 border-b border-slate-200">
               <Button 
                   icon="pi pi-chevron-left" 
-                  className="p-button-rounded p-button-text text-slate-400" 
+                  className="p-button-rounded p-button-text text-slate-400 h-auto" 
                   onClick={() => navegar(-1)} 
                   disabled={isHoje} 
               />
-              <div className="text-center flex flex-col items-center">
-                <div className="flex items-center gap-2 mb-1">
+              <div className="text-center flex flex-col items-center w-full">
+                <div className="flex items-center gap-2">
                     <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">
                         Escala Diária
                     </span>
@@ -610,10 +642,10 @@ export const SudokuView = () => {
 
                 <div className="relative group">
                     <div className="flex items-center gap-2 px-3 py-1 rounded-lg group-hover:bg-slate-100 transition-all cursor-pointer border border-transparent group-hover:border-slate-200">
-                        <span className="text-lg font-black text-slate-700 capitalize leading-none">
+                        <span className="sm:text-lg text-[9px] font-black text-slate-700 capitalize leading-none">
                             {dataAtiva.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
                         </span>
-                        <i className="pi pi-calendar text-blue-600 text-lg" />
+                        <i className="pi pi-calendar text-blue-600 sm:text-lg text-[9px]" />
                     </div>
 
                     <div className="absolute inset-0 opacity-0">
@@ -641,7 +673,7 @@ export const SudokuView = () => {
               </div>
               <Button 
                   icon="pi pi-chevron-right" 
-                  className="p-button-rounded p-button-text text-slate-400" 
+                  className="p-button-rounded p-button-text text-slate-400 h-auto" 
                   onClick={() => navegar(1)} 
               />
           </div>
@@ -750,7 +782,7 @@ export const SudokuView = () => {
                     }
                   }}
                   body={(escala: Escala) => (
-                    <div className="text-[12px] font-black text-slate-700 bg-slate-100">
+                    <div className="sm:text-[12px] text-[9px] font-black text-slate-700 bg-slate-100">
                       {escala.medicoSigla?.substring(0, 3).toUpperCase()}
                     </div>
                   )} 

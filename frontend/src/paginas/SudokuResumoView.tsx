@@ -89,7 +89,6 @@ export const SudokuResumoView = () => {
     return (
         <div className="flex flex-col h-screen bg-slate-50 overflow-hidden">
             <header className="flex items-center justify-between sm:px-4 sm:py-3 px-2 py-1 bg-white border-b border-slate-200 shadow-sm z-20">
-                {/* {(isSyncing || hasChangesToSave) && <div className="sync-glow-bar" />} */}
                 <div className="flex items-center gap-2 w-full">
                     {/* O botão sair sai do FAB e vem para o padrão mobile/tablet: Canto superior esquerdo */}
                     {!isPublicRoute && (
@@ -116,11 +115,11 @@ export const SudokuResumoView = () => {
                     <div className="flex items-center gap-3 bg-slate-100 rounded-lg w-full">
                         <Button 
                             icon="pi pi-chevron-left" 
-                            className="p-button-rounded p-button-text text-slate-500 h-full" 
+                            className="p-button-rounded p-button-text text-slate-500 h-auto" 
                             onClick={() => { const d = new Date(dataAtiva); d.setDate(d.getDate() - 1); setDataAtiva(d); }} 
                             disabled={isHoje} 
                         />
-                        <div className="text-center flex flex-col items-center w-full">
+                        <div className="text-center flex flex-col items-center h-full w-full">
                             <div className="flex items-center gap-2">
                                 <span className="sm:text-[12px] text-[7px] uppercase font-bold text-slate-400 tracking-widest">
                                     Escala Diária
@@ -166,7 +165,7 @@ export const SudokuResumoView = () => {
                         </div>
                         <Button 
                             icon="pi pi-chevron-right" 
-                            className="p-button-rounded p-button-text text-slate-500 h-full" 
+                            className="p-button-rounded p-button-text text-slate-500 h-auto" 
                             onClick={() => { const d = new Date(dataAtiva); d.setDate(d.getDate() + 1); setDataAtiva(d); }} 
                         />
                     </div>

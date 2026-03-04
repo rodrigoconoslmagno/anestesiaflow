@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import br.com.anestesiaflow.escala.dto.EscalaResumoAnualClinicaResponseDTO;
 import br.com.anestesiaflow.escala.dto.EscalaResumoAnualMedicoResponseDTO;
+import br.com.anestesiaflow.escala.dto.EscalaSimetriaDTO;
 import br.com.anestesiaflow.escala.entidade.Escala;
 
 public interface EscalaRelatorioRepository extends JpaRepository<Escala, Integer> {
@@ -75,4 +76,39 @@ public interface EscalaRelatorioRepository extends JpaRepository<Escala, Integer
 	        """, nativeQuery = true)
 	    List<EscalaResumoAnualClinicaResponseDTO> findResumoAnualByClinica(@Param("estId") int medicoId, @Param("ano") int ano);
 		
+	
+	@Query(value = """
+	        SELECT 
+	            base.sigla,
+	            base.cor,
+	            base.icone,
+	            base.estid,
+	            jsonb_agg(
+	                jsonb_build_object('sigla', base.sigla_medico, 'medicoid', base.medicoid,'total', base.total)
+	                ORDER BY base.total ASC, base.dataassociacao ASC
+	            ) AS dadosMedicos
+	        FROM (
+	            SELECT 
+	                e.sigla AS sigla,
+	                e.cor,
+	                e.icone,
+	                m.id as medicoid,
+	                e.id as estid,
+	                m.sigla AS sigla_medico,
+	                m.dataassociacao,
+	                COALESCE(contagem.total, 0) AS total
+	            FROM estabelecimento e
+	            CROSS JOIN medico m
+	            LEFT JOIN (
+	                SELECT ei.estabelecimentoid, esc.medicoid, COUNT(ei.id) AS total
+	                FROM escalaitem ei
+	                JOIN escala esc ON ei.escalaid = esc.id
+	                GROUP BY ei.estabelecimentoid, esc.medicoid
+	            ) contagem ON contagem.estabelecimentoid = e.id AND contagem.medicoid = m.id
+	            where m.ativo = true and e.ativo = true 
+	        ) base
+	        GROUP BY base.sigla, base.cor, base.icone, base.estid
+	        ORDER BY base.sigla
+	        """, nativeQuery = true)
+	    List<EscalaSimetriaDTO> buscarRelatorioAssimetria();
 }

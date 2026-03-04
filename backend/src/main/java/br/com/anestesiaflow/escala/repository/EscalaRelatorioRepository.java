@@ -36,9 +36,9 @@ public interface EscalaRelatorioRepository extends JpaRepository<Escala, Integer
 	        FROM 
 	            estabelecimento est
 	        LEFT JOIN 
-	            escalaitem ei ON est.id = ei.estabelecimentoid
-	        LEFT JOIN 
-	            escala e ON ei.escalaid = e.id and e.medicoid = :medicoId and EXTRACT(YEAR FROM e.data) = :ano
+	            escala e ON e.medicoid = :medicoId and EXTRACT(YEAR FROM e.data) = :ano
+			LEFT JOIN 
+	            escalaitem ei ON ei.escalaid = e.id and est.id = ei.estabelecimentoid	            
 	        GROUP BY 
 	            coalesce(est.sigla, est.nome),  est.icone, est.cor
 	        ORDER BY 

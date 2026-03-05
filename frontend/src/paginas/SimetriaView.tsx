@@ -104,10 +104,7 @@ export const SimetriaView = () => {
     const colunasMedicos = useMemo(() => {
         if (!resumoSimetria || resumoSimetria.length === 0) return [];
         
-        return (resumoSimetria[0] as any).medico.map((m: any, index: any) => ({
-            header: m.sigla,
-            index: index
-        }));
+        return (resumoSimetria[0] as any).medico.length;
     }, [resumoSimetria]);
 
     const corpoMedico = (rowData: any, colIndex: any) => {
@@ -119,19 +116,29 @@ export const SimetriaView = () => {
                 onClick={() => abrirLancamento(rowData, colIndex)}
                 title="Clique para lançar escala"
                 className={`
-                    flex items-center justify-center gap-1 w-full h-full transition-all duration-200
-                    cursor-pointer group relative
-                    ${temValor && 'bg-blue-100/50 text-blue-700'}
+                    flex items-center justify-between w-full h-full p-1 transition-all duration-200
+                    cursor-pointer group relative overflow-hidden
+                    ${temValor ? 'bg-blue-100/40 text-blue-700' : 'hover:bg-slate-50'}
                 `}
             >
-                <div className="absolute inset-0 border-2 border-transparent group-hover:border-blue-400/30 pointer-events-none" />
-                
-                <span className={`text-[15px] 'font-black' text-slate-300'}`}>
-                    {infoMedico?.total || 0}
-                </span>
-    
-                <i className="pi pi-plus text-[10px] opacity-0 group-hover:opacity-100 transition-opacity absolute top-1 right-1" />
-            </div>
+                {/* Overlay de borda no hover */}
+                <div className="absolute inset-0 border-2 border-transparent group-hover:border-blue-400/20 pointer-events-none" /> 
+
+                {/* ÁREA DA ESQUERDA: Sigla + Total (Pilha Vertical) */}
+                <div className="flex flex-col items-center justify-center flex-1">
+                    <span className="text-[12px] font-bold text-slate-500 uppercase leading-none mb-1">
+                        {infoMedico?.sigla}
+                    </span>
+                    <span className={`text-[16px] font-black leading-none ${infoMedico?.total > 0 ? 'text-blue-700' : 'text-slate-300'}`}>
+                        {infoMedico?.total || 0}
+                    </span>
+                </div>
+
+                {/* ÁREA DA DIREITA: Ícone de Plus (Centralizado Verticalmente) */}
+                <div className="flex items-center justify-center">
+                    <i className="pi pi-plus text-[10px] text-blue-600" />
+                </div>
+</div>
         );
     };
 
@@ -214,10 +221,10 @@ export const SimetriaView = () => {
                                     )}
                             />
                         
-                            {colunasMedicos.map((col: any, i: any) => (
+                            {Array.from({ length: colunasMedicos }).map((_, i: any) => (
                                 <Column 
-                                    key={col.header + i} 
-                                    header={col.header} 
+                                    key={i} 
+                                    // header={col.header} 
                                     headerClassName='text-[15px] font-bold]'
                                     bodyClassName="!px-0 !py-0 m-0"
                                     pt={{

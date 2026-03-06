@@ -1,4 +1,5 @@
 import { server } from "@/api/server";
+import { useAppToast } from "@/context/ToastContext";
 import { getIntervalosEscala } from "@/types/escalaHelper";
 import { Button } from "primereact/button"
 import { Calendar } from "primereact/calendar";
@@ -8,12 +9,14 @@ import { Dialog } from "primereact/dialog";
 import { ProgressSpinner } from "primereact/progressspinner";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { type Escala, type EscalaItem } from "@/types/escala";
+import { DateUtils } from "@/utils/DateUtils";
 
 export const SimetriaView = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
-    const [resumoSimetria, setResumoSimetria] = useState([]);
-
+    const [resumoSimetria, setResumoSimetria] = useState<any>([]);
+    const { showError } = useAppToast();
     const [displayDialog, setDisplayDialog] = useState(false);
     const [selectedCell, setSelectedCell] = useState<any>(null);
     const [formData, setFormData] = useState({
@@ -25,78 +28,161 @@ export const SimetriaView = () => {
 
     const abrirLancamento = (rowData: any, colIndex: any) => {
         const medico = rowData.medico[colIndex];
-        setSelectedCell({ row: rowData, medico: medico });
+        setFormData({data: new Date(), horas: []});
+        setSelectedCell({ 
+            row: rowData, 
+            medico: medico
+        });
         setDisplayDialog(true);
     };
 
     const salvarEscala = () => {
-        console.log("Salvando para:", selectedCell.medico.sigla, formData);
-        setDisplayDialog(false);
+        const enviaBackend = async (escala: Escala) => {
+            try {
+                await server.api.criar('/escala/simetria', escala);
+
+                const novoResumo = [...resumoSimetria] as any[];
+
+                const indexLinha = novoResumo.findIndex(
+                    (item: any) => String(item.estId) === String(selectedCell.row.estId)
+                );
+
+                if (indexLinha !== -1) {
+                    const linhaAtualizada = { ...novoResumo[indexLinha] };
+                    const medicosNovos = [...linhaAtualizada.medico];
+
+                    const idxM = medicosNovos.findIndex(
+                        (m: any) => String(m.medicoid) === String(selectedCell.medico.medicoid)
+                    );
+
+                    if (idxM !== -1) {
+                        medicosNovos[idxM] = {
+                            ...medicosNovos[idxM],
+                            total: (Number(medicosNovos[idxM].total) || 0) + formData.horas.length
+                        };
+
+                        linhaAtualizada.medico = medicosNovos;
+                        novoResumo[indexLinha] = linhaAtualizada;
+
+                        setResumoSimetria(novoResumo);
+                    }
+                }
+
+            } catch (error: any) {
+                const errorMessage = error.response?.data?.message || "Ocorreu um erro inesperado";
+                showError('Erro', errorMessage);
+            }
+        }
+
+        if (formData.horas.length == 0){
+            showError("Escala", "Seleciona pelo menos um horário para continuar.");
+        } else {
+            let escala: Escala = {medicoId: selectedCell?.medico.medicoid, 
+                                 data: DateUtils.paraISO(formData.data),
+                                 itens: []};
+            formData.horas.map((hora) => {
+                let escalaItem: EscalaItem = {
+                    estabelecimentoId: selectedCell?.row.estId,
+                    hora: hora
+                };
+                escala?.itens?.push(escalaItem);
+            });             
+            
+            enviaBackend(escala);
+
+            setDisplayDialog(false);
+        }
     };
 
     const TimeSlotPicker = ({ intervals, selectedHours, onChange }: any) => {
         const [isSelecting, setIsSelecting] = useState(false);
-
+    
+        const isHoraPassada = (hourField: string) => {
+            const hoje = new Date();
+            const dataSelecionada = formData.data;
+    
+            if (dataSelecionada.toDateString() === hoje.toDateString()) {
+                const horaAtual = hoje.getHours();
+                const apenasNumeros = hourField.replace(/\D/g, '');
+                const horaSlot = parseInt(apenasNumeros.substring(0, 2), 10);
+                return horaSlot < horaAtual;
+            }
+            return false;
+        };
+    
         const toggleHour = (hourField: string) => {
+            if (isHoraPassada(hourField)) {
+                return;
+            }
+            
             const newSelection = selectedHours.includes(hourField)
                 ? selectedHours.filter((h: string) => h !== hourField)
                 : [...selectedHours, hourField];
             onChange(newSelection);
         };
-
+    
         const handleMouseDown = (hourField: string) => {
+            if (isHoraPassada(hourField)) return;
             setIsSelecting(true);
             toggleHour(hourField);
         };
-
+    
         const handleMouseEnter = (hourField: string) => {
-            if (isSelecting) {
+            if (isSelecting && !isHoraPassada(hourField)) {
                 if (!selectedHours.includes(hourField)) {
                     onChange([...selectedHours, hourField]);
                 }
             }
         };
-
+    
         return (
             <div 
                 className="grid grid-cols-4 sm:grid-cols-6 gap-2 p-2 bg-slate-100 rounded-xl select-none"
                 onMouseUp={() => setIsSelecting(false)}
                 onMouseLeave={() => setIsSelecting(false)}
             >
-                {intervals.map((int: any) => (
-                    <div
-                        key={int.field}
-                        onMouseDown={() => handleMouseDown(int.field)}
-                        onMouseEnter={() => handleMouseEnter(int.field)}
-                        className={`
-                            flex items-center justify-center p-2 rounded-lg cursor-pointer transition-all duration-200
-                            h-12 text-center /* Altura fixa para garantir uniformidade */
-                            ${selectedHours.includes(int.field) 
-                                ? 'bg-blue-600 text-white shadow-md scale-105' 
-                                : 'bg-white text-slate-600 hover:bg-blue-50 border border-slate-200'}
-                        `}
-                    >
-                        <span className="text-[11px] font-bold uppercase whitespace-nowrap leading-none">
-                            {int.header}
-                        </span>
-                    </div>
-                ))}
+                {intervals.map((int: any) => {
+                    const desabilitado = isHoraPassada(int.field);
+                    const selecionado = selectedHours.includes(int.field);
+    
+                    return (
+                        <div
+                            key={int.field}
+                            onMouseDown={() => handleMouseDown(int.field)}
+                            onMouseEnter={() => handleMouseEnter(int.field)}
+                            className={`
+                                flex items-center justify-center p-2 rounded-lg transition-all duration-200
+                                h-12 text-center border
+                                ${desabilitado 
+                                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-60 border-slate-300' 
+                                    : selecionado 
+                                        ? 'bg-blue-600 text-white shadow-md scale-105 border-blue-700' 
+                                        : 'bg-white text-slate-600 hover:bg-blue-50 border-slate-200 cursor-pointer'}
+                            `}
+                        >
+                            <span className="text-[11px] font-bold uppercase whitespace-nowrap leading-none">
+                                {int.header}
+                            </span>
+                            {desabilitado && <i className="pi pi-lock ml-1 text-[9px]"></i>}
+                        </div>
+                    );
+                })}
             </div>
         );
     };
 
     useEffect(() => {
         const carregarDados = async () => {
-        try {
-            const simetria = await server.api.listarCustomizada<any>(
-                '/escala-relatorio', 
-                '/simetria',
-                { }
-            );
-            setResumoSimetria(simetria as any);
-        } finally {
-            setLoading(false);
-        }
+            try {
+                const simetria = await server.api.listarCustomizada<any>(
+                    '/escala-relatorio', 
+                    '/simetria',
+                    { }
+                );
+                setResumoSimetria(simetria as any);
+            } finally {
+                setLoading(false);
+            }
         }
         carregarDados()
     }, []);
@@ -121,20 +207,17 @@ export const SimetriaView = () => {
                     ${temValor ? 'bg-blue-100/40 text-blue-700' : 'hover:bg-slate-50'}
                 `}
             >
-                {/* Overlay de borda no hover */}
                 <div className="absolute inset-0 border-2 border-transparent group-hover:border-blue-400/20 pointer-events-none" /> 
 
-                {/* ÁREA DA ESQUERDA: Sigla + Total (Pilha Vertical) */}
                 <div className="flex flex-col items-center justify-center flex-1">
-                    <span className="text-[12px] font-bold text-slate-500 uppercase leading-none mb-1">
+                    <span className="text-[13px] font-bold text-slate-600 uppercase leading-none mb-1">
                         {infoMedico?.sigla}
                     </span>
-                    <span className={`text-[16px] font-black leading-none ${infoMedico?.total > 0 ? 'text-blue-700' : 'text-slate-300'}`}>
+                    <span className={`text-[12px] font-black leading-none ${infoMedico?.total > 0 ? 'text-blue-500' : 'text-slate-500'}`}>
                         {infoMedico?.total || 0}
                     </span>
                 </div>
 
-                {/* ÁREA DA DIREITA: Ícone de Plus (Centralizado Verticalmente) */}
                 <div className="flex items-center justify-center">
                     <i className="pi pi-plus text-[10px] text-blue-600" />
                 </div>
@@ -192,9 +275,25 @@ export const SimetriaView = () => {
                                     headerCell: { className: 'bg-gray-50 text-gray-500 sm:text-[15px] text-[10px] font-bold py-3' },
                                 },
                             }}
+                            header={
+                                resumoSimetria.length > 0 ? (
+                                    <div className="flex justify-between items-center px-2 py-1">
+                                        <div className="flex items-center gap-2">
+                                            <i className="pi pi-filter-fill text-blue-500 text-sm"></i>
+                                            <span className="text-lg font-semibold text-slate-600">
+                                                Período analisado: 
+                                                <span className="text-blue-600 ml-1">
+                                                    {new Date((resumoSimetria[0] as any).dataInicio).toLocaleDateString('pt-BR')} 
+                                                    {" à "} 
+                                                    {new Date((resumoSimetria[0] as any).dataFim).toLocaleDateString('pt-BR')}
+                                                </span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                ) : null
+                            }
                         >
-                            <Column header=""
-                                    frozen
+                            <Column frozen
                                     style={{ minWidth: '50px' }}
                                     className="bg-slate-100 font-bold border-r border-slate-300 z-20 shadow-[2px_0_5px_rgba(0,0,0,0.05)]"
                                     headerClassName='text-[15px]'
@@ -223,8 +322,7 @@ export const SimetriaView = () => {
                         
                             {Array.from({ length: colunasMedicos }).map((_, i: any) => (
                                 <Column 
-                                    key={i} 
-                                    // header={col.header} 
+                                    key={`col-medico-${i}`}
                                     headerClassName='text-[15px] font-bold]'
                                     bodyClassName="!px-0 !py-0 m-0"
                                     pt={{
@@ -244,9 +342,7 @@ export const SimetriaView = () => {
                         <span className="text-xl font-bold text-slate-800">Lançar Escala</span>
                         <small className="text-slate-500 font-normal">
                             Médico: {selectedCell?.medico?.sigla} | 
-                            Médico Id: {selectedCell?.medico?.medicoid} | 
-                            Setor: {selectedCell?.row?.estSigla} |
-                            Est id: {selectedCell?.row?.estId}
+                            Clinica / Hospital: {selectedCell?.row?.estSigla} 
                         </small>
                     </div>
                 } 

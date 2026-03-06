@@ -54,9 +54,11 @@ public class EscalaRelatorioService {
                 raw.getDadosMedicos(), 
                 new TypeReference<List<EscalaSimetriaMedicoResponseDTO>>() {}
             );
-            return new EscalaSimetriaEstResponseDTO(raw.getEstId(), raw.getSigla(), raw.getCor(), raw.getIcone(), medicos);
+            return new EscalaSimetriaEstResponseDTO(raw.getEstId(), raw.getSigla(), raw.getCor(), 
+            		raw.getIcone(), raw.getDataInicio(), raw.getDataFim(), medicos);
         } catch (JsonProcessingException e) {
-            return new EscalaSimetriaEstResponseDTO(raw.getEstId(), raw.getSigla(), raw.getCor(), raw.getIcone(), List.of());
+            return new EscalaSimetriaEstResponseDTO(raw.getEstId(), raw.getSigla(), raw.getCor(), 
+            		raw.getIcone(), raw.getDataInicio(), raw.getDataFim(), List.of());
         }
     }
 }

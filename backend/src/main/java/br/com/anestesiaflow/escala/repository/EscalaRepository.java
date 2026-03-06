@@ -22,6 +22,9 @@ public interface EscalaRepository extends JpaRepository<Escala, Integer> {
 	@EntityGraph(attributePaths = {"itens", "itens.estabelecimento", "medico"})
 	List<Escala> findByData(LocalDate data);
 	
+	@EntityGraph(attributePaths = {"itens", "itens.estabelecimento", "medico"})
+	Escala findByMedico_IdAndData(Integer medicoId, LocalDate data);
+	
 	@Query(value = """
 				SELECT 
 			        min(e.id) as id,

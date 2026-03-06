@@ -1,6 +1,7 @@
 package br.com.anestesiaflow.escala.controller;
 
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -65,6 +66,12 @@ public class EscalaController {
 				dto);
 		List<EscalaResponseDTO> escalass = escalaService.salvar(semana);
         return ResponseEntity.status(HttpStatus.CREATED).body(escalass);
+    }
+	
+	@PostMapping("/simetria")
+    public ResponseEntity<EscalaResponseDTO> criar(@Validated @RequestBody EscalaResponseDTO dto) {
+		EscalaResponseDTO escalas = escalaService.salvar(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(escalas);
     }
 	
 	@DeleteMapping("/{id}")

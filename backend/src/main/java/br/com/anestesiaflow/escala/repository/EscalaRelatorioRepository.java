@@ -83,6 +83,8 @@ public interface EscalaRelatorioRepository extends JpaRepository<Escala, Integer
 	            base.cor,
 	            base.icone,
 	            base.estid,
+	            base.datainicio,
+				base.datafim,
 	            jsonb_agg(
 	                jsonb_build_object('sigla', base.sigla_medico, 'medicoid', base.medicoid,'total', base.total)
 	                ORDER BY base.total ASC, base.dataassociacao ASC
@@ -96,6 +98,8 @@ public interface EscalaRelatorioRepository extends JpaRepository<Escala, Integer
 	                e.id as estid,
 	                m.sigla AS sigla_medico,
 	                m.dataassociacao,
+	                (CURRENT_DATE - INTERVAL '90 days')::date AS datainicio,
+					(CURRENT_DATE + INTERVAL '30 days')::date AS datafim,
 	                COALESCE(contagem.total, 0) AS total
 	            FROM estabelecimento e
 	            CROSS JOIN medico m
@@ -103,11 +107,13 @@ public interface EscalaRelatorioRepository extends JpaRepository<Escala, Integer
 	                SELECT ei.estabelecimentoid, esc.medicoid, COUNT(ei.id) AS total
 	                FROM escalaitem ei
 	                JOIN escala esc ON ei.escalaid = esc.id
+	                WHERE esc.data >= (CURRENT_DATE - INTERVAL '90 days')
+			     	  AND esc.data <= (CURRENT_DATE + INTERVAL '30 days')
 	                GROUP BY ei.estabelecimentoid, esc.medicoid
 	            ) contagem ON contagem.estabelecimentoid = e.id AND contagem.medicoid = m.id
 	            where m.ativo = true and e.ativo = true 
 	        ) base
-	        GROUP BY base.sigla, base.cor, base.icone, base.estid
+	        GROUP BY base.sigla, base.cor, base.icone, base.estid, base.datainicio, base.datafim
 	        ORDER BY base.sigla
 	        """, nativeQuery = true)
 	    List<EscalaSimetriaDTO> buscarRelatorioAssimetria();

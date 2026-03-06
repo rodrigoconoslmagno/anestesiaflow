@@ -4,8 +4,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -124,60 +127,105 @@ public class EscalaService {
 	public List<EscalaResponseDTO> salvar(EscalaEdicaoDTO dto) {
 		List<EscalaResponseDTO> resultados = new ArrayList<>();
 		for(EscalaSemanaDTO edicao : dto.semana()) {
-			resultados.addAll(salvar(edicao));
+			resultados.addAll(salvar(edicao, true));
 		}
 		
 		return resultados;
 	}
 	
 	public List<EscalaResponseDTO> salvar(EscalaSemanaDTO dto) {
+		return salvar(dto, true);
+	}
+	
+	public EscalaResponseDTO salvar(EscalaResponseDTO dto) {
+		EscalaSemanaDTO semana = new EscalaSemanaDTO(
+				0,
+			    null,
+			    null,
+				null,
+				null,
+				Arrays.asList(dto));
+		return salvar(semana, false).get(0);
+	}
+	
+	
+	private List<EscalaResponseDTO> salvar(EscalaSemanaDTO dto, boolean deleteItens) {
 		List<EscalaResponseDTO> resultados = new ArrayList<>();
 		for (var escalaDto : dto.escala()) {
 	        Escala entidadeEscala;
 	
 	        if (escalaDto.id() != null) {
-	            // REGISTRO EXISTENTE
 	            entidadeEscala = escalaRepository.findById(escalaDto.id())
 	                .orElseThrow(() -> new BusinessException("Escala não encontrada"));
 	            
 	            entidadeEscala = mapperToEscala(escalaDto, entidadeEscala);
-	            sincronizarItens(entidadeEscala, escalaDto.itens());
+	            sincronizarItens(entidadeEscala, escalaDto.itens(), deleteItens);
 	        } else {
-	            // REGISTRO NOVO
-	            entidadeEscala = mapperToEscala(escalaDto);
-	            sincronizarItens(entidadeEscala, escalaDto.itens());
+	        	entidadeEscala = escalaRepository.findByMedico_IdAndData(escalaDto.medicoId(), escalaDto.data());
+		        
+	        	if (entidadeEscala == null) {
+	        		entidadeEscala = mapperToEscala(escalaDto);	        		
+	        	} else {
+	        		entidadeEscala = mapperToEscala(escalaDto, entidadeEscala);	
+	        	}
+	        	
+	            sincronizarItens(entidadeEscala, escalaDto.itens(), deleteItens);
 	        }
 	
-	        // LÓGICA DE PERSISTÊNCIA / EXCLUSÃO
 	        if (entidadeEscala.getItens() == null || entidadeEscala.getItens().isEmpty()) {
 	            if (entidadeEscala.getId() != null) {
 	                escalaRepository.delete(entidadeEscala);
-	                // Não adicionamos à lista de resultados pois ela deixou de existir
 	            }
 	        } else {
+	        	validaEscalaItens(entidadeEscala);
 	            Escala salva = escalaRepository.save(entidadeEscala);
-	            resultados.add(mapperToDto(salva)); // Adiciona com o ID gerado/mantido
+	            resultados.add(mapperToDto(salva));
 	        }
 	    }
 	
 		return resultados;
 	}
 	
-	private void sincronizarItens(Escala escala, List<EscalaItemResponseDTO> itensDto) {
-	    // 1. Remove itens que não estão mais no DTO (Deleção)
-	    escala.getItens().removeIf(existente -> 
-	        itensDto.stream().noneMatch(dto -> dto.id() != null && dto.id().equals(existente.getId()))
-	    );
+	private void validaEscalaItens(Escala escala) {
+		if (escala.getItens().size() > 12) {
+			throw new BusinessException("Exedico o número de horas para uma escala");
+		}
+		
+		Map<LocalTime, Integer> mapaHorarios = new HashMap<>();
+
+        for (EscalaItem item : escala.getItens()) {
+        	LocalTime hora = item.getHora(); // Ex: "10:00"
+            Integer estId = item.getEstabelecimento().getId();
+
+            // Verificamos se essa hora já foi registrada por alguém
+            if (mapaHorarios.containsKey(hora)) {
+                Integer idExistente = mapaHorarios.get(hora);
+                
+                // Se a hora existe e o ID é diferente, temos um choque!
+                if (!idExistente.equals(estId)) {
+                    throw new BusinessException("Conflito: O horário " + hora + 
+                        " já está ocupado");
+                }
+            } else {
+                mapaHorarios.put(hora, estId);
+            }
+        }
+	}
+	
+	private void sincronizarItens(Escala escala, List<EscalaItemResponseDTO> itensDto, boolean deleteItens) {
+		if (deleteItens) {
+		    escala.getItens().removeIf(existente -> 
+		        itensDto.stream().noneMatch(dto -> dto.id() != null && dto.id().equals(existente.getId()))
+		    );
+		}
 
 	    // 2. Adiciona ou atualiza os itens restantes
 	    itensDto.forEach(dto -> {
 	        if (dto.id() == null) {
-	            // Novo item na grade
 	            EscalaItem novoItem = mapperToEscalaItem(dto);
 	            novoItem.setEscala(escala);
 	            escala.getItens().add(novoItem);
 	        } else {
-	            // Atualiza item existente
 	            escala.getItens().stream()
 	                .filter(i -> i.getId().equals(dto.id()))
 	                .findFirst()
@@ -245,7 +293,6 @@ public class EscalaService {
 	}
 	
 	private Escala mapperToEscala(EscalaResponseDTO dto, Escala escala) {
-//		escala.getMedico().setId(dto.medicoId());
 		escala.setData(dto.data());
 		return escala;
 	}

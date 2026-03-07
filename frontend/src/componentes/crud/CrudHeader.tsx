@@ -2,11 +2,26 @@ import { Button } from 'primereact/button';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { classNames } from 'primereact/utils';
+import { useAuthStore } from '@/permissoes/authStore';
+import type { Recurso } from '@/permissoes/recurso';
 
-export const CrudHeader = ({ title, onAdd, filterContent, onClose, onApplyFilters, onClearFilters }: any) => {
+interface CrudHeaderProps {
+  title: string;
+  onAdd?: () => void;
+  resurso: Recurso;
+  filterContent?: React.ReactNode;
+  onClose?: () => void;
+  onApplyFilters?: () => void;
+  onClearFilters?: () => void;
+}
+
+export const CrudHeader = ({ title, onAdd, resurso, filterContent, 
+                             onClose, onApplyFilters, onClearFilters }: CrudHeaderProps) => {
   const [showDesktopFilters, setShowDesktopFilters] = useState(false);
   const navigate = useNavigate();
 
+  const hasPermission = useAuthStore(state => state.hasPermission(resurso, 'NOVO'));
+  
   const handleClose = onClose || (() => navigate('/dashboard'));
 
   return (
@@ -28,7 +43,7 @@ export const CrudHeader = ({ title, onAdd, filterContent, onClose, onApplyFilter
             />
           )}
 
-          {onAdd && (
+          {onAdd && hasPermission && (
             <Button 
               onClick={onAdd} 
               className="hidden md:flex bg-blue-600 border-none shadow-md h-11 px-6 justify-center text-white"

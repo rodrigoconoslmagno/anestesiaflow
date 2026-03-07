@@ -1,4 +1,4 @@
-import { useState, type FC } from 'react';
+import { useState, type FC, useMemo } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { clsx } from 'clsx';
 import { Ripple } from 'primereact/ripple';
@@ -7,7 +7,9 @@ import { Button } from 'primereact/button';
 import { InputSwitch } from 'primereact/inputswitch'; 
 import { Logo } from '@/componentes/logo/Logo';
 import { useAuth } from '@/context/AuthContext';
-import { navigationItems,type MenuItem } from '@/componentes/menu/navigation';
+import { type MenuItem } from '@/componentes/menu/navigation';
+import { useAuthStore } from '@/permissoes/authStore';
+import { buildDynamicMenu } from '@/componentes/menu/MenuFactory';
 
 const NavItem: FC<{ item: MenuItem; level?: number; closeMobile?: () => void; isCollapsed?: boolean; onSelect: () => void }> = ({ 
   item, level = 0, closeMobile, isCollapsed, onSelect 
@@ -25,7 +27,9 @@ const NavItem: FC<{ item: MenuItem; level?: number; closeMobile?: () => void; is
     } else if (item.to) {
       navigate(item.to);
       onSelect(); 
-      if (closeMobile) closeMobile();
+      if (closeMobile) {
+        closeMobile();
+      }
     }
   };
 
@@ -58,7 +62,14 @@ const NavItem: FC<{ item: MenuItem; level?: number; closeMobile?: () => void; is
       {hasChildren && expanded && !isCollapsed && (
         <div className="flex flex-col">
           {item.children?.map((child, idx) => (
-            <NavItem key={idx} item={child} level={level + 1} closeMobile={closeMobile} isCollapsed={isCollapsed} onSelect={onSelect} />
+            <NavItem 
+              key={idx} 
+              item={child} 
+              level={level + 1} 
+              closeMobile={closeMobile} 
+              isCollapsed={isCollapsed} 
+              onSelect={onSelect} 
+            />
           ))}
         </div>
       )}
@@ -71,7 +82,8 @@ export const DashboardLayout: FC = () => {
   const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
   const [fullViewMode, setFullViewMode] = useState(false); 
   const [isHovered, setIsHovered] = useState(false); 
-  
+  const hasPermission = useAuthStore((state) => state.hasPermission);
+  const user = useAuthStore(state => state.user);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -79,9 +91,36 @@ export const DashboardLayout: FC = () => {
 
   const mobileQuickActions = [
     { label: 'Início', icon: 'pi pi-home', to: '/dashboard' },
-    { label: 'Sudoku', icon: 'pi pi-calendar', to: '/sudokuview' },
-    { label: 'Médicos', icon: 'pi pi-users', to: '/medico' },
+    { label: 'Sudoku', icon: 'pi pi-th-large', to: '/sudokuview' },
+    { label: 'Simetria', icon: 'pi pi-clone', to: '/simetriaview' },
+    { label: 'Escala Semana', icon: 'pi pi-calendar-plus', to: '/escalamedicoview' },
   ];
+
+  const dynamicNavigation = useMemo(() => {
+    if (user?.permissoes) {
+      return buildDynamicMenu(user.permissoes as any);
+    }
+    return [{ label: 'Início', icon: 'pi pi-home', to: '/dashboard' }];
+  }, [user]);
+
+  const filterMenu = (items: MenuItem[]): MenuItem[] => {
+    return items
+      .map(item => ({ ...item }))
+      .filter(item => {
+        if (item.recurso) {
+          if (!hasPermission(item.recurso, 'ACESSAR')) {
+            return false;
+          }
+        }
+
+        if (item.children) {
+          item.children = filterMenu(item.children);
+          return item.children.length > 0;
+        }
+  
+        return true;
+      });
+  };
 
   return (
     <div className="h-screen flex flex-col lg:flex-row bg-[#f9fafb] overflow-hidden">
@@ -118,7 +157,7 @@ export const DashboardLayout: FC = () => {
         </div>
         
         <nav className="flex-1 px-4 py-6 overflow-y-auto custom-scrollbar">
-          {navigationItems.map((item, idx) => (
+          {dynamicNavigation.map((item, idx) => (
             <NavItem 
               key={idx} 
               item={item} 
@@ -184,14 +223,21 @@ export const DashboardLayout: FC = () => {
 
       {/* MOBILE UI (Original Mantido) */}
       <div className="lg:hidden fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-lg border-t border-gray-100 px-6 py-3 flex justify-between items-center z-40 pb-safe">
-        {mobileQuickActions.map((item) => (
-          <button key={item.to} onClick={() => navigate(item.to)} className={clsx("flex flex-col items-center gap-1", location.pathname === item.to ? "text-blue-600" : "text-gray-400")}>
-            <i className={clsx(item.icon, "text-xl")}></i>
-            <span className="text-[9px] font-black uppercase tracking-tighter">{item.label}</span>
-          </button>
+        {mobileQuickActions.map((item: any) => (
+            <button 
+                key={item.to} 
+                onClick={() =>  navigate(item.to)} 
+                className={clsx(
+                    "flex flex-col items-center gap-1 transition-colors",
+                    location.pathname === item.to ? "text-blue-600" : "text-gray-400"
+                )}
+            >
+              <i className={clsx(item.icon, "text-xl")}></i>
+              <span className="text-[9px] font-black uppercase tracking-tighter">{item.label}</span>
+            </button>
         ))}
         <button onClick={() => setMobileMenuVisible(true)} className="flex flex-col items-center gap-1 text-gray-400">
-          <i className="pi pi-th-large text-xl"></i>
+          <i className="pi pi-bars text-xl"></i>
           <span className="text-[9px] font-black uppercase tracking-tighter">Menu</span>
         </button>
       </div>
@@ -203,7 +249,7 @@ export const DashboardLayout: FC = () => {
              <span className="font-black text-blue-900 text-xl tracking-tight">AnestesiaFlow</span>
           </div>
           <nav className="flex-1 p-4 overflow-y-auto">
-            {navigationItems.map((item, idx) => (
+            {dynamicNavigation.map((item, idx) => (
               <NavItem key={idx} item={item} closeMobile={() => setMobileMenuVisible(false)} onSelect={() => setMobileMenuVisible(false)} />
             ))}
           </nav>

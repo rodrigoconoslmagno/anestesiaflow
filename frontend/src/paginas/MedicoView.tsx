@@ -4,6 +4,7 @@ import { AppCalendar } from '@/componentes/datetime/AppCalendar';
 import { AppInputText } from '@/componentes/inputtext/AppInputText';
 import { AppSelect } from '@/componentes/select/AppSelect';
 import { AppSwitch } from '@/componentes/switch/AppSwitch';
+import { Recurso } from '@/permissoes/recurso';
 import { type Medico, medicoSchema } from '@/types/medico';
 import { DateUtils } from '@/utils/DateUtils';
 import { Column } from 'primereact/column';
@@ -54,6 +55,7 @@ export const MedicoView = () => {
     return (
         <CrudBase<Medico>
             title="Médico"
+            recurso={Recurso.MEDICO}
             // filterContent={<p>Teste de Filtro</p>}
             resourcePath='/medico'
             schema={medicoSchema}

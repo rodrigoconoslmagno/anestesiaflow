@@ -19,8 +19,11 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import br.com.anestesiaflow.auth.permission.Permissoes;
+import br.com.anestesiaflow.auth.permission.SecurityUtils;
 import br.com.anestesiaflow.escala.dto.EscalaEdicaoDTO;
 import br.com.anestesiaflow.escala.dto.EscalaItemResponseDTO;
 import br.com.anestesiaflow.escala.dto.EscalaResponseDTO;
@@ -45,13 +48,15 @@ public class EscalaService {
 	private final EstabelecimentoRepository estabelecimentoRepository;
 	private final MedicoService medicoService;
 	private final EntityManager entityManager;
+	private final SecurityUtils securityUtils;
 	
 	public EscalaService(EscalaRepository escalaRepository,EstabelecimentoRepository estabelecimentoRepository,
-					MedicoService medicoService, EntityManager entityManager) {
+					MedicoService medicoService, EntityManager entityManager, SecurityUtils securityUtils) {
 		this.escalaRepository = escalaRepository;
 		this.estabelecimentoRepository = estabelecimentoRepository;
 		this.medicoService = medicoService;
 		this.entityManager = entityManager;
+		this.securityUtils = securityUtils;
 	}
 	
 	public List<EscalaSemanaSummaryDTO> listarTodos(Map<String, Object> filtros){
@@ -127,14 +132,15 @@ public class EscalaService {
 	public List<EscalaResponseDTO> salvar(EscalaEdicaoDTO dto) {
 		List<EscalaResponseDTO> resultados = new ArrayList<>();
 		for(EscalaSemanaDTO edicao : dto.semana()) {
-			resultados.addAll(salvar(edicao, true));
+			resultados.addAll(salvar(edicao, Permissoes.ESCALA_EXCLUIR));
 		}
 		
 		return resultados;
 	}
 	
 	public List<EscalaResponseDTO> salvar(EscalaSemanaDTO dto) {
-		return salvar(dto, true);
+		//para o sudoku nao da para unificar, entao vamos usar a alteracao e excluir unificada
+		return salvar(dto, Permissoes.SUDOKU_ALTERAR);
 	}
 	
 	public EscalaResponseDTO salvar(EscalaResponseDTO dto) {
@@ -145,11 +151,11 @@ public class EscalaService {
 				null,
 				null,
 				Arrays.asList(dto));
-		return salvar(semana, false).get(0);
+		return salvar(semana, null).get(0);
 	}
 	
 	
-	private List<EscalaResponseDTO> salvar(EscalaSemanaDTO dto, boolean deleteItens) {
+	private List<EscalaResponseDTO> salvar(EscalaSemanaDTO dto, Permissoes permissoes) {
 		List<EscalaResponseDTO> resultados = new ArrayList<>();
 		for (var escalaDto : dto.escala()) {
 	        Escala entidadeEscala;
@@ -159,7 +165,7 @@ public class EscalaService {
 	                .orElseThrow(() -> new BusinessException("Escala não encontrada"));
 	            
 	            entidadeEscala = mapperToEscala(escalaDto, entidadeEscala);
-	            sincronizarItens(entidadeEscala, escalaDto.itens(), deleteItens);
+	            sincronizarItens(entidadeEscala, escalaDto.itens(), permissoes);
 	        } else {
 	        	entidadeEscala = escalaRepository.findByMedico_IdAndData(escalaDto.medicoId(), escalaDto.data());
 		        
@@ -169,7 +175,7 @@ public class EscalaService {
 	        		entidadeEscala = mapperToEscala(escalaDto, entidadeEscala);	
 	        	}
 	        	
-	            sincronizarItens(entidadeEscala, escalaDto.itens(), deleteItens);
+	            sincronizarItens(entidadeEscala, escalaDto.itens(), permissoes);
 	        }
 	
 	        if (entidadeEscala.getItens() == null || entidadeEscala.getItens().isEmpty()) {
@@ -212,14 +218,24 @@ public class EscalaService {
         }
 	}
 	
-	private void sincronizarItens(Escala escala, List<EscalaItemResponseDTO> itensDto, boolean deleteItens) {
-		if (deleteItens) {
+	private void sincronizarItens(Escala escala, List<EscalaItemResponseDTO> itensDto, Permissoes permissoes) {
+		if (permissoes != null) {
+			boolean tentativaExclusao = escala.getItens().stream().anyMatch(existente -> 
+				itensDto.stream().noneMatch(itemDto -> 
+				            itemDto.id() != null && itemDto.id().equals(existente.getId())
+				        )
+		    );
+	
+		    if (tentativaExclusao && !securityUtils.hasAuthority(permissoes)) {
+		        throw new AccessDeniedException("Você não tem permissão para excluir itens desta escala.");
+		    }
+			
+			
 		    escala.getItens().removeIf(existente -> 
 		        itensDto.stream().noneMatch(dto -> dto.id() != null && dto.id().equals(existente.getId()))
 		    );
 		}
 
-	    // 2. Adiciona ou atualiza os itens restantes
 	    itensDto.forEach(dto -> {
 	        if (dto.id() == null) {
 	            EscalaItem novoItem = mapperToEscalaItem(dto);

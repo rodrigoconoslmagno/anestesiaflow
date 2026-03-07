@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { server } from  '@/api/server'
 import { useAppToast } from '@/context/ToastContext';
 import { useAuth } from '@/context/AuthContext';
+import { useAuthStore } from '@/permissoes/authStore';
 
 export const Login: FC = () => {
   const [login, setLogin] = useState('');
@@ -15,6 +16,7 @@ export const Login: FC = () => {
   const navigate = useNavigate();
   const { showError, showSuccess } = useAppToast();
   const { usuario, loginSucesso, loading: authLoading } = useAuth();
+  const setLoginStore = useAuthStore((state) => state.setLogin);
 
   useEffect(() => {
     if (!authLoading && usuario) {
@@ -31,10 +33,10 @@ export const Login: FC = () => {
     setLoading(true);
     try {
       const usuario = await server.auth.login({ login, senha });
+      console.log("analise backend", usuario)
       loginSucesso(usuario);
-    
-      // 3. Salvando no localStorage
-      localStorage.setItem('@AnestesiaFlow:user', JSON.stringify(usuario));
+
+      setLoginStore(usuario);
       
       showSuccess('Bem-vindo!', 'Autenticação realizada com sucesso.');
       navigate('/dashboard');

@@ -11,6 +11,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { type Escala, type EscalaItem } from "@/types/escala";
 import { DateUtils } from "@/utils/DateUtils";
+import { useAuthStore } from "@/permissoes/authStore";
+import { Recurso } from "@/permissoes/recurso";
 
 export const SimetriaView = () => {
     const navigate = useNavigate();
@@ -25,6 +27,9 @@ export const SimetriaView = () => {
     });
 
     const intervalos = useMemo(() => getIntervalosEscala(), []);
+    const hasPerm = useAuthStore(state => state.hasPermission);
+
+    const canALTERAR = hasPerm(Recurso.SIMETRIA, 'ALTERAR');
 
     const abrirLancamento = (rowData: any, colIndex: any) => {
         const medico = rowData.medico[colIndex];
@@ -69,8 +74,13 @@ export const SimetriaView = () => {
                 }
 
             } catch (error: any) {
-                const errorMessage = error.response?.data?.message || "Ocorreu um erro inesperado";
-                showError('Erro', errorMessage);
+                if (error.status === 403) {
+                    const errorMessage = error.response?.data?.mensagem || "Você não tem permissão para excluir este registro.";
+                    showError('Ação Bloqueada', errorMessage);
+                } else {
+                    const errorMessage = error.response?.data?.message || "Ocorreu um erro inesperado";
+                    showError('Erro', errorMessage);
+                }
             }
         }
 
@@ -199,11 +209,11 @@ export const SimetriaView = () => {
         
         return (
             <div 
-                onClick={() => abrirLancamento(rowData, colIndex)}
+                onClick={() => canALTERAR && abrirLancamento(rowData, colIndex)}
                 title="Clique para lançar escala"
                 className={`
                     flex items-center justify-between w-full h-full p-1 transition-all duration-200
-                    cursor-pointer group relative overflow-hidden
+                    ${canALTERAR && `cursor-pointer` } group relative overflow-hidden
                     ${temValor ? 'bg-blue-100/40 text-blue-700' : 'hover:bg-slate-50'}
                 `}
             >
@@ -218,9 +228,9 @@ export const SimetriaView = () => {
                     </span>
                 </div>
 
-                <div className="flex items-center justify-center">
+                {canALTERAR && <div className="flex items-center justify-center">
                     <i className="pi pi-plus text-[10px] text-blue-600" />
-                </div>
+                </div>}
 </div>
         );
     };

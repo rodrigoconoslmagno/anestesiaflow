@@ -2,6 +2,7 @@ import { CrudBase } from '@/componentes/crud/CrudBase';
 import { AppSelect } from '@/componentes/select/AppSelect';
 import { AppSelectForm } from '@/componentes/select/AppSelectForm';
 import { AppStepperEscala } from '@/componentes/stepper/AppStepper';
+import { Recurso } from '@/permissoes/recurso';
 import { type EscalaEdicao, escalaEdicaoSchema } from '@/types/escala';
 import type { Medico } from '@/types/medico';
 import { DateUtils } from '@/utils/DateUtils';
@@ -32,6 +33,7 @@ export const EscalaView = () => {
     return (
         <CrudBase<EscalaEdicao>
             title="Escala"
+            recurso={Recurso.ESCALA}
             filterContent={(
                 <div className="p-fluid grid grid-cols-12 w-full">
                     <AppSelect
@@ -41,9 +43,9 @@ export const EscalaView = () => {
                         url="/medico"
                         value={filtroMedicoId}
                         onChange={(e) => setFiltroMedicoId(e.value)}
-                        colSpan={12} // No mobile ocupa tudo, no desktop podemos ajustar
-                        showClear // Permite limpar o filtro para ver todos
-                        filter // Habilita busca interna no select
+                        colSpan={12}
+                        showClear
+                        filter
                         valueTemplate={medicoTemplate}
                         itemTemplate={medicoTemplate}
                         optionLabel="nome"

@@ -2,6 +2,7 @@
 import { createContext, useContext, useState, useEffect, type FC, type ReactNode } from 'react';
 import { type Usuario, server } from '@/api/server';
 import { Manutencao } from '@/paginas/Manutencao';
+import { useAuthStore } from '@/permissoes/authStore';
 
 interface AuthContextData {
     usuario: Usuario | null;
@@ -17,6 +18,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const [usuario, setUsuario] = useState<Usuario | null>(null);
     const [loading, setLoading] = useState(true);
     const [isOffline, setIsOffline] = useState(false);
+    const setLoginStore = useAuthStore((state) => state.setLogin);
+    const logoutStore = useAuthStore((state) => state.logout);
 
     useEffect(() => {
         const handleOffline = () => setIsOffline(true);
@@ -27,19 +30,17 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             const isPublicRoute = window.location.pathname.startsWith('/view/');
 
             if (isPublicRoute) {
-                setLoading(false); // Apenas para o loading e permite renderizar a página
+                setLoading(false);
                 return;
             }
 
             try {
-                // DESCOMENTADO: Necessário para recuperar a sessão via Cookie
                 const data = await server.auth.me();
+                setLoginStore(data);
                 setUsuario(data);
             } catch (err) {
                 console.error("Sessão inválida ou expirada");
-                setUsuario(null);
-                localStorage.removeItem('@AnestesiaFlow:user');
-                sessionStorage.clear();
+                handleLocalLogout();
             } finally {
                 setLoading(false);
             }
@@ -48,19 +49,26 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     }, []);
 
     const loginSucesso = (dados: Usuario) => {
+        setLoginStore(dados as any);
         setUsuario(dados);
-        setLoading(false); // Garante que o loading para após o login
+        setLoading(false);
     };
 
     const logout = async () => {
         try {
             await server.auth.logout();
         } finally {
-            setUsuario(null);
-            localStorage.removeItem('@AnestesiaFlow:user');
-            sessionStorage.clear();
+            handleLocalLogout();
             window.location.href = '/login';
         }
+    };
+
+    const handleLocalLogout = () => {
+        setUsuario(null);
+        logoutStore(); 
+        localStorage.removeItem('@AnestesiaFlow:user');
+        localStorage.removeItem('af-auth-storage');
+        sessionStorage.clear();
     };
 
     if (isOffline) {

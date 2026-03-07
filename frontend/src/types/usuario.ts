@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { baseEntitySchema } from '@/types/baseEntity'
+import { permissoesSchema } from '@/permissoes/permissoes';
+
 
 export const usuarioSchema = baseEntitySchema.extend({
   nome: z.string().min(1, 'Nome é obrigatório'),
@@ -7,8 +9,8 @@ export const usuarioSchema = baseEntitySchema.extend({
   ativo: z.boolean().default(true),
   senha: z.string().optional().or(z.literal('')),
   confirmarSenha: z.string().optional().or(z.literal('')),
+  permissoes: z.array(permissoesSchema).default([]),
 }).superRefine((data, ctx) => {
-  // Se NÃO tem ID (Novo Usuário), a senha DEVE ter ao menos 6 caracteres
   if (!data.id) {
     if (!data.senha || data.senha.length < 6) {
       ctx.addIssue({
@@ -19,7 +21,6 @@ export const usuarioSchema = baseEntitySchema.extend({
     }
   }
 
-  // Validação de igualdade (apenas se algum dos campos for preenchido)
   if (data.senha || data.confirmarSenha) {
     if (data.senha !== data.confirmarSenha) {
       ctx.addIssue({

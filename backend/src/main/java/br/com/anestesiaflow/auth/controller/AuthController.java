@@ -1,5 +1,8 @@
 package br.com.anestesiaflow.auth.controller;
 
+import java.util.Arrays;
+import java.util.List;
+
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -13,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import br.com.anestesiaflow.auth.dto.LoginRequestDTO;
 import br.com.anestesiaflow.auth.dto.LoginResponseDTO;
+import br.com.anestesiaflow.auth.permission.Permissoes;
 import br.com.anestesiaflow.auth.service.TokenService;
 import br.com.anestesiaflow.entidades.Usuario;
 import br.com.anestesiaflow.usuario.dto.UsuarioResponseDTO;
@@ -44,7 +48,7 @@ public class AuthController {
 							.build();
 			return ResponseEntity.ok()
 					.header(HttpHeaders.SET_COOKIE, cookie.toString())
-					.body(new LoginResponseDTO(usuario.nome(), token));
+					.body(new LoginResponseDTO(usuario.nome(), token, analisaRetornoPermissoes(usuario)));
 		}
 		
 		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -71,6 +75,23 @@ public class AuthController {
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 		}
 		
-		return ResponseEntity.ok(new LoginResponseDTO(usuario.getNome(), null));
+		return ResponseEntity.ok(new LoginResponseDTO(usuario.getNome(), null,
+				analisaRetornoPermissoes(usuario)));
+	}
+	
+	private List<Permissoes> analisaRetornoPermissoes(Usuario usuario){
+		if (usuario.getLogin().equalsIgnoreCase("admin")) {
+			return Arrays.asList(Permissoes.values());
+		} 
+		
+		return usuario.getPermissoes().parallelStream().toList();
+	}
+	
+	private List<Permissoes> analisaRetornoPermissoes(UsuarioResponseDTO usuario){
+		if (usuario.login().equalsIgnoreCase("admin")) {
+			return Arrays.asList(Permissoes.values());
+		} 
+		
+		return usuario.permissoes();
 	}
 }

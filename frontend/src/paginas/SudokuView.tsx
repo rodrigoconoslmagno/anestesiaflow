@@ -18,6 +18,9 @@ import clsx from 'clsx';
 import { Calendar } from 'primereact/calendar';
 import { addLocale, locale } from 'primereact/api';
 import { Menu } from 'primereact/menu';
+import { useAppToast } from '@/context/ToastContext';
+import { useAuthStore } from '@/permissoes/authStore';
+import { Recurso } from '@/permissoes/recurso';
 
 addLocale('pt-BR', {
   firstDayOfWeek: 0,
@@ -137,12 +140,19 @@ export const SudokuView = () => {
   const [hasChangesToSave, setHasChangesToSave] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [isOverTrash, setIsOverTrash] = useState(false);
-  const menu = useRef<Menu>(null); // Ref para o menu de transbordamento
+  const [isOverTrash, setIsOverTrash ] = useState(false);
+  const { showError } = useAppToast();
+  const menu = useRef<Menu>(null);
+
+  const hasPerm = useAuthStore(state => state.hasPermission);
+
+  const canArquivar = hasPerm(Recurso.SUDOKU,'ARQUIVAR');
+  const canNotificar = hasPerm(Recurso.SUDOKU,'NOTIFICAR');
+  const canALTERAR = hasPerm(Recurso.SUDOKU,'ALTERAR');
 
   const menuItems = [
-    { label: 'Arquivar', icon: 'pi pi-box', command: () => { console.log('PDF'); } },
-    { label: 'Notificar', icon: 'pi pi-send', command: () => { console.log('Avisos'); } }
+    { label: 'Arquivar', icon: 'pi pi-box', visible: canArquivar , command: () => { console.log('PDF'); } },
+    { label: 'Notificar', icon: 'pi pi-send', visible: canNotificar, command: () => { console.log('Avisos'); } }
   ];
 
   const sensors = useSensors(
@@ -173,18 +183,20 @@ export const SudokuView = () => {
       try {
         const dataFormatada = DateUtils.paraISO(dataAtiva);
 
-        // Usamos Promise.all para disparar as buscas em paralelo se for a carga inicial.
-        // Se já tivermos as clínicas, buscamos apenas as escalas.
         if (clinicas.length === 0) {
-          const [resClinicas, resEscalas] = await Promise.all([
-            server.api.listar<Estabelecimento>('/estabelecimento', { ativo: true }),
-            server.api.listarCustomizada<Escala>('/escala', '/listardia', { data: dataFormatada })
-          ]);
-          
-          setClinicas(resClinicas || []);
-          setEscalas(resEscalas || []);
+          try{
+            const [resClinicas, resEscalas] = await Promise.all([
+                server.api.listar<Estabelecimento>('/estabelecimento', { ativo: true }),
+                server.api.listarCustomizada<Escala>('/escala', '/listardia', { data: dataFormatada })
+            ]);
+
+            setClinicas(resClinicas || []);
+            setEscalas(resEscalas || []);
+          } catch (err: any){
+            const errorMessage = err.response?.data?.mensagem || "Você não tem permissão para excluir este registro.";
+            showError('Ação Bloqueada', errorMessage);
+          }
         } else {
-          // Se as clínicas já existem (mudança de data), buscamos apenas as escalas
           const resEscalas = await server.api.listarCustomizada<Escala>('/escala', '/listardia', { data: dataFormatada });
           setEscalas(resEscalas || []);
         }
@@ -193,16 +205,13 @@ export const SudokuView = () => {
       } catch (error) {
         console.error("Erro ao carregar dados do Sudoku:", error);
       } finally {
-        // O loading só é desativado quando TUDO terminar
         setLoading(false);
       }
     };
 
     carregarDados();
-    // O efeito roda na montagem e sempre que a data ativa mudar
   }, [dataAtiva]);
 
-  // Adicione também este useEffect para garantir que o "arraste" pare ao soltar o mouse
   useEffect(() => {
     const stopDragging = () => setIsDraggingWithinGrid(false);
     window.addEventListener('mouseup', stopDragging);
@@ -256,8 +265,12 @@ export const SudokuView = () => {
           }
 
           setHasChangesToSave(false);
-        } catch (err) {
+        } catch (err: any) {
           console.error("Falha na sincronização:", err);
+          if (err.status === 403) {
+            const errorMessage = err.response?.data?.mensagem || "Você não tem permissão para excluir este registro.";
+            showError('Ação Bloqueada', errorMessage);
+          }
         } finally {
           setIsSyncing(false);
         }
@@ -282,15 +295,11 @@ export const SudokuView = () => {
 
   const onDragEnd = (event: any) => {
     const { active, over } = event;
-    console.log("ITEM ARRASTADO:", active.id);
-    console.log("ALVO DO DROP:", over?.id);
     setActiveDragData(null);
     if (!over) {
       return;
     }
-  
     const dragData = active.data.current;
-    console.log("analise", dragData, over);
     if (dragData.isFromGrid && over.id === 'painel-clinicas-trash') {
       const { medicoId: oMedId, hora: oHora } = dragData.origem;
       const oHoraNorm = oHora.substring(0, 5);
@@ -305,17 +314,18 @@ export const SudokuView = () => {
           }
           return e;
         });
-        console.log("removendo item", prev);
         setHasChangesToSave(true);
         return novoEstado;
       });
       return;
     }
 
-    console.log("inserindo item");
-
     const [destMedicoIdStr, destHora] = over.id.split('|');
     const destMedicoId = Number(destMedicoIdStr);
+
+    if (!destMedicoId || !destHora){
+      return;
+    }
     const horaDestNorm = destHora.substring(0, 5);
   
     setEscalas(prev => {
@@ -376,7 +386,7 @@ export const SudokuView = () => {
     const { active } = event;
     const data = active.data.current;
     
-    if (data.isFromGrid) {
+    if (data.isFromGrid) {        
         setActiveDragData(data.alocacao);
     } else {
         setActiveDragData(data.clinica);
@@ -564,19 +574,19 @@ export const SudokuView = () => {
 
         <div className="flex items-center gap-2">
           <div className="hidden md:flex gap-2">
-            <Button icon="pi pi-box" 
+            {canArquivar && <Button icon="pi pi-box" 
                     // label="Arquivar"
                     tooltip="Arquivar" 
                     className="p-button-outlined p-button-secondary p-button-sm transition-all p-1 border-amber-500 text-amber-600 hover:bg-amber-50" 
-            />
-            <Button icon="pi pi-send" 
+            />}
+            {canNotificar && <Button icon="pi pi-send" 
                     // label="Notificar" 
                     tooltip="Notificar" 
                     className="p-button-outlined p-button-secondary p-button-sm transition-all p-1 border-slate-400 text-slate-500 hover:bg-slate-50" 
-            />
+            />}
           </div>
 
-          <Button 
+          {canALTERAR && <Button 
             icon={isSyncing ? "pi pi-spin pi-spinner" : (isEditing ? "pi pi-check" : "pi pi-pencil")}
             label={isEditing ? "Concluir" : "Editar"}          
             className={clsx(
@@ -586,17 +596,18 @@ export const SudokuView = () => {
               isEditing && hasChangesToSave && "bg-red-400 border-red-400 text-white opacity-70"
             )}
             onClick={() => setIsEditing(!isEditing)}
-          />
+          />}
 
-          <div className="md:hidden h-auto w-auto">
-                <Button 
+          {(canArquivar || canNotificar)  &&
+            <div className="md:hidden h-auto w-auto">
+                 <Button 
                   icon="pi pi-ellipsis-v" 
                   disabled={isEditing}
                   className="p-button-rounded p-button-text p-button-secondary h-auto w-auto" 
                   onClick={(e) => menu.current?.toggle(e)}
                 />
                 <Menu model={menuItems} popup ref={menu} id="popup_menu_left" />
-          </div>
+          </div>}
         </div>
       </header>
 

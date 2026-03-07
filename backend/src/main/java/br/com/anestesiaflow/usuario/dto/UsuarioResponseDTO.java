@@ -1,6 +1,8 @@
 package br.com.anestesiaflow.usuario.dto;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import br.com.anestesiaflow.auth.permission.Permissoes;
 
 public record UsuarioResponseDTO(
 	    int id,
@@ -8,5 +10,6 @@ public record UsuarioResponseDTO(
 	    String login,
 	    Boolean ativo,
 	    LocalDateTime dataCriacao,
-	    LocalDateTime dataAtualizacao
+	    LocalDateTime dataAtualizacao,
+	    List<Permissoes> permissoes
 ) {}

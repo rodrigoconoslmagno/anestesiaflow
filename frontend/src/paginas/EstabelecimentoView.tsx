@@ -5,6 +5,7 @@ import { AppIconPicker } from "@/componentes/image/AppIconPicker";
 import { AppInputText } from "@/componentes/inputtext/AppInputText";
 import { AppSelect } from "@/componentes/select/AppSelect";
 import { AppSwitch } from "@/componentes/switch/AppSwitch";
+import { Recurso } from "@/permissoes/recurso";
 import { type Estabelecimento, estabelecimentoSchema } from "@/types/estabelecimento";
 import { Column } from "primereact/column";
 import { DataTable } from "primereact/datatable";
@@ -55,6 +56,7 @@ export const EstabelecimentoView = () => {
     return (
         <CrudBase<Estabelecimento>
             title="Clinicas / Hospitais / Consultório"
+            recurso={Recurso.ESTABELECIMENTO}
             // filterContent={<p>Teste de Filtro</p>}
             resourcePath='/estabelecimento'
             schema={estabelecimentoSchema}

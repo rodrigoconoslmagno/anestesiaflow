@@ -8,6 +8,7 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,11 +31,13 @@ public class EscalaController {
 	@Autowired
 	private EscalaService escalaService;
 	
+	@PreAuthorize("@auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).MEDICO_ACESSAR)")
 	@PostMapping("/listar")
 	public ResponseEntity<List<EscalaSemanaSummaryDTO>> listar(@RequestBody(required = false) Map<String, Object> filtros) {
         return ResponseEntity.ok(escalaService.listarTodos(filtros));
     }
 	
+	@PreAuthorize("@auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).SUDOKU_ACESSAR)")
 	@PostMapping("/listardia")
 	public ResponseEntity<List<EscalaResponseDTO>> listardia(@RequestBody(required = false) Map<String, LocalDate> filtros) {
 		if (filtros != null && filtros.get("data") != null) {
@@ -43,18 +46,21 @@ public class EscalaController {
 		return ResponseEntity.ok().build();
 	}
 	
+	@PreAuthorize("@auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).MEDICO_ACESSAR)")
 	@PostMapping("/buscarid")
 	public ResponseEntity<EscalaEdicaoDTO> buscaPorId(@RequestBody Map<String, Integer> payload) {
 		Integer id = payload.get("id");
 		return ResponseEntity.ok(escalaService.buscarId(id));
 	}
 	
+	@PreAuthorize("@auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).ESCALA_ALTERAR)")
 	@PostMapping
     public ResponseEntity<List<EscalaResponseDTO>> criar(@Validated @RequestBody EscalaEdicaoDTO dto) {
         List<EscalaResponseDTO> novEscala = escalaService.salvar(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(novEscala);
     }
 	
+	@PreAuthorize("@auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).SUDOKU_ALTERAR)")
 	@PostMapping("/sudoku")
     public ResponseEntity<List<EscalaResponseDTO>> criar(@Validated @RequestBody List<EscalaResponseDTO> dto) {
 		EscalaSemanaDTO semana = new EscalaSemanaDTO(
@@ -68,16 +74,18 @@ public class EscalaController {
         return ResponseEntity.status(HttpStatus.CREATED).body(escalass);
     }
 	
+	@PreAuthorize("@auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).SIMETRIA_ALTERAR)")
 	@PostMapping("/simetria")
     public ResponseEntity<EscalaResponseDTO> criar(@Validated @RequestBody EscalaResponseDTO dto) {
 		EscalaResponseDTO escalas = escalaService.salvar(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(escalas);
     }
 	
+	@PreAuthorize("@auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).ESCALA_EXCLUIR)")
 	@DeleteMapping("/{id}")
 	public ResponseEntity<Void> excluir(@PathVariable int id) {
 	    escalaService.excluir(id);
-	    return ResponseEntity.noContent().build(); // Retorna 204 No Content (sucesso sem corpo)
+	    return ResponseEntity.noContent().build();
 	}
 	
 	@PostMapping("/upload")

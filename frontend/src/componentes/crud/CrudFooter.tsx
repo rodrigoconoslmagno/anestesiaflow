@@ -1,8 +1,12 @@
 import { Button } from 'primereact/button';
+import { useAuthStore } from '@/permissoes/authStore';
+import type { Recurso } from '@/permissoes/recurso';
 
 interface CrudFooterProps {
   onCancel: () => void;
   onSave: () => void;
+  recurso: Recurso;
+  isEditMode: boolean;
   loading?: boolean;
   auditData?: {
     criacao?: string;
@@ -10,7 +14,12 @@ interface CrudFooterProps {
   };
 }
 
-export const CrudFooter = ({ onCancel, onSave, loading, auditData }: CrudFooterProps) => {
+export const CrudFooter = ({ onCancel, onSave, recurso, isEditMode, loading, auditData }: CrudFooterProps) => {
+  const permissionSuffix = isEditMode ? 'ALTERAR' : 'NOVO';
+  const canSave = useAuthStore(state => 
+    state.hasPermission(recurso, `${permissionSuffix}`)
+  );
+
   const formatarData = (dataIso?: string) => {
     if (!dataIso) return '';
     try {
@@ -58,13 +67,15 @@ export const CrudFooter = ({ onCancel, onSave, loading, auditData }: CrudFooterP
           onClick={onCancel} 
           className="flex-1 md:flex-none md:px-6 py-3 md:py-2.5 font-bold text-sm bg-white border-gray-300 text-gray-600 hover:bg-gray-100 transition-colors"
         />
-        <Button 
-          label="Salvar" 
-          icon="pi pi-check" 
-          className="flex-1 md:flex-none md:px-10 py-3 md:py-2.5 bg-blue-600 border-none text-white font-bold text-sm shadow-md hover:bg-blue-700 transition-all" 
-          onClick={onSave}
-          loading={loading}
-        />
+        {canSave && (
+          <Button 
+            label="Salvar" 
+            icon="pi pi-check" 
+            className="flex-1 md:flex-none md:px-10 py-3 md:py-2.5 bg-blue-600 border-none text-white font-bold text-sm shadow-md hover:bg-blue-700 transition-all" 
+            onClick={onSave}
+            loading={loading}
+          />
+        )}
       </div>
     </div>
   );

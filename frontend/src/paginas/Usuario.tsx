@@ -3,11 +3,14 @@ import { AppInputText } from '@/componentes/inputtext/AppInputText';
 import { type Usuario, usuarioSchema } from '@/types/usuario';
 import { AppInputPassword } from '@/componentes/inputtext/AppInputPassword';
 import { AppSwitch } from '@/componentes/switch/AppSwitch';
+import { AppUsuarioPermissao } from '@/componentes/usuario/AppUsuarioPermissao';
+import { Recurso } from '@/permissoes/recurso';
 
 export const UsuarioView = () => {
   return (
       <CrudBase<Usuario>
         title="Usuários do Sistema"
+        recurso={Recurso.USUARIO}
         // filterContent={<p>Teste de Filtro</p>}
         resourcePath='/usuario'
         schema={usuarioSchema}
@@ -16,7 +19,8 @@ export const UsuarioView = () => {
           login: '', 
           ativo: true, 
           senha: '',
-          confirmarSenha: ''
+          confirmarSenha: '',
+          permissoes: []
         }}
         columns={[
           { field: 'nome', header: 'Nome' },
@@ -67,8 +71,8 @@ export const UsuarioView = () => {
                 label="Senha de Acesso" 
                 control={control} 
                 required={!isEditing}
-                toggleMask // Exibe o ícone para ver a senha
-                feedback={true} // Se quiser mostrar a força da senha (opcional)
+                toggleMask 
+                feedback={true}
                 colSpan={6} 
               />
 
@@ -77,11 +81,13 @@ export const UsuarioView = () => {
                 label="Repetir Senha de Acesso" 
                 control={control} 
                 required={!isEditing}
-                toggleMask // Exibe o ícone para ver a senha
-                feedback={false} // Se quiser mostrar a força da senha (opcional)
+                toggleMask
+                feedback={false}
                 colSpan={6} 
               />            
 
+              <AppUsuarioPermissao 
+              />
             </>
           );
         }}

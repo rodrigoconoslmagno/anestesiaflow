@@ -97,7 +97,8 @@ public class UsuarioService {
 			      usuario.getLogin(),
 			      usuario.isAtivo(),
 			      usuario.getDataCriacao(),
-			      usuario.getDataAtualizacao());
+			      usuario.getDataAtualizacao(),
+			      usuario.getPermissoes().parallelStream().toList());
 	}
 	
 	private Usuario mapperToUsuario(UsuarioRequestDTO dto) {
@@ -117,6 +118,12 @@ public class UsuarioService {
 		if (request.senha() != null && !request.senha().isBlank()) {
 			usuario.setSenha(passwordEncoder.encode(request.senha()));
 		}
+	    
+	    usuario.getPermissoes().clear(); // Remove todas as antigas
+	    
+	    if (request.permissoes() != null) {
+	        usuario.getPermissoes().addAll(request.permissoes());
+	    }
 		
 		return usuario;
 	}

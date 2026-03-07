@@ -1,10 +1,13 @@
 package br.com.anestesiaflow.exception;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -30,6 +33,15 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(HttpStatus.CONFLICT)
                              .body(new ErrorResponse(409, message, LocalDateTime.now()));
+    }
+    
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<Map<String, String>> handleAccessDeniedException(AccessDeniedException ex) {
+        Map<String, String> errors = new HashMap<>();
+        errors.put("mensagem", "Você não tem permissão para executar esta ação.");
+        errors.put("codigo", "ACESSO_NEGADO");
+        // Retorna 403 Forbidden com corpo amigável
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errors);
     }
 	
 }

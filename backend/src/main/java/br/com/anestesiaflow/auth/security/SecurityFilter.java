@@ -7,16 +7,17 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-
+import br.com.anestesiaflow.auth.permission.Permissoes;
 import br.com.anestesiaflow.auth.service.TokenService;
 import br.com.anestesiaflow.entidades.Usuario;
 import br.com.anestesiaflow.usuario.repository.UsuarioRepository;
-
 import java.io.IOException;
-import java.util.Collections;
+import java.util.Arrays;
+import java.util.List;
 
 @Component
 public class SecurityFilter extends OncePerRequestFilter {
@@ -66,7 +67,17 @@ public class SecurityFilter extends OncePerRequestFilter {
 	            Usuario user = userRepository.findByLogin(login).orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
 	
 	            if (user != null) {
-	            	Authentication authentication = new UsernamePasswordAuthenticationToken(user, null, Collections.emptyList());
+	            	List<SimpleGrantedAuthority> authorities;
+	            	if (user.getLogin().equalsIgnoreCase("admin")) {
+	            		authorities = Arrays.asList(Permissoes.values()).stream()
+		                        .map(p -> new SimpleGrantedAuthority(p.name()))
+		                        .toList();
+	            	} else {
+		            	authorities = user.getPermissoes().stream()
+		                        .map(p -> new SimpleGrantedAuthority(p.name()))
+		                        .toList();
+	            	}
+	            	Authentication authentication = new UsernamePasswordAuthenticationToken(user, null, authorities);
 	                SecurityContextHolder.getContext().setAuthentication(authentication);
 	            }
             }

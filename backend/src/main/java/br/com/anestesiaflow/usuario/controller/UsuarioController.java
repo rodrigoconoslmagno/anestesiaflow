@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,23 +29,27 @@ public class UsuarioController {
 		this.usuarioService = usuarioService;
 	}
 	
+	@PreAuthorize("@auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).USUARIO_ACESSAR)")
 	@PostMapping("/listar")
 	public ResponseEntity<List<UsuarioResponseDTO>> listar() {
         return ResponseEntity.ok(usuarioService.listarTodos());
     }
 
+	@PreAuthorize("@auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).USUARIO_ACESSAR)")
 	@PostMapping("/buscarid")
 	public ResponseEntity<UsuarioResponseDTO> buscaPorId(@RequestBody Map<String, Integer> payload) {
 		Integer id = payload.get("id");
 		return ResponseEntity.ok(usuarioService.buscaId(id));
 	}
 	
+	@PreAuthorize("@auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).USUARIO_NOVO)")
 	@PostMapping
     public ResponseEntity<UsuarioResponseDTO> criar(@Validated @RequestBody UsuarioRequestDTO dto) {
         UsuarioResponseDTO novoUsuario = usuarioService.salvar(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(novoUsuario);
     }
 	
+	@PreAuthorize("@auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).USUARIO_ALTERAR)")
 	@PutMapping("/{id}")
 	public ResponseEntity<UsuarioResponseDTO> atualizar(
 	        @PathVariable int id, 
@@ -54,9 +59,10 @@ public class UsuarioController {
 	    return ResponseEntity.ok(response);
 	}
 	
+	@PreAuthorize("@auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).USUARIO_EXCLUIR)")
 	@DeleteMapping("/{id}")
 	public ResponseEntity<Void> excluir(@PathVariable int id) {
 	    usuarioService.excluir(id);
-	    return ResponseEntity.noContent().build(); // Retorna 204 No Content (sucesso sem corpo)
+	    return ResponseEntity.noContent().build();
 	}
 }

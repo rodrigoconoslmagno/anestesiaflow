@@ -90,14 +90,13 @@ export const SudokuResumoView = () => {
         <div className="flex flex-col h-screen bg-slate-50 overflow-hidden">
             <header className="flex items-center justify-between sm:px-4 sm:py-3 px-2 py-1 bg-white border-b border-slate-200 shadow-sm z-20">
                 <div className="flex items-center gap-2 w-full">
-                    {/* O botão sair sai do FAB e vem para o padrão mobile/tablet: Canto superior esquerdo */}
                     {!isPublicRoute && (
                         <>
                         <Button 
                             icon="pi pi-times" 
                             label="Sair"
                             text
-                            severity="danger" // Vermelho para indicar saída/fechamento
+                            severity="danger"
                             className="hidden md:flex h-11 px-4 border-red-200 text-red-500 hover:bg-red-50"
                             onClick={() => navigate(-1)} 
                         />
@@ -109,7 +108,7 @@ export const SudokuResumoView = () => {
                         </> 
                     )}
                     <h1 className="text-[9px] sm:text-xl font-black text-slate-700 m-0">
-                        Sudoku Ddiário
+                        Sudoku Diário
                     </h1>
 
                     <div className="flex items-center gap-3 bg-slate-100 rounded-lg w-full">

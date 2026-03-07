@@ -9,16 +9,18 @@ import { type BaseEntity } from '@/types/baseEntity';
 import { useForm, type DefaultValues, type Resolver, type Control, type FieldErrors, FormProvider } from 'react-hook-form';
 import type z from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-
+import { useAuthStore } from '@/permissoes/authStore';
 import { useAppToast } from '@/context/ToastContext';
 import { server } from '@/api/server';
 import { confirmDialog } from 'primereact/confirmdialog';
 import { CrudFooter } from './CrudFooter';
 import { useCrudStore } from '@/store/crudStore';
+import type { Recurso } from '@/permissoes/recurso';
 
 interface CrudBaseProps<T extends BaseEntity> {
   title: string;
-  resourcePath: string; // Ex: '/usuarios'
+  recurso: Recurso
+  resourcePath: string;
   schema: z.ZodObject<any>;
   defaultValues: DefaultValues<T>;
   columns: { field: string; header: string; body?: (item: any) => React.ReactNode }[];
@@ -33,7 +35,7 @@ interface CrudBaseProps<T extends BaseEntity> {
 }
 
 export const CrudBase = <T extends { id?: any }>({
-  title, resourcePath, schema, defaultValues, columns, filterContent, 
+  title, recurso, resourcePath, schema, defaultValues, columns, filterContent, 
   filterParams, onApplyFilters, onClearFilters, onAdd, onEdit ,children, initialValues
 }: CrudBaseProps<T>) => {
   const { setFormData, getFormData, clearFormData } = useCrudStore();
@@ -47,10 +49,14 @@ export const CrudBase = <T extends { id?: any }>({
   const { showSuccess, showError } = useAppToast();
   const location = useLocation();
 
-  const methods = useForm<T>({ // 1. Guardamos o retorno completo do useForm em 'methods'
+  const methods = useForm<T>({
     resolver: zodResolver(schema) as Resolver<T>,
     defaultValues
   });
+
+  const hasPerm = useAuthStore(state => state.hasPermission);
+
+  const canDelete = hasPerm(recurso,'EXCLUIR');
 
   const { 
     control, 
@@ -127,8 +133,9 @@ export const CrudBase = <T extends { id?: any }>({
     try {
       const result = await server.api.listar<T>(resourcePath, filterParams); 
       setData(result);
-    } catch (err) {
-      showError('Erro', 'Erro ao carregar lista de registros.');
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.mensagem || "Você não tem permissão para excluir este registro.";
+      showError('Ação Bloqueada', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -155,8 +162,10 @@ export const CrudBase = <T extends { id?: any }>({
       setFormVisible(false);
       loadData();
     } catch (err: any )  {
-      const errorMessage = err.response?.data?.message || "Ocorreu um erro inesperado";
-      showError('Erro', errorMessage);
+      const errorMessage = err.response?.data?.mensagem || "Ocorreu um erro inesperado ao salvar.";
+      const errorCodigo = err.response?.data?.codigo;
+
+      showError(errorCodigo === 'ACESSO_NEGADO' ? 'Acesso Negado' : 'Erro', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -193,8 +202,8 @@ export const CrudBase = <T extends { id?: any }>({
           showSuccess('Excluído', 'Registro removido com sucesso.');
           loadData();
         } catch (err: any) {
-          const errorMessage = err.response?.data?.message || "Ocorreu um erro inesperado";
-          showError('Erro', errorMessage);
+          const errorMessage = err.response?.data?.mensagem || "Você não tem permissão para excluir este registro.";
+          showError('Ação Bloqueada', errorMessage);
         }
       }
     });
@@ -214,13 +223,14 @@ export const CrudBase = <T extends { id?: any }>({
     setIsEditMode(true);
     try {
       const fullItem = await server.api.buscarId<T>(resourcePath, item.id);
-      reset(fullItem as any);
+      reset(fullItem as T);
       if (onEdit) {
         onEdit(fullItem as T);
       }
       setFormVisible(true);
-    } catch (err) {
-      showError('Erro', 'Não foi possível carregar os detalhes do registro.' + err);
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.mensagem || "Você não tem permissão para excluir este registro.";
+      showError('Ação Bloqueada', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -271,6 +281,7 @@ export const CrudBase = <T extends { id?: any }>({
                 <CrudHeader 
                   title={title} 
                   onAdd={handleAdd} 
+                  resurso={recurso}
                   filterContent={filterContent}
                   onApplyFilters={handleApply} 
                   onClearFilters={onClearFilters}
@@ -325,7 +336,7 @@ export const CrudBase = <T extends { id?: any }>({
                             className="text-blue-500 hover:bg-blue-50 transition-all duration-200" 
                             onClick={() => handleEdit(rowData)} 
                           />
-                          <Button 
+                          {canDelete && ( <Button 
                             icon="pi pi-trash" 
                             tooltip="Excluir"
                             tooltipOptions={{ position: 'top' }}
@@ -333,6 +344,7 @@ export const CrudBase = <T extends { id?: any }>({
                             className="text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all duration-200" 
                             onClick={() => confirmDelete(rowData)} 
                           />
+                          )}
                         </div>
                       )} 
                     />
@@ -420,13 +432,15 @@ export const CrudBase = <T extends { id?: any }>({
 
               {/* RODAPÉ DESKTOP: Botões à Direita */}
               <CrudFooter 
+                recurso={recurso}
+                isEditMode={isEditMode}
                 onCancel={() => {
                   clearFormData(resourcePath);
                   setFormVisible(false);
                 }}
                 onSave={methods.handleSubmit(onSave, onValidationError)}
                 loading={loading}
-                auditData={isEditMode ? auditValues : undefined} // Só mostra auditoria na edição
+                auditData={isEditMode ? auditValues : undefined}
               />
             </div>
           )}

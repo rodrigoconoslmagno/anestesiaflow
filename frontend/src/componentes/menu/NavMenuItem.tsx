@@ -49,11 +49,14 @@ export const NavMenuItem = ({ item, level = 0 }: NavMenuItemProps) => {
         <Ripple />
       </button>
 
-      {/* RENDERIZAÇÃO RECURSIVA */}
       {hasChildren && expanded && (
         <div className="flex flex-col animate-fadein">
           {item.children?.map((child, idx) => (
-            <NavMenuItem key={idx} item={child} level={level + 1} />
+            <NavMenuItem 
+              key={idx} 
+              item={child} 
+              level={level + 1} 
+            />
           ))}
         </div>
       )}

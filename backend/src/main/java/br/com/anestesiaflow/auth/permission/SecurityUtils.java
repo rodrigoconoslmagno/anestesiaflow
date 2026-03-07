@@ -9,7 +9,7 @@ public class SecurityUtils {
 	public boolean hasAuthority(Permissoes authority) {
         return SecurityContextHolder.getContext().getAuthentication()
                 .getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals(authority.name()+"_1"));
+                .anyMatch(a -> a.getAuthority().equals(authority.name()));
     }
 	
 }

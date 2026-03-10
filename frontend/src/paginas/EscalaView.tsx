@@ -24,7 +24,6 @@ export const EscalaView = () => {
         setParamsBusca({});
     };
 
-    // Template para o médico
     const medicoTemplate = (option: Medico) => {
         if (!option) return "Selecione um médico";
         return option.sigla ? `${option.nome} - ${option.sigla}` : option.nome;
@@ -81,6 +80,7 @@ export const EscalaView = () => {
             {(control) => {
                 return (<>
                     <AppSelectForm
+                        className='pt-5'
                         name='medicoId'
                         label='Médico'
                         url="/medico"

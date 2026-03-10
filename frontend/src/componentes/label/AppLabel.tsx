@@ -19,14 +19,14 @@ export const AppLabel = <T extends FieldValues>({
     name,
     control,
     value: valueProp
-}: AppLabelProps<T>) => {
+    }: AppLabelProps<T>) => {
     const formValue = name && control ? useWatch({ control, name }) : undefined;
     const displayValue = formValue ?? valueProp;
 
   return (
     <FieldWrapper 
       label="" 
-      className={classNames(getColSpanClass(colSpan), "flex flex-col")}
+      className={classNames(getColSpanClass(colSpan), "flex flex-col", className)}
     >
       <div className="custom-app-label-container relative">
         {/* Label superior simulando o FloatLabel flutuando */}
@@ -39,7 +39,9 @@ export const AppLabel = <T extends FieldValues>({
          'w-full !p-1 !pl-4 border border-gray-500 rounded-lg outline-none transition-all duration-200 text-lg', 
           className
         )}>
-          <span className="text-gray-900">
+          <span className={classNames("text-gray-900",
+                           className
+          )}>
             {displayValue || '-'}
           </span>
         </div>

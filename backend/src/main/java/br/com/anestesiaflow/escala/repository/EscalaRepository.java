@@ -68,7 +68,15 @@ public interface EscalaRepository extends JpaRepository<Escala, Integer> {
 	    """)
 	int arquivarItensPorData(@Param("dataEscala") LocalDate dataEscala);
 	
-	int countByDataAndItens_ArquivadoIsNotNull(LocalDate data);
+	@Query("SELECT COUNT(i) FROM Escala e " +
+		       "JOIN e.itens i " +
+		       "WHERE e.data = :data " +
+		       "AND i.arquivado IS NOT NULL " +
+		       "AND (:medicoId IS NULL OR e.medico.id = :medicoId)")
+	int countConsultasArquivadas(LocalDate data, Integer medicoId);
 	
-	boolean existsByData(LocalDate data);
+	@Query("SELECT COUNT(e) > 0 FROM Escala e " +
+		       "WHERE e.data = :data " +
+		       "AND (:medicoId IS NULL OR e.medico.id = :medicoId)")
+	boolean existsByDataAndOptionalMedico(LocalDate data, Integer medicoId);
 }

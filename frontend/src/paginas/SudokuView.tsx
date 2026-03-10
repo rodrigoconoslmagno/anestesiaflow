@@ -191,7 +191,7 @@ export const SudokuView = () => {
     
         const [ resEscalas, arquivado ] = await Promise.all([
           server.api.listarCustomizada<Escala>('/sudoku', '/listardia', { data: dataFormatada }),
-          server.api.postCustomizada<boolean>('/sudoku', '/arquivado', dataFormatada)
+          server.api.postCustomizada<boolean>('/sudoku', '/arquivado', { data: dataFormatada })
         ]);
 
         setPermiteArquivar(!arquivado)
@@ -291,7 +291,7 @@ export const SudokuView = () => {
       const jaArquivado = await server.api.postCustomizada<boolean>(
         '/sudoku', 
         '/arquivado', 
-        DateUtils.paraISO(data)
+        { data: DateUtils.paraISO(data) }
       );
       // Força o booleano e atualiza o estado
       setPermiteArquivar(!!(String(jaArquivado) !== 'true'));

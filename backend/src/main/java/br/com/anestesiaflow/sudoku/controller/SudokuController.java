@@ -63,11 +63,16 @@ public class SudokuController {
 	
 	@PreAuthorize("@auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).SUDOKU_ACESSAR)")
 	@PostMapping("/arquivado")
-	public ResponseEntity<Boolean> arquivado(@Validated @RequestBody LocalDate dataEscala) {
-		boolean habilitaArquivar = escalaRepository.existsByData(dataEscala); 
+	public ResponseEntity<Boolean> arquivado(@Validated @RequestBody Map<String, Object> payload) {
+		LocalDate data = LocalDate.parse((String) payload.get("data"));
+		Integer medicoId = null;
+		if (payload.get("medicoId") != null) {
+			medicoId = (Integer) payload.get("medicoId"); 
+		}
+		boolean habilitaArquivar = escalaRepository.existsByDataAndOptionalMedico(data, medicoId); 
 		if (habilitaArquivar) {
-			habilitaArquivar = escalaRepository.countByDataAndItens_ArquivadoIsNotNull(dataEscala) > 0;
-		} else {
+			habilitaArquivar = escalaRepository.countConsultasArquivadas(data, medicoId) > 0;
+		} else if (medicoId == null) {
 			habilitaArquivar = !habilitaArquivar;
 		}
 		return ResponseEntity.ok(habilitaArquivar);

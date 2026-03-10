@@ -190,7 +190,7 @@ public class EscalaService {
 	}
 	
 	private void validaEscalaItens(Escala escala) {
-		if (escala.getItens().size() > 12) {
+		if (escala.getItens().stream().filter(item -> !item.isReagendado()).count() > 12) {
 			throw new BusinessException("Exedico o número de horas para uma escala");
 		}
 		

@@ -40,8 +40,9 @@ public class EscalaRelatorioService {
 		return escalaRepository.findResumoAnualByClinica(estId, ano);
 	}
 	
-	public List<EscalaSimetriaEstResponseDTO> resumoAssimetria(){
-		return escalaRepository.buscarRelatorioAssimetria().stream()
+	public List<EscalaSimetriaEstResponseDTO> resumoAssimetria(Map<String, Object> filtros){
+		String arquivado = (String) filtros.get("tipo");
+		return escalaRepository.buscarRelatorioAssimetria(arquivado).stream()
 	            .map(this::convert)
 	            .toList();
 		
@@ -49,7 +50,6 @@ public class EscalaRelatorioService {
 	
 	private EscalaSimetriaEstResponseDTO convert(EscalaSimetriaDTO raw) {
         try {
-            // Converte a String JSON diretamente para List<MedicoRelatorio>
             List<EscalaSimetriaMedicoResponseDTO> medicos = objectMapper.readValue(
                 raw.getDadosMedicos(), 
                 new TypeReference<List<EscalaSimetriaMedicoResponseDTO>>() {}

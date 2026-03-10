@@ -25,6 +25,9 @@ export const server = {
     excluir: (url: string, id: any) => 
       httpClient.delete(`${url}/${id}`).then(res => res.data),  
 
+    postCustomizada: <T>(url: string, method: string, filtros: any = {}) => 
+      httpClient.post<T>(`${url}${method}`, filtros).then(res => res.data),
+
     upload: async (url: string, file: File, key: string = 'file') => {
       const formData = new FormData();
       formData.append(key, file);

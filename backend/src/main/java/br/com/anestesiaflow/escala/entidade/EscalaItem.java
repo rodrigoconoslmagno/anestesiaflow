@@ -1,5 +1,6 @@
 package br.com.anestesiaflow.escala.entidade;
 
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
@@ -31,6 +32,12 @@ public class EscalaItem extends BaseEntity<Integer> {
     @Column(nullable = false)
     private LocalTime hora;
     
+    @Column
+    private LocalDateTime arquivado;
+    
+    @Column
+    private boolean reagendado;
+    
     public Escala getEscala() {
 		return escala;
 	}
@@ -55,4 +62,19 @@ public class EscalaItem extends BaseEntity<Integer> {
 		this.hora = hora;
 	}
     
+    public LocalDateTime getArquivado() {
+		return arquivado;
+	}
+    
+    public void setArquivado(LocalDateTime arquivado) {
+		this.arquivado = arquivado;
+	}
+    
+    public boolean isReagendado() {
+		return reagendado;
+	}
+    
+    public void setReagendado(boolean reagendado) {
+		this.reagendado = reagendado;
+	}
 }

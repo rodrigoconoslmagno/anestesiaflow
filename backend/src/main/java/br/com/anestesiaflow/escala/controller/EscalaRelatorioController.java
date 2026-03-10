@@ -37,6 +37,6 @@ public class EscalaRelatorioController {
 	
 	@PostMapping("/simetria")
 	public ResponseEntity<List<EscalaSimetriaEstResponseDTO>> resumoSimetria(@RequestBody(required = false) Map<String, Object> filtros){
-		return ResponseEntity.ok(escalaService.resumoAssimetria());
+		return ResponseEntity.ok(escalaService.resumoAssimetria(filtros));
 	}
 }

@@ -1,5 +1,6 @@
 package br.com.anestesiaflow.escala.dto;
 
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 public record EscalaItemResponseDTO(
@@ -7,4 +8,6 @@ public record EscalaItemResponseDTO(
 	    int estabelecimentoId,
 	    LocalTime hora,
 	    String cor,
-	    byte[] icone) {}
+	    byte[] icone,
+	    LocalDateTime arquivado,
+	    boolean reagendado) {}

@@ -13,6 +13,7 @@ import { type Escala, type EscalaItem } from "@/types/escala";
 import { DateUtils } from "@/utils/DateUtils";
 import { useAuthStore } from "@/permissoes/authStore";
 import { Recurso } from "@/permissoes/recurso";
+import { AppSelect } from "@/componentes/select/AppSelect";
 
 export const SimetriaView = () => {
     const navigate = useNavigate();
@@ -25,7 +26,7 @@ export const SimetriaView = () => {
         data: new Date(),
         horas: [] as string[]
     });
-
+    const [ cbTipo, setCbTipo ] = useState('E');
     const intervalos = useMemo(() => getIntervalosEscala(), []);
     const hasPerm = useAuthStore(state => state.hasPermission);
 
@@ -93,7 +94,8 @@ export const SimetriaView = () => {
             formData.horas.map((hora) => {
                 let escalaItem: EscalaItem = {
                     estabelecimentoId: selectedCell?.row.estId,
-                    hora: hora
+                    hora: hora,
+                    reagendado: false
                 };
                 escala?.itens?.push(escalaItem);
             });             
@@ -182,12 +184,13 @@ export const SimetriaView = () => {
     };
 
     useEffect(() => {
+        setLoading(true);
         const carregarDados = async () => {
             try {
                 const simetria = await server.api.listarCustomizada<any>(
                     '/escala-relatorio', 
                     '/simetria',
-                    { }
+                    { tipo: cbTipo }
                 );
                 setResumoSimetria(simetria as any);
             } finally {
@@ -195,7 +198,7 @@ export const SimetriaView = () => {
             }
         }
         carregarDados()
-    }, []);
+    }, [cbTipo]);
 
     const colunasMedicos = useMemo(() => {
         if (!resumoSimetria || resumoSimetria.length === 0) return [];
@@ -277,9 +280,9 @@ export const SimetriaView = () => {
                             showGridlines
                             scrollable
                             emptyMessage={loading ? "Carregando..." : "Nenhum dado encontrado."}
-                            tableStyle={{ minWidth: '50rem' }}
+                            tableStyle={{ minWidth: '50rem' }}                            
                             pt={{
-                                thead: { className: 'bg-gray-50' },
+                                thead: { className: 'hidden' },
                                 headerRow: { className: 'sticky top-0 z-10' },
                                 column: {
                                     headerCell: { className: 'bg-gray-50 text-gray-500 sm:text-[15px] text-[10px] font-bold py-3' },
@@ -287,10 +290,10 @@ export const SimetriaView = () => {
                             }}
                             header={
                                 resumoSimetria.length > 0 ? (
-                                    <div className="flex justify-between items-center px-2 py-1">
-                                        <div className="flex items-center gap-2">
+                                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center w-full h-full px-2 py-2 gap-4">
+                                        <div className="flex items-center h-full gap-2">
                                             <i className="pi pi-filter-fill text-blue-500 text-sm"></i>
-                                            <span className="text-lg font-semibold text-slate-600">
+                                            <span className="sm:text-lg text-sm font-semibold text-slate-600">
                                                 Período analisado: 
                                                 <span className="text-blue-600 ml-1">
                                                     {new Date((resumoSimetria[0] as any).dataInicio).toLocaleDateString('pt-BR')} 
@@ -298,6 +301,19 @@ export const SimetriaView = () => {
                                                     {new Date((resumoSimetria[0] as any).dataFim).toLocaleDateString('pt-BR')}
                                                 </span>
                                             </span>
+
+                                        </div>
+                                        <div className="w-full h-full md:w-64 mt-2">
+                                            <AppSelect
+                                                className={`sm:text-leg text-sm transition-all duration-200}`}
+                                                options={[{name:'Arquivado', value: 'A'} ,{name: 'Executado', value: 'E'}]}
+                                                showClear={false}
+                                                filter={false}
+                                                label="Tipo"
+                                                name="tipoSimetria"
+                                                value={cbTipo}
+                                                onChange={(e) => setCbTipo(e.value)}
+                                            />
                                         </div>
                                     </div>
                                 ) : null
@@ -307,7 +323,7 @@ export const SimetriaView = () => {
                                     style={{ minWidth: '50px' }}
                                     className="bg-slate-100 font-bold border-r border-slate-300 z-20 shadow-[2px_0_5px_rgba(0,0,0,0.05)]"
                                     headerClassName='text-[15px]'
-                                    headerStyle={{ justifyContent: 'center' }}  
+                                    headerStyle={{ justifyContent: 'center', display: 'nome' }}  
                                     pt={{
                                         headerContent: { className: 'justify-center' },
                                     }}
@@ -334,6 +350,7 @@ export const SimetriaView = () => {
                                 <Column 
                                     key={`col-medico-${i}`}
                                     headerClassName='text-[15px] font-bold]'
+                                    headerStyle={{display: 'none'}}
                                     bodyClassName="!px-0 !py-0 m-0"
                                     pt={{
                                         headerContent: { className: 'justify-center' },

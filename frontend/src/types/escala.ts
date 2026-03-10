@@ -13,7 +13,9 @@ export const escalaItemSchema = z.object({
             message: "Formato de hora inválido (HH:mm)"
         }),
     cor: z.string().nullable().optional(),
-    icone: z.any().optional()
+    icone: z.any().optional(),
+    arquivado: z.union([z.date(), z.string()]).nullable().optional(), 
+    reagendado: z.boolean().nullable().optional().default(false),
 });
 
 export type EscalaItem = z.infer<typeof escalaItemSchema>;

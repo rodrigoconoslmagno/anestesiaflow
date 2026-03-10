@@ -1,7 +1,6 @@
 package br.com.anestesiaflow.escala.controller;
 
 import java.time.LocalDate;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,7 +19,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import br.com.anestesiaflow.escala.dto.EscalaEdicaoDTO;
 import br.com.anestesiaflow.escala.dto.EscalaResponseDTO;
-import br.com.anestesiaflow.escala.dto.EscalaSemanaDTO;
 import br.com.anestesiaflow.escala.dto.EscalaSemanaSummaryDTO;
 import br.com.anestesiaflow.escala.service.EscalaService;
 
@@ -58,20 +56,6 @@ public class EscalaController {
     public ResponseEntity<List<EscalaResponseDTO>> criar(@Validated @RequestBody EscalaEdicaoDTO dto) {
         List<EscalaResponseDTO> novEscala = escalaService.salvar(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(novEscala);
-    }
-	
-	@PreAuthorize("@auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).SUDOKU_ALTERAR)")
-	@PostMapping("/sudoku")
-    public ResponseEntity<List<EscalaResponseDTO>> criar(@Validated @RequestBody List<EscalaResponseDTO> dto) {
-		EscalaSemanaDTO semana = new EscalaSemanaDTO(
-				0,
-			    null,
-			    null,
-				null,
-				null,
-				dto);
-		List<EscalaResponseDTO> escalass = escalaService.salvar(semana);
-        return ResponseEntity.status(HttpStatus.CREATED).body(escalass);
     }
 	
 	@PreAuthorize("@auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).SIMETRIA_ALTERAR)")

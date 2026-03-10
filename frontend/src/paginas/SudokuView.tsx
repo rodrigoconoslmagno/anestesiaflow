@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
@@ -21,6 +21,7 @@ import { Menu } from 'primereact/menu';
 import { useAppToast } from '@/context/ToastContext';
 import { useAuthStore } from '@/permissoes/authStore';
 import { Recurso } from '@/permissoes/recurso';
+import { confirmDialog } from 'primereact/confirmdialog';
 
 addLocale('pt-BR', {
   firstDayOfWeek: 0,
@@ -141,8 +142,9 @@ export const SudokuView = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isOverTrash, setIsOverTrash ] = useState(false);
-  const { showError } = useAppToast();
+  const { showError, showSuccess } = useAppToast();
   const menu = useRef<Menu>(null);
+  const [ permiteArquivar, setPermiteArquivar ] = useState(false);
 
   const hasPerm = useAuthStore(state => state.hasPermission);
 
@@ -177,32 +179,30 @@ export const SudokuView = () => {
 
   useEffect(() => {
     const carregarDados = async () => {
-      // Ativamos o loading logo no início
       setLoading(true);
-      
+
       try {
         const dataFormatada = DateUtils.paraISO(dataAtiva);
 
         if (clinicas.length === 0) {
-          try{
-            const [resClinicas, resEscalas] = await Promise.all([
-                server.api.listar<Estabelecimento>('/estabelecimento', { ativo: true }),
-                server.api.listarCustomizada<Escala>('/escala', '/listardia', { data: dataFormatada })
-            ]);
+          const resClinicas = await server.api.listar<Estabelecimento>('/estabelecimento', { ativo: true });
+          setClinicas(resClinicas || []);
+        } 
+    
+        const [ resEscalas, arquivado ] = await Promise.all([
+          server.api.listarCustomizada<Escala>('/sudoku', '/listardia', { data: dataFormatada }),
+          server.api.postCustomizada<boolean>('/sudoku', '/arquivado', dataFormatada)
+        ]);
 
-            setClinicas(resClinicas || []);
-            setEscalas(resEscalas || []);
-          } catch (err: any){
-            const errorMessage = err.response?.data?.mensagem || "Você não tem permissão para excluir este registro.";
-            showError('Ação Bloqueada', errorMessage);
-          }
-        } else {
-          const resEscalas = await server.api.listarCustomizada<Escala>('/escala', '/listardia', { data: dataFormatada });
-          setEscalas(resEscalas || []);
-        }
-
+        setPermiteArquivar(!arquivado)
+        setEscalas(resEscalas || []);
+       
         setLastUpdate(Date.now());
-      } catch (error) {
+      } catch (error: any) {
+        if (error.status = 403) {
+          const errorMessage = error.response?.data?.mensagem || "Você não tem permissão para excluir este registro.";
+          showError('Ação Bloqueada', errorMessage);
+        } 
         console.error("Erro ao carregar dados do Sudoku:", error);
       } finally {
         setLoading(false);
@@ -237,7 +237,9 @@ export const SudokuView = () => {
             })) || [] 
           }));
 
-          const response = await server.api.criar<Escala[]>('/escala/sudoku', payload as Escala[]);
+          const response = await server.api.criar<Escala[]>('/sudoku', payload as Escala[]);
+
+          await atualizarStatusBloqueio(dataAtiva);
 
           if (response && Array.isArray(response)) {
             const mapaBack = new Map(response.map(e => [e.medicoId, e]));
@@ -271,6 +273,10 @@ export const SudokuView = () => {
             const errorMessage = err.response?.data?.mensagem || "Você não tem permissão para excluir este registro.";
             showError('Ação Bloqueada', errorMessage);
           }
+          if (err.status === 422) {
+            const errorMessage = err.response?.data?.message || "Ocorreu um erro inesperado ao salvar.";
+            showError('Erro', errorMessage);
+          }
         } finally {
           setIsSyncing(false);
         }
@@ -279,6 +285,20 @@ export const SudokuView = () => {
       sincronizarComBackend();
     }
   }, [hasChangesToSave, isDraggingWithinGrid, activeDragData, escalas, dataStr]);
+
+  const atualizarStatusBloqueio = useCallback(async (data: any) => {
+    try {
+      const jaArquivado = await server.api.postCustomizada<boolean>(
+        '/sudoku', 
+        '/arquivado', 
+        DateUtils.paraISO(data)
+      );
+      // Força o booleano e atualiza o estado
+      setPermiteArquivar(!!(String(jaArquivado) !== 'true'));
+    } catch (e) {
+      setPermiteArquivar(false);
+    }
+  }, []);
 
   const HORARIOS = useMemo(() => getIntervalosEscala(), []);
   const isHoje = dataAtiva.toDateString() === new Date().toDateString();
@@ -334,12 +354,17 @@ export const SudokuView = () => {
         itens: e.itens ? [...e.itens] : []
       }));
 
+      let itemSendoMovido: EscalaItem | null = null;
+      let medicoOrigemId = undefined;
+
       if (dragData.isFromGrid) {
         const { medicoId: oMedId, hora: oHora } = dragData.origem;
+        medicoOrigemId = oMedId;
         const oHoraNorm = oHora.substring(0, 5);
         
         tempEscalas = tempEscalas.map(e => {
           if (e.medicoId === oMedId) {
+            itemSendoMovido = e.itens?.find(i => (i.hora?.substring(0, 5) || i.hora) === oHoraNorm) || null;
             return {
               ...e,
               itens: e.itens?.filter(i => (i.hora?.substring(0, 5) || i.hora) !== oHoraNorm)
@@ -350,15 +375,18 @@ export const SudokuView = () => {
       }
 
       const clinica = dragData.isFromGrid ? dragData.alocacao : dragData.clinica;
+      
+      const idxDest = tempEscalas.findIndex(e => e.medicoId === destMedicoId);
+
       const novoItem: EscalaItem = {
-        id: undefined,
+        id: itemSendoMovido && medicoOrigemId && medicoOrigemId == destMedicoId ? (itemSendoMovido as EscalaItem).id : undefined,
         estabelecimentoId: clinica.estabelecimentoId || clinica.id,
         hora: horaDestNorm,
         cor: clinica.cor,
-        icone: clinica.icone
+        icone: clinica.icone,
+        arquivado: null,
+        reagendado: false
       };
-  
-      const idxDest = tempEscalas.findIndex(e => e.medicoId === destMedicoId);
   
       if (idxDest === -1) {
         tempEscalas.push({ 
@@ -376,7 +404,6 @@ export const SudokuView = () => {
           ]
         };
       }
-  
       setHasChangesToSave(true);
       return tempEscalas;
     });
@@ -423,7 +450,9 @@ export const SudokuView = () => {
             estabelecimentoId: activePaintingClinica.id,
             hora: horaNormalizada,
             cor: activePaintingClinica.cor,
-            icone: activePaintingClinica.icone
+            icone: activePaintingClinica.icone,
+            arquivado: null,
+            reagendado: false
           }], 
           medicoSigla: '' 
         };
@@ -446,7 +475,9 @@ export const SudokuView = () => {
           estabelecimentoId: activePaintingClinica.id,
           hora: horaNormalizada,
           cor: activePaintingClinica.cor,
-          icone: activePaintingClinica.icone
+          icone: activePaintingClinica.icone,
+          arquivado: null,
+          reagendado: false
         }
       ];
 
@@ -544,6 +575,46 @@ export const SudokuView = () => {
     );
   };
 
+  const confirmArquivamento = () => {
+    confirmDialog({
+      header: 'Confirmação de Arquivamento',
+      message: (
+        <div className="flex flex-col items-center gap-3">
+          <i className="pi pi-exclamation-triangle text-red-500 text-5xl"></i>
+          <div className="text-center">
+            <p className="text-lg font-bold text-gray-700 m-0">
+              Você está prestes a arquivar este sudoku.
+            </p>
+            <p className="text-gray-500 text-sm mt-1">
+              Esta ação não poderá ser desfeita. Tem certeza que deseja continuar?
+            </p>
+          </div>
+        </div>
+      ),
+      icon: 'hidden',
+      acceptLabel: 'Sim, Arquivar',
+      rejectLabel: 'Não, Cancelar',
+      
+      acceptClassName: 'bg-red-600 hover:bg-red-700 text-white border-none px-6 py-2.5 font-bold shadow-md transition-all',
+      rejectClassName: 'p-button-text p-button-secondary text-gray-600 hover:text-gray-800 px-6 py-2.5 font-bold',
+      
+      className: 'max-w-[480px] rounded-2xl border-none shadow-2xl',
+      
+      accept: async () => {
+        try {
+          await server.api.criar('/sudoku/arquivar', DateUtils.paraISO(dataAtiva));
+          showSuccess('Arquivamento', 'Sudoku arquivado com sucesso.');
+          setPermiteArquivar(false);
+        } catch (err: any) {
+          const errorMessage = err.response?.data?.mensagem || "Ocorreu um erro inesperado ao salvar.";
+          const errorCodigo = err.response?.data?.codigo;
+    
+          showError(errorCodigo === 'ACESSO_NEGADO' ? 'Acesso Negado' : 'Erro', errorMessage);
+        }
+      }
+    });
+  };
+
   return (
     <div className="sudoku-container flex flex-col h-screen bg-slate-50 overflow-hidden">
       
@@ -576,11 +647,14 @@ export const SudokuView = () => {
           <div className="hidden md:flex gap-2">
             {canArquivar && <Button icon="pi pi-box" 
                     // label="Arquivar"
+                    onClick={confirmArquivamento}
+                    disabled={!permiteArquivar || loading || hasChangesToSave}
                     tooltip="Arquivar" 
                     className="p-button-outlined p-button-secondary p-button-sm transition-all p-1 border-amber-500 text-amber-600 hover:bg-amber-50" 
             />}
             {canNotificar && <Button icon="pi pi-send" 
                     // label="Notificar" 
+                    disabled={loading}
                     tooltip="Notificar" 
                     className="p-button-outlined p-button-secondary p-button-sm transition-all p-1 border-slate-400 text-slate-500 hover:bg-slate-50" 
             />}
@@ -588,7 +662,8 @@ export const SudokuView = () => {
 
           {canALTERAR && <Button 
             icon={isSyncing ? "pi pi-spin pi-spinner" : (isEditing ? "pi pi-check" : "pi pi-pencil")}
-            label={isEditing ? "Concluir" : "Editar"}          
+            label={isEditing ? "Concluir" : "Editar"}  
+            disabled={loading}        
             className={clsx(
               "p-button-sm shadow-sm transition-all p-1",
               !isEditing && "bg-blue-600 border-blue-600 text-white",

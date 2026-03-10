@@ -109,6 +109,8 @@ public interface EscalaRelatorioRepository extends JpaRepository<Escala, Integer
 	                JOIN escala esc ON ei.escalaid = esc.id
 	                WHERE esc.data >= (CURRENT_DATE - INTERVAL '90 days')
 			     	  AND esc.data <= (CURRENT_DATE + INTERVAL '30 days')
+			     	  AND (ei.arquivado is not null AND :arquivado = 'A' OR
+			     	       ei.reagendado = false AND :arquivado = 'E')
 	                GROUP BY ei.estabelecimentoid, esc.medicoid
 	            ) contagem ON contagem.estabelecimentoid = e.id AND contagem.medicoid = m.id
 	            where m.ativo = true and e.ativo = true 
@@ -116,5 +118,5 @@ public interface EscalaRelatorioRepository extends JpaRepository<Escala, Integer
 	        GROUP BY base.sigla, base.cor, base.icone, base.estid, base.datainicio, base.datafim
 	        ORDER BY base.sigla
 	        """, nativeQuery = true)
-	    List<EscalaSimetriaDTO> buscarRelatorioAssimetria();
+	    List<EscalaSimetriaDTO> buscarRelatorioAssimetria(@Param("arquivado") String arquivado);
 }

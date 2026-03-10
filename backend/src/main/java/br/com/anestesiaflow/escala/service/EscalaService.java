@@ -11,7 +11,9 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 import org.apache.poi.ss.usermodel.Cell;
@@ -19,11 +21,9 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import br.com.anestesiaflow.auth.permission.Permissoes;
-import br.com.anestesiaflow.auth.permission.SecurityUtils;
 import br.com.anestesiaflow.escala.dto.EscalaEdicaoDTO;
 import br.com.anestesiaflow.escala.dto.EscalaItemResponseDTO;
 import br.com.anestesiaflow.escala.dto.EscalaResponseDTO;
@@ -48,15 +48,13 @@ public class EscalaService {
 	private final EstabelecimentoRepository estabelecimentoRepository;
 	private final MedicoService medicoService;
 	private final EntityManager entityManager;
-	private final SecurityUtils securityUtils;
 	
 	public EscalaService(EscalaRepository escalaRepository,EstabelecimentoRepository estabelecimentoRepository,
-					MedicoService medicoService, EntityManager entityManager, SecurityUtils securityUtils) {
+					MedicoService medicoService, EntityManager entityManager) {
 		this.escalaRepository = escalaRepository;
 		this.estabelecimentoRepository = estabelecimentoRepository;
 		this.medicoService = medicoService;
 		this.entityManager = entityManager;
-		this.securityUtils = securityUtils;
 	}
 	
 	public List<EscalaSemanaSummaryDTO> listarTodos(Map<String, Object> filtros){
@@ -78,7 +76,7 @@ public class EscalaService {
 					findFirst();
 			
 			if (escalaEncontrada.isPresent()) {
-				return mapperToDto(escalaEncontrada.get());
+				return mapperToDto(escalaEncontrada.get(), false);
 			} 
 				
 			return new EscalaResponseDTO(
@@ -119,9 +117,8 @@ public class EscalaService {
 		        	LocalDate inicioSemana = entry.getKey();
 		            List<Escala> escalasDaquelaSemana = entry.getValue();
 
-		            // Transforma a lista de entidades Escala em EscalaResponseDTO
 		            List<EscalaResponseDTO> dtosDaSemana = escalasDaquelaSemana.stream()
-		                .map(escala -> mapperToDto(escala))
+		                .map(escala -> mapperToDto(escala, false))
 		                .collect(Collectors.toList());
 
 		            return new EscalaSemanaDTO(medicoId, null, null, inicioSemana, null, dtosDaSemana);
@@ -185,7 +182,7 @@ public class EscalaService {
 	        } else {
 	        	validaEscalaItens(entidadeEscala);
 	            Escala salva = escalaRepository.save(entidadeEscala);
-	            resultados.add(mapperToDto(salva));
+	            resultados.add(mapperToDto(salva, false));
 	        }
 	    }
 	
@@ -200,14 +197,16 @@ public class EscalaService {
 		Map<LocalTime, Integer> mapaHorarios = new HashMap<>();
 
         for (EscalaItem item : escala.getItens()) {
-        	LocalTime hora = item.getHora(); // Ex: "10:00"
+        	if (item.isReagendado()) {
+        		continue;
+        	}
+        	
+        	LocalTime hora = item.getHora();
             Integer estId = item.getEstabelecimento().getId();
 
-            // Verificamos se essa hora já foi registrada por alguém
             if (mapaHorarios.containsKey(hora)) {
                 Integer idExistente = mapaHorarios.get(hora);
                 
-                // Se a hora existe e o ID é diferente, temos um choque!
                 if (!idExistente.equals(estId)) {
                     throw new BusinessException("Conflito: O horário " + hora + 
                         " já está ocupado");
@@ -220,22 +219,48 @@ public class EscalaService {
 	
 	private void sincronizarItens(Escala escala, List<EscalaItemResponseDTO> itensDto, Permissoes permissoes) {
 		if (permissoes != null) {
-			boolean tentativaExclusao = escala.getItens().stream().anyMatch(existente -> 
-				itensDto.stream().noneMatch(itemDto -> 
-				            itemDto.id() != null && itemDto.id().equals(existente.getId())
-				        )
-		    );
-	
-		    if (tentativaExclusao && !securityUtils.hasAuthority(permissoes)) {
-		        throw new AccessDeniedException("Você não tem permissão para excluir itens desta escala.");
-		    }
-			
-			
-		    escala.getItens().removeIf(existente -> 
-		        itensDto.stream().noneMatch(dto -> dto.id() != null && dto.id().equals(existente.getId()))
-		    );
-		}
+		    Set<Integer> idsNoGrid = itensDto.stream()
+		            .map(EscalaItemResponseDTO::id)
+		            .filter(Objects::nonNull)
+		            .collect(Collectors.toSet());
 
+		    List<EscalaItem> itensNoBanco = new ArrayList<>(escala.getItens());
+
+		    for (EscalaItem itemBanco : itensNoBanco) {
+		        boolean itemPermaneceNoGrid = idsNoGrid.contains(itemBanco.getId());
+		        boolean estaArquivado = itemBanco.getArquivado() != null;
+
+		        if (!itemPermaneceNoGrid) {
+		            if (estaArquivado) {
+		                itemBanco.setReagendado(true);
+		            } else {
+		                escala.getItens().remove(itemBanco);
+		            }
+		        } 
+		        
+		        else if (estaArquivado) {
+		            for (int i = 0; i < itensDto.size(); i++) {
+		                EscalaItemResponseDTO dto = itensDto.get(i);
+		                if (itemBanco.getId().equals(dto.id()) && 
+		                		!itemBanco.getHora().equals(dto.hora())) {
+				            itemBanco.setReagendado(true);
+				            
+		                    itensDto.set(i, new EscalaItemResponseDTO(
+		                        null,
+		                        dto.estabelecimentoId(),
+		                        dto.hora(),
+		                        null,
+		                        null,
+		                        null,
+		                        false
+		                    ));
+		                    break;
+		                }
+		            }
+		        }
+		    }
+		}
+		
 	    itensDto.forEach(dto -> {
 	        if (dto.id() == null) {
 	            EscalaItem novoItem = mapperToEscalaItem(dto);
@@ -252,30 +277,27 @@ public class EscalaService {
 	
 	@Transactional
 	public void excluir(int id) {
-	    // Verifica se existe antes de deletar
 		Escala referencia = escalaRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Escala não encontrada"));
 
-        // 2. Calcula o início (Domingo) e fim (Sábado) daquela semana
-        // Usamos a mesma lógica de deslocamento (-1 dia para o Domingo ser o início)
         LocalDate data = referencia.getData();
         LocalDate segunda = data.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
         LocalDate domingo = segunda.plusDays(6);
 
-        // 3. Deleta todos os registros do médico naquele intervalo
         List<Escala> escalasDaSemana = escalaRepository.findByMedico_IdAndDataBetweenOrderByDataAsc(referencia.getMedico().getId(), segunda, domingo);
 
-        // 4. Remove via repositório (Isso aciona o CascadeType.ALL e limpa os itens)
         escalaRepository.deleteAll(escalasDaSemana);
 	}
 	
-	private EscalaResponseDTO mapperToDto(Escala escala) {
+	private EscalaResponseDTO mapperToDto(Escala escala, boolean reagendado) {
 		return new EscalaResponseDTO(
 					escala.getId(), 
 					escala.getMedico().getId(),
 					escala.getMedico().getSigla(),
 					escala.getData(),
-					escala.getItens().stream().map(this::mapperToDto).toList());
+					escala.getItens().stream()
+						.filter(item -> !reagendado && !item.isReagendado())
+						.map(this::mapperToDto).toList());
 	}
 	
 	private EscalaItemResponseDTO mapperToDto(EscalaItem escalaItem) {	
@@ -284,7 +306,9 @@ public class EscalaService {
 				escalaItem.getEstabelecimento().getId(),
 				escalaItem.getHora(),
 				escalaItem.getEstabelecimento().getCor(),
-				escalaItem.getEstabelecimento().getIcone()
+				escalaItem.getEstabelecimento().getIcone(),
+				escalaItem.getArquivado(),
+				escalaItem.isReagendado()
 			);
 	}
 	

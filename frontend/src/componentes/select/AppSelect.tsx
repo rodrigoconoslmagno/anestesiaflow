@@ -30,14 +30,16 @@ export const AppSelect = ({
   required,
   public_back,
   errorMessage,
+  showClear = true,
+  filter = true,
   onObjectChange,
   filterFn,
   onChange,
-  value,
   ...props }: AppSelectProps) => {
 
     const [data, setData] = useState<any[]>(props.options || []);
     const [loading, setLoading] = useState(false);
+    const [innerValue, setInnerValue] = useState(props.value);
 
     useEffect(() => {
       if (url && (!props.options || props.options.length === 0)) {
@@ -63,23 +65,31 @@ export const AppSelect = ({
     }, [url, JSON.stringify(filterParams)]);
 
     useEffect(() => {
+      setInnerValue(props.value);
+
       if (onObjectChange) {
-        if (!value) {
+        if (!props.value) {
           onObjectChange(null);
         } else if (data.length > 0) {
-          const selectedObj = data.find(item => item[props.optionValue || 'id'] === value);
+          const selectedObj = data.find(item => item[props.optionValue || 'id'] === props.value);
           onObjectChange(selectedObj || null);
         } else {
           onObjectChange(null);
         }
       }
-    }, [value, data, onObjectChange, props.optionValue]);
+    }, [props.value, data, onObjectChange, props.optionValue]);
 
-    const defaultItemTemplate = (option: any) => (
-      <div className="flex flex-col py-1">
-        <span className="font-semibold text-gray-800 leading-tight">{option.nome}</span>
-      </div>
-    );
+    const defaultItemTemplate = (option: any) => {
+      const labelField = props.optionLabel || "nome"; 
+      const displayValue = option[labelField] || option.name || option.label;
+      return (
+        <div className="flex flex-col py-1">
+          <span className="font-semibold text-gray-800 leading-tight">
+            {displayValue}
+          </span>
+        </div>
+      );
+    };
 
   return (
         <FieldWrapper 
@@ -91,19 +101,22 @@ export const AppSelect = ({
             <Dropdown 
               {...props} 
               id={name}
-              value={value?? null}
+              value={innerValue?? null}
               options={data || []}
-              filter
-              showClear
+              filter={filter}
+              showClear={showClear}
               filterPlaceholder="Buscar..."
               emptyFilterMessage="Nenhum registro encontrado"
               itemTemplate={props.itemTemplate || defaultItemTemplate}
               loading={loading}
+              optionValue={props.optionValue || "value"}
+              optionLabel={props.optionLabel || "name"}
               className={classNames(
                   'w-full border border-gray-500 rounded-lg outline-none transition-all duration-200 text-lg', 
                   props.className, 
                   { 'p-invalid border-red-500': errorMessage })} 
               onChange={(e) => {
+                setInnerValue(e.value);
                 onChange?.(e); 
                 if (onObjectChange) {
                     const selectedObj = data.find(item => item[props.optionValue || 'id'] === e.value);

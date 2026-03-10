@@ -13,16 +13,22 @@ import jakarta.transaction.Transactional;
 
 public interface EscalaRepository extends JpaRepository<Escala, Integer> {
 
-	@EntityGraph(attributePaths = {"medico", "itens", "itens.estabelecimento"})
+	@EntityGraph(attributePaths = {"medico", "itens.estabelecimento"})
 	List<Escala> findByMedico_IdAndDataBetweenOrderByDataAsc(Integer medicoId, LocalDate inicio, LocalDate fim);
 	
-	@EntityGraph(attributePaths = {"medico", "itens", "itens.estabelecimento"})
+	@EntityGraph(attributePaths = {"medico", "itens.estabelecimento"})
 	List<Escala> findByMedico_IdAndDataGreaterThanEqualOrderByDataAsc(Integer medicoId, LocalDate inicio);
 	
-	@EntityGraph(attributePaths = {"itens", "itens.estabelecimento", "medico"})
+	@Query("""
+		    SELECT DISTINCT e FROM Escala e 
+		    LEFT JOIN FETCH e.itens i 
+		    LEFT JOIN FETCH i.estabelecimento 
+		    JOIN FETCH e.medico 
+		    WHERE e.data = :data
+		    """)
 	List<Escala> findByData(LocalDate data);
 	
-	@EntityGraph(attributePaths = {"itens", "itens.estabelecimento", "medico"})
+	@EntityGraph(attributePaths = {"itens.estabelecimento", "medico"})
 	Escala findByMedico_IdAndData(Integer medicoId, LocalDate data);
 	
 	@Query(value = """
@@ -48,4 +54,21 @@ public interface EscalaRepository extends JpaRepository<Escala, Integer> {
 	@Modifying
     @Transactional
     void deleteByMedico_IdAndDataBetween(int medicoId, LocalDate inicio, LocalDate fim);
+	
+	@Modifying
+	@Transactional
+	@Query("""
+	    UPDATE EscalaItem ei 
+	    SET ei.arquivado = CURRENT_TIMESTAMP,
+			ei.dataAtualizacao = CURRENT_TIMESTAMP 
+	    WHERE ei.escala.id IN (
+	        SELECT e.id FROM Escala e 
+	        WHERE e.data = :dataEscala
+	    )
+	    """)
+	int arquivarItensPorData(@Param("dataEscala") LocalDate dataEscala);
+	
+	int countByDataAndItens_ArquivadoIsNotNull(LocalDate data);
+	
+	boolean existsByData(LocalDate data);
 }

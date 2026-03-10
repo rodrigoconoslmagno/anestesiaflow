@@ -153,7 +153,7 @@ export const SudokuView = () => {
   const canALTERAR = hasPerm(Recurso.SUDOKU,'ALTERAR');
 
   const menuItems = [
-    { label: 'Arquivar', icon: 'pi pi-box', visible: canArquivar , command: () => { console.log('PDF'); } },
+    { label: 'Arquivar', icon: 'pi pi-box', visible: canArquivar && permiteArquivar , command: () => {confirmArquivamento()} },
     { label: 'Notificar', icon: 'pi pi-send', visible: canNotificar, command: () => { console.log('Avisos'); } }
   ];
 

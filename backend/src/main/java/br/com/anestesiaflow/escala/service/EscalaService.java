@@ -151,7 +151,7 @@ public class EscalaService {
 		return salvar(semana, null).get(0);
 	}
 	
-	
+	@Transactional
 	private List<EscalaResponseDTO> salvar(EscalaSemanaDTO dto, Permissoes permissoes) {
 		List<EscalaResponseDTO> resultados = new ArrayList<>();
 		for (var escalaDto : dto.escala()) {
@@ -261,6 +261,8 @@ public class EscalaService {
 		    }
 		}
 		
+		escalaRepository.save(escala);
+		
 	    itensDto.forEach(dto -> {
 	        if (dto.id() == null) {
 	            EscalaItem novoItem = mapperToEscalaItem(dto);
@@ -272,7 +274,7 @@ public class EscalaService {
 	                .findFirst()
 	                .ifPresent(item -> mapperToEscalaItem(dto, item));
 	        }
-	    });
+	    });    
 	}	
 	
 	@Transactional

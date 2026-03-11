@@ -127,7 +127,7 @@ export const AppEscalaDiaria = <T extends FieldValues>({
     const [dataAtiva, setDataAtiva] = useState(new Date());
     const [estabelecimentos, setEstabelecimentos] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-
+    const [ arquivada, setArquivada] = useState(false);
     const dataStr = useMemo(() => DateUtils.paraISO(dataAtiva), [dataAtiva]);
 
     const isHoje = useMemo(() => {
@@ -155,6 +155,26 @@ export const AppEscalaDiaria = <T extends FieldValues>({
             setDataAtiva(dataAtivaExterno);
         }
     }, [dataAtivaExterno]);
+
+    const atualizarStatusBloqueio = useCallback(async (data: any) => {
+        try {
+          const jaArquivado = await server.api.postCustomizada<boolean>(
+            '/sudoku', 
+            '/arquivado', 
+            { data: DateUtils.paraISO(data), medicoId: medicoId }
+          );
+          setArquivada(String(jaArquivado) === 'true');
+        } catch (e) {
+          setArquivada(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        const consultaStatus = async () => {
+            await atualizarStatusBloqueio(dataAtiva);
+        }
+        consultaStatus();
+    }, [dataAtiva])
 
     const diaAtual = useMemo(() => {
         if (!semanas.length) {
@@ -314,6 +334,11 @@ export const AppEscalaDiaria = <T extends FieldValues>({
                                 Hoje
                             </span>
                         )}
+                        {arquivada && 
+                            <span className="bg-red-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-sm uppercase tracking-tighter">
+                                    Arquivada
+                            </span>
+                        }
                     </div>
                     <span className="text-lg font-black text-slate-700 capitalize leading-none">
                         {dataAtiva.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}

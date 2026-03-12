@@ -8,6 +8,7 @@ import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.MulticastMessage;
 import com.google.firebase.messaging.Notification;
+import com.google.firebase.messaging.SendResponse;
 
 import br.com.anestesiaflow.notification.entidade.NotificacaoDispositivo;
 import br.com.anestesiaflow.notification.entidade.NotificacaoMensagem;
@@ -63,6 +64,11 @@ public class NotificacaoService {
             
             if (response.getFailureCount() > 0) {
                 System.out.println("Falhas: " + response.getFailureCount());
+                String msgErro = "";
+                for(SendResponse erro : response.getResponses()) {
+                	msgErro += erro.getException().getMessage();
+                }
+                System.out.println("Detalhe Falhas: " + msgErro);
             }
         } catch (FirebaseMessagingException e) {
             e.printStackTrace();

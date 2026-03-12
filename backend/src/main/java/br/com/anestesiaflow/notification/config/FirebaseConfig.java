@@ -30,17 +30,17 @@ public class FirebaseConfig {
         try {
             
 //        	if (configPath != null && !configPath.isEmpty()) {        	
-	            Resource resource = resourceLoader.getResource(configPath);
-	            InputStream serviceAccount = resource.getInputStream();
-	
-	            FirebaseOptions options = FirebaseOptions.builder()
-	                    .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-	                    .build();
-	
-	            if (FirebaseApp.getApps().isEmpty()) {
-	                FirebaseApp.initializeApp(options);
-	                System.out.print("Firebase inicializado com sucesso!");
-	            }
+//	            Resource resource = resourceLoader.getResource(configPath);
+//	            InputStream serviceAccount = resource.getInputStream();
+//	
+//	            FirebaseOptions options = FirebaseOptions.builder()
+//	                    .setCredentials(GoogleCredentials.fromStream(serviceAccount))
+//	                    .build();
+//	
+//	            if (FirebaseApp.getApps().isEmpty()) {
+//	                FirebaseApp.initializeApp(options);
+//	                System.out.print("Firebase inicializado com sucesso!");
+//	            }
 //        	}
         } catch (Exception e) {
             System.out.println("FALHA CRÍTICA: Não foi possível inicializar o Firebase. As notificações não funcionarão. Erro: {}" + e.getMessage());

@@ -154,7 +154,7 @@ export const SudokuView = () => {
 
   const menuItems = [
     { label: 'Arquivar', icon: 'pi pi-box', visible: canArquivar && permiteArquivar , command: () => {confirmArquivamento()} },
-    { label: 'Notificar', icon: 'pi pi-send', visible: canNotificar, command: () => { console.log('Avisos'); } }
+    { label: 'Notificar', icon: 'pi pi-send', visible: canNotificar, command: () => { handleEnciarMensagem()} }
   ];
 
   const sensors = useSensors(
@@ -615,6 +615,11 @@ export const SudokuView = () => {
     });
   };
 
+  const handleEnciarMensagem = () => {
+    server.api.postCustomizada('/notification', '/send-notification', 
+        { mensagem: "Sudoku atualizado, entrar para conferrir."});
+  }
+
   return (
     <div className="sudoku-container flex flex-col h-screen bg-slate-50 overflow-hidden">
       
@@ -655,6 +660,7 @@ export const SudokuView = () => {
             {canNotificar && <Button icon="pi pi-send" 
                     // label="Notificar" 
                     disabled={loading}
+                    onClick={handleEnciarMensagem}
                     tooltip="Notificar" 
                     className="p-button-outlined p-button-secondary p-button-sm transition-all p-1 border-slate-400 text-slate-500 hover:bg-slate-50" 
             />}

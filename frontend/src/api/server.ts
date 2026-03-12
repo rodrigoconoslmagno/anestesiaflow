@@ -5,7 +5,6 @@ export interface Usuario {
   }
 
 export const server = {
-  // --- CLIENTE REST PARA CRUD ---
   api: {
     listar: <T>(url: string, filtros: any = {}) => 
       httpClient.post<T[]>(`${url}/listar`, filtros).then(res => res.data),
@@ -25,8 +24,8 @@ export const server = {
     excluir: (url: string, id: any) => 
       httpClient.delete(`${url}/${id}`).then(res => res.data),  
 
-    postCustomizada: <T>(url: string, method: string, filtros: any = {}) => 
-      httpClient.post<T>(`${url}${method}`, filtros).then(res => res.data),
+    postCustomizada: <T>(url: string, method: string, data: any = {}) => 
+      httpClient.post<T>(`${url}${method}`, data).then(res => res.data),
 
     upload: async (url: string, file: File, key: string = 'file') => {
       const formData = new FormData();
@@ -58,6 +57,9 @@ export const server = {
     },
     async logout() {
       await httpClient.post('/auth/logout');
+    },
+    async registrarToken(token : string) {
+       await httpClient.post('/notification/add-device', token, { headers: { 'Content-Type': 'text/plain' } } );
     }
   },
 };

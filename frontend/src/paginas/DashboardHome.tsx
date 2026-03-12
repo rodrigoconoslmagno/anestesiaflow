@@ -1,9 +1,16 @@
+import { Notificacao } from "@/componentes/notificacao/Notificacao";
+
 export const DashboardHome = () => {
     return (
       <div className="space-y-6">
-        <header>
-          <h1 className="text-2xl font-bold text-gray-800">Bem-vindo, Dr. João</h1>
-          <p className="text-gray-500">Aqui está o resumo do seu dia hoje.</p>
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">Bem-vindo, Dr. João</h1>
+            <p className="text-gray-500 text-sm">Aqui está o resumo do seu dia hoje.</p>
+          </div>
+          
+          <Notificacao />
+        
         </header>
   
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

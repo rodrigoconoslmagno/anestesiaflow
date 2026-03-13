@@ -38,24 +38,20 @@ export const Notificacao = () => {
         try{
             const permission = await Notification.requestPermission();
             setStatus(permission);
-            console.log("validando permissao", permission)
             if (permission === 'granted') {
                 const messaging = await getMessagingSafe();
-                console.log("validando messaging", messaging)
                 if (messaging) {  
                     const token = await getToken(messaging, { 
                         vapidKey: 'BKONz9FI9x-nFDsQTBI9m8_XJlixcvxLcHj3ztyHkTWsKy9O5M8WL7q0C3kMtrRBgCB-BBqiWoRKkyfZGwDhRoY' 
                     });
-                    console.log("token", token)
                     if (token) {
                         await server.auth.registrarToken(token);
                         console.log("Push Token registrado com sucesso.");
                         showSuccess("Notificação", "Notificação ativa com sucesso!");
                     }
                 } else {
-                console.log("Não tem suporte suporte a regsitro ao firebase");
+                    console.log("Não tem suporte suporte a regsitro ao firebase");
                 }
-                console.log("Token de registro disparado...");
             }
         } catch(err) {
             console.error("erro", err)

@@ -24,6 +24,39 @@
     100% { background-position: -200% 0; }
 }
 
+@keyframes border-glow {
+    0%, 100% { box-shadow: 0 0 15px #3b82f6, 0 0 20px #3b82f6; border-color: #3b82f6; }
+    50% { box-shadow: 0 0 25px #10b981, 0 0 40px #10b981; border-color: #10b981; }
+}
+
+.animate-glow-around {
+    animation: border-glow 1.5s infinite;
+    border-radius: 6px !important; /* Valor padrão do rounded-md */
+    overflow: hidden; /* Corta qualquer excesso que gere os pontos pretos */
+}
+
+.processing-snake {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .processing-snake::before {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(transparent, #3b82f6, #10b981, transparent 30%);
+    animation: rotate-snake 2s linear infinite;
+    z-index: 0;
+  }
+  
+  @keyframes rotate-snake {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
 .sudoku-container {
     display: flex;
     flex-direction: column;

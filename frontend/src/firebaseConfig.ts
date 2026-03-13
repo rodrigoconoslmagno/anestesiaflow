@@ -15,17 +15,6 @@ const app = initializeApp(firebaseConfig);
 export const getMessagingSafe = async () => {
   try {
     const supported = await isSupported();
-  
-    const hasSW = 'serviceWorker' in navigator;
-    const hasPush = 'PushManager' in window;
-    const hasNotification = 'Notification' in window;
-  
-    if (hasSW && hasPush && hasNotification) {
-      const permission = await Notification.requestPermission();
-      console.log("Resultado da permissão direta:", permission);
-    } else {
-      console.error("O Safari diz que falta alguma API acima.");
-    }
 
     if (supported && typeof window !== 'undefined') {
       return getMessaging(app);

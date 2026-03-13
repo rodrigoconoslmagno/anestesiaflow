@@ -133,6 +133,7 @@ export const SudokuView = () => {
   const [escalas, setEscalas] = useState<Escala[]>([]);
   const [clinicas, setClinicas] = useState<Estabelecimento[]>([]);
   const [loading, setLoading] = useState(false);
+  const [ sendMessaging, setSendMessaging ] = useState(false);
   const [activeDragData, setActiveDragData] = useState<any>(null);
   const [lastUpdate, setLastUpdate] = useState(Date.now());
   const [isPaintingMode, setIsPaintingMode] = useState(false);
@@ -615,9 +616,14 @@ export const SudokuView = () => {
     });
   };
 
-  const handleEnciarMensagem = () => {
-    server.api.postCustomizada('/notification', '/send-notification', 
+  const handleEnciarMensagem = async () => {
+    try {
+      setSendMessaging(true);
+      await server.api.postCustomizada('/notification', '/send-notification', 
         { mensagem: "Sudoku atualizado, entrar para conferrir."});
+    } finally {
+      setSendMessaging(false);
+    }    
   }
 
   return (
@@ -657,13 +663,29 @@ export const SudokuView = () => {
                     tooltip="Arquivar" 
                     className="p-button-outlined p-button-secondary p-button-sm transition-all p-1 border-amber-500 text-amber-600 hover:bg-amber-50" 
             />}
-            {canNotificar && <Button icon="pi pi-send" 
-                    // label="Notificar" 
-                    disabled={loading}
-                    onClick={handleEnciarMensagem}
-                    tooltip="Notificar" 
-                    className="p-button-outlined p-button-secondary p-button-sm transition-all p-1 border-slate-400 text-slate-500 hover:bg-slate-50" 
-            />}
+            {canNotificar && (
+              <div className={clsx(
+                "relative inline-flex items-center justify-center rounded-md p-[2px] transition-all duration-300",
+                sendMessaging ? "animate-glow-around bg-blue-500/20" : "bg-transparent"
+              )}>
+                {/* Camada de brilho/giro ajustada para não vazar nos cantos */}
+                {sendMessaging && (
+                  <div className="absolute inset-0 rounded-md animate-pulse bg-gradient-to-r from-blue-400 to-emerald-400 opacity-50 blur-[2px]" />
+                )}
+                
+                <Button 
+                  icon={sendMessaging ? "pi pi-spin pi-spinner" : "pi pi-send"} 
+                  disabled={loading || sendMessaging}
+                  onClick={handleEnciarMensagem}
+                  tooltip="Notificar" 
+                  className={clsx(
+                    "p-button-outlined p-button-secondary p-button-sm transition-all p-1 border-slate-400 text-slate-500 hover:bg-slate-50 z-10",
+                    // Forçamos o arredondamento para bater com a div pai
+                    "!rounded-md" 
+                  )}
+                />
+              </div>
+            )}
           </div>
 
           {canALTERAR && <Button 
@@ -679,16 +701,22 @@ export const SudokuView = () => {
             onClick={() => setIsEditing(!isEditing)}
           />}
 
-          {(canArquivar || canNotificar)  &&
-            <div className="md:hidden h-auto w-auto">
-                 <Button 
-                  icon="pi pi-ellipsis-v" 
-                  disabled={isEditing}
+          {(canArquivar || canNotificar) && (
+            <div className="md:hidden h-auto w-auto flex items-center justify-center">
+              <div className={clsx(
+                "rounded-full transition-all duration-300",
+                sendMessaging && "animate-glow-around ring-2 ring-blue-400" 
+              )}>
+                <Button 
+                  icon={sendMessaging ? "pi pi-spin pi-spinner" : "pi pi-ellipsis-v"} 
+                  disabled={isEditing || sendMessaging}
                   className="p-button-rounded p-button-text p-button-secondary h-auto w-auto" 
                   onClick={(e) => menu.current?.toggle(e)}
                 />
-                <Menu model={menuItems} popup ref={menu} id="popup_menu_left" />
-          </div>}
+              </div>
+              <Menu model={menuItems} popup ref={menu} id="popup_menu_left" />
+            </div>
+          )}
         </div>
       </header>
 

@@ -66,7 +66,9 @@ public class NotificacaoService {
                 System.out.println("Falhas: " + response.getFailureCount());
                 String msgErro = "";
                 for(SendResponse erro : response.getResponses()) {
-                	msgErro += erro.getException().getMessage();
+                  	if (erro.getException() != null) {
+                  		msgErro += erro.getException().getMessage();
+                  	}
                 }
                 System.out.println("Detalhe Falhas: " + msgErro);
             }

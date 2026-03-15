@@ -3,7 +3,6 @@ import { Login } from '@/paginas/Login';
 import { DashboardLayout } from '@/layouts/DashboardLayout'; 
 import { DashboardHome } from '@/paginas/DashboardHome';
 import { ProtectedRoute } from './ProtectedRoute';
-import { Sudoku } from '@/paginas/Sudoku';
 import { UsuarioView } from '@/paginas/Usuario';
 import { MedicoView } from '@/paginas/MedicoView';
 import { EstabelecimentoView  } from '@/paginas/EstabelecimentoView';
@@ -28,7 +27,6 @@ export const AppRoutes = () => {
         <Route element={<ProtectedRoute />}>
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<DashboardHome />} />
-            <Route path="/sudoku" element={<Sudoku />} />
             <Route path="/usuario" element={<UsuarioView />} />
             <Route path="/medico" element={<MedicoView />} />
             <Route path="/estabelecimento" element={<EstabelecimentoView />} />

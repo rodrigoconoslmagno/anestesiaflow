@@ -2,9 +2,9 @@ import { CrudBase } from '@/componentes/crud/CrudBase';
 import { AppInputText } from '@/componentes/inputtext/AppInputText';
 import { type Usuario, usuarioSchema } from '@/types/usuario';
 import { AppInputPassword } from '@/componentes/inputtext/AppInputPassword';
-import { AppSwitch } from '@/componentes/switch/AppSwitch';
 import { AppUsuarioPermissao } from '@/componentes/usuario/AppUsuarioPermissao';
 import { Recurso } from '@/permissoes/recurso';
+import { AppSwitchForm } from '@/componentes/switch/AppSwitchForm';
 
 export const UsuarioView = () => {
   return (
@@ -41,7 +41,7 @@ export const UsuarioView = () => {
 
           return (
             <>
-              <AppInputText<Usuario> 
+              <AppInputText
                 name="nome"
                 label="Nome" 
                 control={control} 
@@ -49,7 +49,7 @@ export const UsuarioView = () => {
                 required
               />
 
-              <AppSwitch<Usuario>
+              <AppSwitchForm
                 name="ativo"
                 label="Situação"
                 control={control}
@@ -58,7 +58,7 @@ export const UsuarioView = () => {
                 labelOff='Inativo'
               />
 
-              <AppInputText<Usuario> 
+              <AppInputText
                 name="login"
                 label="Login" 
                 control={control} 
@@ -66,7 +66,7 @@ export const UsuarioView = () => {
                 required
               />
 
-              <AppInputPassword<Usuario> 
+              <AppInputPassword
                 name="senha"
                 label="Senha de Acesso" 
                 control={control} 
@@ -76,7 +76,7 @@ export const UsuarioView = () => {
                 colSpan={6} 
               />
 
-              <AppInputPassword<Usuario> 
+              <AppInputPassword
                 name="confirmarSenha"
                 label="Repetir Senha de Acesso" 
                 control={control} 
@@ -86,8 +86,7 @@ export const UsuarioView = () => {
                 colSpan={6} 
               />            
 
-              <AppUsuarioPermissao 
-              />
+              <AppUsuarioPermissao />
             </>
           );
         }}

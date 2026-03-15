@@ -134,8 +134,10 @@ export const CrudBase = <T extends { id?: any }>({
       const result = await server.api.listar<T>(resourcePath, filterParams); 
       setData(result);
     } catch (err: any) {
-      const errorMessage = err.response?.data?.mensagem || "Você não tem permissão para excluir este registro.";
-      showError('Ação Bloqueada', errorMessage);
+      const errorMessage = err.response?.data?.mensagem || "Ocorreu um erro inesperado ao carregar os dados.";
+      const errorCodigo = err.response?.data?.codigo;
+
+      showError(errorCodigo === 'ACESSO_NEGADO' ? 'Acesso Negado' : 'Erro', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -202,8 +204,10 @@ export const CrudBase = <T extends { id?: any }>({
           showSuccess('Excluído', 'Registro removido com sucesso.');
           loadData();
         } catch (err: any) {
-          const errorMessage = err.response?.data?.mensagem || "Você não tem permissão para excluir este registro.";
-          showError('Ação Bloqueada', errorMessage);
+          const errorMessage = err.response?.data?.mensagem || "Ocorreu um erro inesperado ao excluir.";
+          const errorCodigo = err.response?.data?.codigo;
+    
+          showError(errorCodigo === 'ACESSO_NEGADO' ? 'Acesso Negado' : 'Erro', errorMessage);
         }
       }
     });

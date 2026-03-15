@@ -7,5 +7,6 @@ public record EstabelecimentoRequestDTO(
 		String sigla,
 		String cor,
 		byte[] icone,
+		boolean plantao,
 		boolean ativo) {
 }

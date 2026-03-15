@@ -8,7 +8,7 @@ import { Button } from 'primereact/button';
 import { MeasuringStrategy, DndContext, PointerSensor, TouchSensor, useSensor, useSensors, DragOverlay, rectIntersection, useDraggable, useDroppable } from '@dnd-kit/core';
 
 import { server } from '@/api/server';
-import { getIntervalosEscala } from '@/types/escalaHelper';
+import { getIntervalosEscala, getIntervalosEscalaPlantao } from '@/types/escalaHelper';
 import { ClinicasPanel } from '@/componentes/sudoku/ClinicasPanel';
 import '@/componentes/sudoku/SudokuView.css';
 import type { Estabelecimento } from '@/types/estabelecimento';
@@ -22,6 +22,7 @@ import { useAppToast } from '@/context/ToastContext';
 import { useAuthStore } from '@/permissoes/authStore';
 import { Recurso } from '@/permissoes/recurso';
 import { confirmDialog } from 'primereact/confirmdialog';
+import { AppSwitch } from '@/componentes/switch/AppSwitch';
 
 addLocale('pt-BR', {
   firstDayOfWeek: 0,
@@ -146,6 +147,7 @@ export const SudokuView = () => {
   const { showError, showSuccess } = useAppToast();
   const menu = useRef<Menu>(null);
   const [ permiteArquivar, setPermiteArquivar ] = useState(false);
+  const [ swPlantao, setSwPlantao ] = useState(false);
 
   const hasPerm = useAuthStore(state => state.hasPermission);
 
@@ -186,7 +188,7 @@ export const SudokuView = () => {
         const dataFormatada = DateUtils.paraISO(dataAtiva);
 
         if (clinicas.length === 0) {
-          const resClinicas = await server.api.listar<Estabelecimento>('/estabelecimento', { ativo: true });
+          const resClinicas = await server.api.listar<Estabelecimento>('/estabelecimento', { ativo: true, plantao: swPlantao });
           setClinicas(resClinicas || []);
         } 
     
@@ -301,7 +303,19 @@ export const SudokuView = () => {
     }
   }, []);
 
-  const HORARIOS = useMemo(() => getIntervalosEscala(), []);
+  const HORARIOS = useMemo(() => {
+    const atualizaClinicas = async () => {
+      const resClinicas = await server.api.listar<Estabelecimento>('/estabelecimento', { ativo: true, plantao: swPlantao });
+            setClinicas(resClinicas || []);
+    }
+    atualizaClinicas();
+    if (swPlantao) {
+      return getIntervalosEscalaPlantao();
+    } else {
+      return getIntervalosEscala();
+    }
+  }, [swPlantao]);
+
   const isHoje = dataAtiva.toDateString() === new Date().toDateString();
 
   const navegar = (dias: number) => {
@@ -635,13 +649,13 @@ export const SudokuView = () => {
       )}>
         {(isSyncing || hasChangesToSave) && <div className="sync-glow-bar" />}
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 mr-2">
           <Button 
             icon="pi pi-times" 
             label="Sair"
             text
             severity="danger"
-            className="hidden md:flex px-4 h-auto border-red-200 text-red-500 hover:bg-red-50"
+            className="hidden md:flex px-4 h-full w-full border-red-200 text-red-500 hover:bg-red-50"
             onClick={() => navigate(-1)} 
           />
           <Button 
@@ -652,6 +666,13 @@ export const SudokuView = () => {
           <h1 className="text-lg md:text-xl font-black text-slate-700 m-0">
             Sudoku
           </h1>
+          <AppSwitch
+            name='plantao'
+            label='Plantão'
+            value={swPlantao}
+            colSpan={1}
+            onChange={(e) => setSwPlantao(e.value as boolean) }
+          />
         </div>
 
         <div className="flex items-center gap-2">
@@ -667,8 +688,7 @@ export const SudokuView = () => {
               <div className={clsx(
                 "relative inline-flex items-center justify-center rounded-md p-[2px] transition-all duration-300",
                 sendMessaging ? "animate-glow-around bg-blue-500/20" : "bg-transparent"
-              )}>
-                {/* Camada de brilho/giro ajustada para não vazar nos cantos */}
+              )}>`
                 {sendMessaging && (
                   <div className="absolute inset-0 rounded-md animate-pulse bg-gradient-to-r from-blue-400 to-emerald-400 opacity-50 blur-[2px]" />
                 )}
@@ -680,7 +700,6 @@ export const SudokuView = () => {
                   tooltip="Notificar" 
                   className={clsx(
                     "p-button-outlined p-button-secondary p-button-sm transition-all p-1 border-slate-400 text-slate-500 hover:bg-slate-50 z-10",
-                    // Forçamos o arredondamento para bater com a div pai
                     "!rounded-md" 
                   )}
                 />
@@ -907,9 +926,10 @@ export const SudokuView = () => {
                     </div>
                   )} 
                 />
-                
+
                 {HORARIOS.map(h => {
                   const bloqueado = isHoraBloqueada(h.field);
+
                   return (
                     <Column 
                         key={h.field} 

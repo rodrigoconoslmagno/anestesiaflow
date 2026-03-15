@@ -3,7 +3,7 @@ import { CrudBase } from '@/componentes/crud/CrudBase';
 import { AppCalendar } from '@/componentes/datetime/AppCalendar';
 import { AppInputText } from '@/componentes/inputtext/AppInputText';
 import { AppSelect } from '@/componentes/select/AppSelect';
-import { AppSwitch } from '@/componentes/switch/AppSwitch';
+import { AppSwitchForm } from '@/componentes/switch/AppSwitchForm';
 import { Recurso } from '@/permissoes/recurso';
 import { type Medico, medicoSchema } from '@/types/medico';
 import { DateUtils } from '@/utils/DateUtils';
@@ -100,7 +100,7 @@ export const MedicoView = () => {
                     >
                         <TabPanel header="Cadastro" leftIcon="pi pi-user mr-2">
                             <div className="grid grid-cols-12 gap-4 pt-4">
-                                <AppInputText<Medico> 
+                                <AppInputText
                                     name="nome"
                                     label="Nome" 
                                     control={control} 
@@ -109,7 +109,7 @@ export const MedicoView = () => {
                                     required
                                 />
 
-                                <AppInputText<Medico> 
+                                <AppInputText
                                     name="sigla"
                                     label="Sigla" 
                                     control={control} 
@@ -127,7 +127,7 @@ export const MedicoView = () => {
                                     required
                                 />
 
-                                <AppSwitch<Medico>
+                                <AppSwitchForm
                                     name="ativo"
                                     label="Situação"
                                     control={control}

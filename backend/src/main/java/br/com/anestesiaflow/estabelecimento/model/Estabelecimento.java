@@ -17,6 +17,8 @@ public class Estabelecimento extends BaseEntity<Integer> {
 	private byte[] icone;
 	@Column(length = 5)
 	private String sigla;
+	@Column(columnDefinition = "boolean default false")
+	private boolean plantao;
 	@Column
 	private boolean ativo;
 	
@@ -50,6 +52,14 @@ public class Estabelecimento extends BaseEntity<Integer> {
 	
 	public void setIcone(byte[] icone) {
 		this.icone = icone;
+	}
+	
+	public boolean isPlantao() {
+		return plantao;
+	}
+	
+	public void setPlantao(boolean plantao) {
+		this.plantao = plantao;
 	}
 	
 	public boolean isAtivo() {

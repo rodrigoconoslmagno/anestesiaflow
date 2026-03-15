@@ -24,9 +24,9 @@ public class EstabelecimentoService {
 				.toList();
 	}
 	
-	public List<EstabelecimentoResponseDTO> listarAtivos(){
+	public List<EstabelecimentoResponseDTO> listarAtivos(Boolean plantao){
 		return estRepository.findAll().stream()
-				.filter(est -> est.isAtivo())
+				.filter(est -> est.isAtivo() && (plantao == null || est.isPlantao() == plantao))
 				.sorted(Comparator.comparing(Estabelecimento::getId))
 				.map(this::mapperToDto)
 				.toList();
@@ -58,7 +58,6 @@ public class EstabelecimentoService {
 	
 	@Transactional
 	public void excluir(int id) {
-	    // Verifica se existe antes de deletar
 	    if (!estRepository.existsById(id)) {
 	        throw new BusinessException("Médico não encontrado com o ID: " + id);
 	    }
@@ -74,6 +73,7 @@ public class EstabelecimentoService {
 				estabelecimento.getCor(),
 				estabelecimento.getSigla(),
 				estabelecimento.getIcone(), 
+				estabelecimento.isPlantao(),
 				estabelecimento.isAtivo(), 
 				estabelecimento.getDataCriacao(), 
 				estabelecimento.getDataAtualizacao());
@@ -86,7 +86,7 @@ public class EstabelecimentoService {
 		estabelecimento.setSigla(dto.sigla());
 		estabelecimento.setIcone(dto.icone());
 		estabelecimento.setAtivo(dto.ativo());
-		
+		estabelecimento.setPlantao(dto.plantao());
 		return estabelecimento;
 	}
 	
@@ -96,7 +96,7 @@ public class EstabelecimentoService {
 		estabelecimento.setIcone(dto.icone());
 		estabelecimento.setAtivo(dto.ativo());
 		estabelecimento.setSigla(dto.sigla());
-		
+		estabelecimento.setPlantao(dto.plantao());
 		return estabelecimento;
 	}
 	

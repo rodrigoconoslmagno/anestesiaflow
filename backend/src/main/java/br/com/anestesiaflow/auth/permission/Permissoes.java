@@ -38,8 +38,9 @@ public enum Permissoes {
 	SUDOKURESUMO_ACESSAR("Sudoku", "Sudoku Resumo", "ACESSAR", "pi pi-chart-bar", true, "/sudokuresumoview"),
 	
 	SIMETRIA_ACESSAR("Sudoku", "Simetria", "ACESSAR", "pi pi-clone", true, "/simetriaview"),
-	SIMETRIA_ALTERAR("Sudoku", "Alterar", "ALTERAR", "pi pi-pencil", false, null)
+	SIMETRIA_ALTERAR("Sudoku", "Alterar", "ALTERAR", "pi pi-pencil", false, null),
 
+	PLANTAO_ACESSAR("Plantão", "Plantão", "ACESSAR", "pi pi-clone", true, "/plantaoview"),
     ;
 	
 	private final String modulo;

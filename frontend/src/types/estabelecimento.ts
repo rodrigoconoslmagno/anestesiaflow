@@ -8,6 +8,7 @@ export const estabelecimentoSchema = baseEntitySchema.extend({
   cor: z.string()   
     .max(7, 'O nome deve ter no máximo 7 caracteres').optional().nullable(),
   sigla: z.string().max(5, 'A sigla deve ter no máximo 3 dígitos').optional().nullable(),
+  plantao: z.boolean().default(false),
   ativo: z.boolean().default(true),
   icone: z.union([
     z.array(z.number()), 

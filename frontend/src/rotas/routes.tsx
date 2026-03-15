@@ -12,6 +12,7 @@ import { SudokuView } from '@/paginas/SudokuView';
 import { EscalaMedicoView } from '@/paginas/EscalaMedioView';
 import { SudokuResumoView } from '@/paginas/SudokuResumoView';
 import { SimetriaView } from '@/paginas/SimetriaView';
+import { PlantaoView } from '@/paginas/PlantaoView';
 // import { TelaPlanilhaMedica } from '@/paginas/TelaPlanilhaMedica';
 
 export const AppRoutes = () => {
@@ -36,6 +37,7 @@ export const AppRoutes = () => {
             <Route path="/escalamedicoview" element={<EscalaMedicoView />} />
             <Route path="/sudokuresumoview" element={<SudokuResumoView />} />
             <Route path="/simetriaview" element={<SimetriaView />} />
+            <Route path="/plantaoview" element={<PlantaoView />} />
             {/* <Route path="/planilha" element={<TelaPlanilhaMedica />} /> */}
           </Route>
         </Route>

@@ -30,7 +30,8 @@ public class EstabelecimentoController {
 	@PostMapping("/listar")
 	public ResponseEntity<List<EstabelecimentoResponseDTO>> listar(@RequestBody(required = false) Map<String, Object> filtros) {
         if (filtros != null && filtros.get("ativo") != null) {
-        	return ResponseEntity.ok(estService.listarAtivos());
+        	Boolean plantao = filtros.get("plantao") != null ? (boolean) filtros.get("plantao") : null;
+        	return ResponseEntity.ok(estService.listarAtivos(plantao));
         }
 		
         return ResponseEntity.ok(estService.listarTodos());

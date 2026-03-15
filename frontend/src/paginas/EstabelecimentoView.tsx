@@ -4,7 +4,7 @@ import { CrudBase } from "@/componentes/crud/CrudBase";
 import { AppIconPicker } from "@/componentes/image/AppIconPicker";
 import { AppInputText } from "@/componentes/inputtext/AppInputText";
 import { AppSelect } from "@/componentes/select/AppSelect";
-import { AppSwitch } from "@/componentes/switch/AppSwitch";
+import { AppSwitchForm } from "@/componentes/switch/AppSwitchForm";
 import { Recurso } from "@/permissoes/recurso";
 import { type Estabelecimento, estabelecimentoSchema } from "@/types/estabelecimento";
 import { Column } from "primereact/column";
@@ -161,11 +161,11 @@ export const EstabelecimentoView = () => {
                                         maxLength={5}
                                     />
 
-                                    <AppSwitch
+                                    <AppSwitchForm
                                         name="ativo"
                                         label="Situação"
                                         control={control}
-                                        colSpan={4}
+                                        colSpan={3}
                                         labelOn='Ativo'
                                         labelOff='Inativo'
                                     />
@@ -174,7 +174,7 @@ export const EstabelecimentoView = () => {
                                         name="cor"
                                         label="Cor"
                                         control={control}
-                                        colSpan={4}
+                                        colSpan={3}
                                         shape="circle"
                                     />
 
@@ -182,7 +182,16 @@ export const EstabelecimentoView = () => {
                                         name="icone"
                                         label="Icone"
                                         control={control}
-                                        colSpan={4}
+                                        colSpan={3}
+                                    />
+
+                                    <AppSwitchForm
+                                        name="plantao"
+                                        label="Plantão"
+                                        control={control}
+                                        colSpan={3}
+                                        labelOn='Sim'
+                                        labelOff='Não'
                                     />
                                 </div>
                             </TabPanel>    

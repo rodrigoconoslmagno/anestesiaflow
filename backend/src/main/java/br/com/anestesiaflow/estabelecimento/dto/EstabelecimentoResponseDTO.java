@@ -8,6 +8,7 @@ public record EstabelecimentoResponseDTO(
 		String cor,
 		String sigla,
 		byte[] icone,
+		boolean plantao,
 		boolean ativo,
 		LocalDateTime dataCriacao,
 		LocalDateTime dataAtualizacao) {

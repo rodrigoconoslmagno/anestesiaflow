@@ -68,13 +68,16 @@ public class SecurityConfig {
 		CorsConfiguration configuration = new CorsConfiguration();
 
 		configuration.setAllowedOrigins(Arrays.asList(
-		        "http://localhost:5173", 
+		        "http://localhost:5173",  
 		        "http://127.0.0.1:5173",
 		        "http://192.168.0.237:5173", // IP fixo do seu Mac
+		        "http://192.168.0.237:8080",
 		        "http://192.168.0.7:5173", // IP fixo do seu Mac
-		        "http://192.168.0.7:8080",
+		        "http://192.168.0.7:5173", // IP fixo do seu Mac
 		        "https://anestesiaflow.onrender.com",
-		        "https://anestesiaflow.onrender.com:8080"
+		        "https://anestesiaflow.onrender.com:8080",
+		        "https://714mjsfiu8id.share.zrok.io",
+		        "https://vjl9xx21a1mh.share.zrok.io"
 		    ));
 //		configuration.addAllowedOriginPattern("*");
 		configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));

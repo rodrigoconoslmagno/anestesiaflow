@@ -90,7 +90,7 @@ export const SimetriaView = () => {
         } else {
             let escala: Escala = {medicoId: selectedCell?.medico.medicoid, 
                                  data: DateUtils.paraISO(formData.data),
-                                 itens: []};
+                                 plantao: false, itens: []};
             formData.horas.map((hora) => {
                 let escalaItem: EscalaItem = {
                     estabelecimentoId: selectedCell?.row.estId,

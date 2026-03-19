@@ -10,11 +10,13 @@ import { addLocale, locale } from "primereact/api";
 import { Button } from "primereact/button"
 import { Calendar } from "primereact/calendar";
 import { Dialog } from "primereact/dialog";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type SetStateAction } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom"
 import { BlockUI } from 'primereact/blockui';
 import { confirmDialog } from "primereact/confirmdialog";
+import { Recurso } from "@/permissoes/recurso";
+import { useAuthStore } from "@/permissoes/authStore";
 
 addLocale('pt-BR', {
   firstDayOfWeek: 0,
@@ -52,6 +54,12 @@ export const PlantaoView = () => {
     const { showError } = useAppToast();
     const [datasComPlantao, setDatasComPlantao] = useState<string[]>([]);
     const [mesVisualizado, setMesVisualizado] = useState<Date>(new Date());
+
+    const hasPerm = useAuthStore(state => state.hasPermission);
+
+    const canArquivar = hasPerm(Recurso.PLANTAO,'ARQUIVAR');
+    const canNotificar = hasPerm(Recurso.PLANTAO,'NOTIFICAR');
+    const canALTERAR = hasPerm(Recurso.PLANTAO,'ALTERAR');
 
     const intervalos = useMemo(() => [
           {field: "07:00:00", header: '07-13h'},
@@ -191,9 +199,9 @@ export const PlantaoView = () => {
 
         let exists = escalas.filter((escala: EscalaPlantao) => escala.medicoId === medicoId &&
                       escala.data === dataString)
-
+        let novasEscalas: SetStateAction<EscalaPlantao[]>;
         if (exists.length > 0) {
-          const novasEscalas = escalas.map(escala => {
+          novasEscalas = escalas.map(escala => {
             if (escala.medicoId === medicoId && escala.data === dataString) {
               escalaPersistir = {
                 ...escala,
@@ -203,7 +211,7 @@ export const PlantaoView = () => {
             }
             return escala;
           });
-          setEscalas(novasEscalas);
+          // setEscalas(novasEscalas);
         } else {
           escalaPersistir = {
             data: DateUtils.paraISO(formData.data),
@@ -212,12 +220,20 @@ export const PlantaoView = () => {
             itensPlantao: periodo1,
             medico: medico,
           }
-         setEscalas([...escalas, escalaPersistir])
+        //  setEscalas([...escalas, escalaPersistir])
         }
 
         setExibeDialogo(false)
 
-        saveBackend(escalaPersistir!);
+        saveBackend(escalaPersistir!).then(ret => {
+          if (ret){
+            if (novasEscalas) {
+              setEscalas(novasEscalas); 
+            } else {
+              setEscalas([...escalas, escalaPersistir])
+            }
+          }
+        });
     };
 
     const saveBackend = async (escalaPlantao: EscalaPlantao) => {
@@ -249,10 +265,12 @@ export const PlantaoView = () => {
   
         showError(errorCodigo === 'ACESSO_NEGADO' ? 'Acesso Negado' : 'Erro', errorMessage);
         console.error("Erro ao carregar dados do plantao:", error);
+        return false
       } finally {
         setExibeDialogo(false)
         setLoading(false)
       }
+      return true;
     }
 
     const handleNovoPlantao = () => {
@@ -366,9 +384,11 @@ export const PlantaoView = () => {
         return escala;
       }).filter(escala => escala.itensPlantao.length > 0);
 
-      setEscalas(escalasAtualizadas);
-
-      saveBackend(escalaPersistir!);
+      saveBackend(escalaPersistir!).then(ret => {
+        if (ret) {
+          setEscalas(escalasAtualizadas);
+        }
+      });
     };
 
     const confirmArquivamento = () => {
@@ -610,13 +630,13 @@ export const PlantaoView = () => {
           </div>
 
           <div className="flex gap-2">
-            <Button icon="pi pi-box" 
+            {canArquivar && <Button icon="pi pi-box" 
                     onClick={confirmArquivamento}
                     disabled={!permiteArquivar || loading}
                     tooltip="Arquivar" 
                     className="p-button-outlined p-button-secondary p-button-sm transition-all p-1 border-amber-500 text-amber-600 hover:bg-amber-50" 
-            />
-            {<div className={clsx(
+            />}
+            {canNotificar && <div className={clsx(
                 "relative inline-flex items-center justify-center rounded-md p-[2px] transition-all duration-300",
                 sendMessaging ? "animate-glow-around bg-blue-500/20" : "bg-transparent"
               )}>`
@@ -673,13 +693,13 @@ export const PlantaoView = () => {
                             <i className="pi pi-clock text-blue-500"></i>
                             {date?.toLocaleDateString('pt-BR')}
                         </h2>
-                        <Button 
+                        {canALTERAR && <Button 
                           label="Novo" 
                           icon="pi pi-plus" 
                           className="p-button-sm p-button-primary w-full 
                                 sm:w-auto bg-blue-600 text-white p-2 rounded-xl" 
                           onClick={handleNovoPlantao}
-                        />
+                        />}
                       </div>
 
                       <div className="flex flex-row gap-4 overflow-x-auto min-h-[400px]">
@@ -687,12 +707,12 @@ export const PlantaoView = () => {
                           <div className="flex flex-col items-center justify-center w-full py-12 bg-white rounded-xl border border-dashed border-slate-200 text-slate-400">
                             <i className="pi pi-clock text-4xl mb-3 opacity-20"></i>
                             <p className="text-sm font-medium">Nenhum plantão para esta data.</p>
-                            <Button 
+                            {canALTERAR && <Button 
                               label="Gerar Escala Agora" 
                               link 
                               className="mt-2 text-blue-600" 
                               onClick={handleNovoPlantao}
-                            />
+                            />}
                           </div>
                         ) : (
                           colunasPorEstabelecimento.map(coluna => (
@@ -702,12 +722,12 @@ export const PlantaoView = () => {
                                   key={`${escala.medicoId}-${horaSlot}-${idxItem}`}
                                   className="relative bg-white p-3 rounded-xl border border-slate-100 hover:border-blue-200 transition-all shadow-sm flex items-center gap-3 group hover:z-50">
                                   
-                                  <button
+                                  {canALTERAR && <button
                                     onClick={() => confirmExclusao(escala.medicoId, escala.data, item.hora)}
                                     className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-20 hover:bg-red-600"
                                   >
                                     <i className="pi pi-times text-[10px]"></i>
-                                  </button>
+                                  </button>}
                                   
                                   <div className="flex items-center justify-center min-h-[28px] min-w-[28px]">
                                     <div
@@ -787,16 +807,17 @@ export const PlantaoView = () => {
                   }}
               />
             </div>
-
+            
             <div className="flex flex-col gap-2">
               <AppSelect
                   name='estabelecimentoId'
                   value={estabelecimentoId}
                   label='Clinica/Hospital'
-                  url="/estabelecimento"
+                  url="/api/public/estabelecimento/estabelecimentos"
                   filterParams={{ ativo: true, plantao: true }}
                   optionLabel="nome"
                   optionValue="id"
+                  public_back
                   itemTemplate={estabelecimentoTemplate}
                   valueTemplate={estabelecimentoTemplate}
                   onObjectChange={(est) => setEstabelecimento(est)}

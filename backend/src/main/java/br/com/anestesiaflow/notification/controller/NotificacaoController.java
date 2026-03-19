@@ -27,7 +27,8 @@ public class NotificacaoController {
 		return ResponseEntity.ok().build();
 	}
 
-	@PreAuthorize("@auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).SUDOKU_NOTIFICAR)")
+	@PreAuthorize("@auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).SUDOKU_NOTIFICAR) " +
+			   "or @auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).PLANTAO_NOTIFICAR)")
     @PostMapping("/send-notification")
     public ResponseEntity<Void> enviarGeral(@Validated @RequestBody NotificacaoMensagem msg) {
         notificacaoService.enviarNotificacao("Atualização de Escala", msg.getMensagem());

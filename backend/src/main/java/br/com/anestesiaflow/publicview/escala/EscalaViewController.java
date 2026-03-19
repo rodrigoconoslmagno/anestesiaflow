@@ -15,7 +15,7 @@ import br.com.anestesiaflow.medico.service.MedicoService;
 import br.com.anestesiaflow.publicview.BasePublicController;
 
 @RestController
-@RequestMapping("/escala") /// Resultará em /api/public/escala
+@RequestMapping("/escala")
 public class EscalaViewController implements BasePublicController {
     
 	private final MedicoService medicoService;

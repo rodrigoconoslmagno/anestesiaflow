@@ -5,5 +5,6 @@ export enum Recurso {
     ESTABELECIMENTO = 'ESTABELECIMENTO',
     ESCALA = 'ESCALA',
     SUDOKU = 'SUDOKU',
-    SIMETRIA = 'SIMETRIA'
+    SIMETRIA = 'SIMETRIA',
+    PLANTAO = 'PLANTAO'
 };

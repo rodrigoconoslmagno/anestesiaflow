@@ -22,7 +22,7 @@ public class SudokuViewConrtoller implements BasePublicController {
 	
 	@GetMapping("/sudokudia")
 	public ResponseEntity<List<EscalaResponseDTO>> listardia(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data) {
-		return ResponseEntity.ok(escalaService.listarPorData(data));
+		return ResponseEntity.ok(escalaService.listarPorData(data, false));
 	}
 
 }

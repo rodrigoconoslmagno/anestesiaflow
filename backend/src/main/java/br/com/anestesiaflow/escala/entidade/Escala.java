@@ -27,6 +27,9 @@ public class Escala extends BaseEntity<Integer> {
 
     @Column(nullable = false)
     private LocalDate data;
+    
+    @Column(columnDefinition = "boolean default false")
+    private boolean plantao;
 
     @OneToMany(mappedBy = "escala", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @JsonManagedReference // Indica que este é o lado principal que "gerencia" a serialização
@@ -46,6 +49,14 @@ public class Escala extends BaseEntity<Integer> {
     
     public void setData(LocalDate data) {
 		this.data = data;
+	}
+    
+    public boolean isPlantao() {
+		return plantao;
+	}
+    
+    public void setPlantao(boolean plantao) {
+		this.plantao = plantao;
 	}
     
     public List<EscalaItem> getItens() {

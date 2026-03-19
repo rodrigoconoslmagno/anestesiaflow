@@ -39,7 +39,7 @@ public class EscalaController {
 	@PostMapping("/listardia")
 	public ResponseEntity<List<EscalaResponseDTO>> listardia(@RequestBody(required = false) Map<String, LocalDate> filtros) {
 		if (filtros != null && filtros.get("data") != null) {
-			return ResponseEntity.ok(escalaService.listarPorData(filtros.get("data")));
+			return ResponseEntity.ok(escalaService.listarPorData(filtros.get("data"), false));
 		}
 		return ResponseEntity.ok().build();
 	}

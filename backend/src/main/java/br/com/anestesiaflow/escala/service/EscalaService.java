@@ -66,8 +66,8 @@ public class EscalaService {
 		return escalaRepository.findEscalasAgrupadasComMedico(null);
 	}
 	
-	public List<EscalaResponseDTO> listarPorData(LocalDate data){
-		List<Escala> escalas = escalaRepository.findByData(data);
+	public List<EscalaResponseDTO> listarPorData(LocalDate data, boolean plantao){
+		List<Escala> escalas = escalaRepository.findByData(data, plantao);
 		
 		return medicoService.listarAtivos().stream().map(medico -> {
 			
@@ -84,6 +84,7 @@ public class EscalaService {
 						medico.id(),
 						medico.sigla(),
 						data,
+						false,
 						new ArrayList<>());
 		}).toList();
 	}
@@ -297,6 +298,7 @@ public class EscalaService {
 					escala.getMedico().getId(),
 					escala.getMedico().getSigla(),
 					escala.getData(),
+					escala.isPlantao(),
 					escala.getItens().stream()
 						.filter(item -> !reagendado && !item.isReagendado())
 						.map(this::mapperToDto).toList());
@@ -318,6 +320,7 @@ public class EscalaService {
 		Escala escala = new Escala();
 		escala.setMedico(entityManager.getReference(Medico.class, dto.medicoId()));		
 		escala.setData(dto.data());
+		escala.setPlantao(dto.plantao());
 		return escala;
 	}
 	

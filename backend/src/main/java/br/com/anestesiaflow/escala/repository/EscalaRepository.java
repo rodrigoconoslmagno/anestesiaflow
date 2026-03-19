@@ -25,8 +25,12 @@ public interface EscalaRepository extends JpaRepository<Escala, Integer> {
 		    LEFT JOIN FETCH i.estabelecimento 
 		    JOIN FETCH e.medico 
 		    WHERE e.data = :data
+		      AND e.plantao = :plantao 	
 		    """)
-	List<Escala> findByData(LocalDate data);
+	List<Escala> findByData(LocalDate data, boolean plantao);
+	
+	@EntityGraph(attributePaths = {"itens.estabelecimento", "medico"})
+	List<Escala> findByDataAndPlantao(LocalDate data, boolean plantao);
 	
 	@EntityGraph(attributePaths = {"itens.estabelecimento", "medico"})
 	Escala findByMedico_IdAndData(Integer medicoId, LocalDate data);
@@ -79,4 +83,11 @@ public interface EscalaRepository extends JpaRepository<Escala, Integer> {
 		       "WHERE e.data = :data " +
 		       "AND (:medicoId IS NULL OR e.medico.id = :medicoId)")
 	boolean existsByDataAndOptionalMedico(LocalDate data, Integer medicoId);
+	
+	@Query("SELECT DISTINCT e.data FROM Escala e " +
+			"JOIN e.itens i " +
+		    "WHERE i.reagendado is false " +
+		    "  AND e.data BETWEEN :inicio AND :fim and plantao = :plantao")
+    List<LocalDate> findDias(@Param("inicio") LocalDate inicio, @Param("fim") LocalDate fim, 
+    			@Param("plantao") boolean plantao);
 }

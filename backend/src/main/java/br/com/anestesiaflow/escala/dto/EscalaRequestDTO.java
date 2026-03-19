@@ -8,5 +8,6 @@ public record EscalaRequestDTO(
 		@NotNull(message = "O ID do médico é obrigatório") 
 		int medicoId,
 	    LocalDate data,
+	    boolean plantao,
 	    List<EscalaItemRequestDTO> itens
 	) {}

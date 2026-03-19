@@ -393,6 +393,7 @@ export const SudokuView = () => {
         tempEscalas.push({ 
           medicoId: destMedicoId, 
           data: dataStr, 
+          plantao: false,
           itens: [novoItem], 
           medicoSigla: ''
         });
@@ -446,6 +447,7 @@ export const SudokuView = () => {
         const novaEscala: Escala = { 
           medicoId, 
           data: dataStr, 
+          plantao: false,
           itens: [{
             id: undefined,
             estabelecimentoId: activePaintingClinica.id,

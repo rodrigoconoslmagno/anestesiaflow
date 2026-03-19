@@ -8,4 +8,5 @@ public record EscalaResponseDTO(
 		int medicoId,
 		String medicoSigla,
 	    LocalDate data,
+	    boolean plantao,
 	    List<EscalaItemResponseDTO> itens) {}

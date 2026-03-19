@@ -26,6 +26,7 @@ export const escalaSchema = baseEntitySchema.extend({
     data: z.date().or(z.string()).transform((val) => 
         val instanceof Date ? DateUtils.paraISO(val) : val
     ),
+    plantao: z.boolean().default(false),
     itens: z.array(escalaItemSchema).optional()
 });
 

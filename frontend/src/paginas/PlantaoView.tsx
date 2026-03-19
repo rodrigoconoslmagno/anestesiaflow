@@ -682,9 +682,9 @@ export const PlantaoView = () => {
                         />
                       </div>
 
-                      <div className="flex flex-row gap-4 overflow-x-auto pb-4 min-h-[400px]">
+                      <div className="flex flex-row gap-4 overflow-x-auto min-h-[400px]">
                       {colunasPorEstabelecimento.length === 0 ? (
-                          <div className="flex flex-col items-center justify-center py-12 bg-white rounded-xl border border-dashed border-slate-200 text-slate-400">
+                          <div className="flex flex-col items-center justify-center w-full py-12 bg-white rounded-xl border border-dashed border-slate-200 text-slate-400">
                             <i className="pi pi-clock text-4xl mb-3 opacity-20"></i>
                             <p className="text-sm font-medium">Nenhum plantão para esta data.</p>
                             <Button 

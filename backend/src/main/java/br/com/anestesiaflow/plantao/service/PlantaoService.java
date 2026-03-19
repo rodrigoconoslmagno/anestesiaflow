@@ -41,7 +41,7 @@ public class PlantaoService {
 		}
 		
 		if (persiste == null) {
-			persiste = escalaRepository.findByMedico_IdAndData(dto.medicoId(), dto.data());
+			persiste = escalaRepository.findByMedico_IdAndDataAndPlantao(dto.medicoId(), dto.data(), true);
 		}
 		
 		if (persiste == null) {			

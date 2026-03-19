@@ -165,7 +165,7 @@ public class EscalaService {
 	            entidadeEscala = mapperToEscala(escalaDto, entidadeEscala);
 	            sincronizarItens(entidadeEscala, escalaDto.itens(), permissoes);
 	        } else {
-	        	entidadeEscala = escalaRepository.findByMedico_IdAndData(escalaDto.medicoId(), escalaDto.data());
+	        	entidadeEscala = escalaRepository.findByMedico_IdAndDataAndPlantao(escalaDto.medicoId(), escalaDto.data(), false);
 		        
 	        	if (entidadeEscala == null) {
 	        		entidadeEscala = mapperToEscala(escalaDto);	        		

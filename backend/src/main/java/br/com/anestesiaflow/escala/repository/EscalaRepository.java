@@ -33,7 +33,7 @@ public interface EscalaRepository extends JpaRepository<Escala, Integer> {
 	List<Escala> findByDataAndPlantao(LocalDate data, boolean plantao);
 	
 	@EntityGraph(attributePaths = {"itens.estabelecimento", "medico"})
-	Escala findByMedico_IdAndData(Integer medicoId, LocalDate data);
+	Escala findByMedico_IdAndDataAndPlantao(Integer medicoId, LocalDate data, boolean plantao);
 	
 	@Query(value = """
 				SELECT 

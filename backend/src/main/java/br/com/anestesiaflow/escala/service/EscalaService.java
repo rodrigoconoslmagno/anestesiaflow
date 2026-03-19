@@ -249,6 +249,7 @@ public class EscalaService {
 		                    itensDto.set(i, new EscalaItemResponseDTO(
 		                        null,
 		                        dto.estabelecimentoId(),
+		                        dto.estabelecimentoSigla(),
 		                        dto.hora(),
 		                        null,
 		                        null,
@@ -308,6 +309,7 @@ public class EscalaService {
 		return new EscalaItemResponseDTO(
 				escalaItem.getId(),
 				escalaItem.getEstabelecimento().getId(),
+				escalaItem.getEstabelecimento().getSigla(),
 				escalaItem.getHora(),
 				escalaItem.getEstabelecimento().getCor(),
 				escalaItem.getEstabelecimento().getIcone(),

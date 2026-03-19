@@ -5,6 +5,7 @@ import { DateUtils } from '@/utils/DateUtils';
 export const escalaItemSchema = z.object({
     id: z.number().optional(),
     estabelecimentoId: z.number().int().positive("Selecione um local").optional(),
+    estabelecimentoSigla: z.string().nullable().optional(),
     hora: z.string().
         transform(val => {
             return val.trim().substring(0, 5);

@@ -16,6 +16,8 @@
     "axios": "^1.13.4",
     "clsx": "^2.1.1",
     "firebase": "^12.10.0",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7",
     "primeicons": "^7.0.0",
     "primereact": "^10.9.7",
     "react": "^19.2.0",

@@ -8,8 +8,12 @@ import { Button } from "primereact/button";
 import { Calendar } from "primereact/calendar";
 import { Column } from "primereact/column";
 import { DataTable } from "primereact/datatable";
-import { useEffect, useMemo, useState } from "react";
+import { Menu } from "primereact/menu";
+import { OverlayPanel } from "primereact/overlaypanel";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 addLocale('pt-BR', {
     firstDayOfWeek: 0,
@@ -70,6 +74,9 @@ export const SudokuResumoView = () => {
     const HORARIOS = useMemo(() => getIntervalosEscala(), []);
     const isHoje = useMemo(() => new Date().toDateString() === dataAtiva.toDateString(), [dataAtiva]);
 
+    const op = useRef<OverlayPanel>(null);
+    const dt = useRef<DataTable<any>>(null);
+
     useEffect(() => {
         const carregarDados = async () => {
           setLoading(true);
@@ -84,7 +91,164 @@ export const SudokuResumoView = () => {
           }
         };
         carregarDados();
-      }, [dataAtiva]);
+    }, [dataAtiva]);
+
+    const exportItems = [
+        {
+            label: 'Exportar Dados',
+            items: [
+                {
+                    label: 'Gerar PDF (Visual)',
+                    icon: 'pi pi-file-pdf',
+                    command: () => exportarPDF()
+                },
+                {
+                    label: 'Baixar CSV (Excel)',
+                    icon: 'pi pi-file-excel',
+                    command: () => exportCSV()
+                }
+            ]
+        }
+    ];
+
+    const renderTableHeader = () => (
+        <div className="flex items-center justify-end bg-slate-50">
+            <Button 
+                type="button" 
+                icon="pi pi-ellipsis-v" 
+                onClick={(e) => op.current?.toggle(e)} 
+                className="p-button-rounded p-button-text p-button-secondary h-8 w-8"
+            />
+            <OverlayPanel ref={op} className="shadow-xl border-slate-200">
+                <Menu model={exportItems} className="border-none sm:w-44 w-40 text-sm" />
+            </OverlayPanel>
+        </div>
+    );
+
+    const exportCSV = () => {
+        const cabecalho = ['MEDICO', ...HORARIOS.map(h => h.header)].join(';');
+
+        const linhasDados = escalas.map(escala => {
+            const colunas = [];
+            colunas.push(escala.medicoSigla?.toUpperCase() || '');
+
+            HORARIOS.forEach(h => {
+                const item = escala.itens?.find(i => {
+                    const hItem = i.hora?.substring(0, 5) || i.hora;
+                    const hHeader = h.field?.substring(0, 5) || h.field;
+                    return hItem === hHeader;
+                });
+                colunas.push(item ? item.estabelecimentoSigla : '');
+            });
+
+            return colunas.join(';');
+        });
+        const csvFinal = `sep=;\n${cabecalho}\n${linhasDados.join('\n')}`;
+
+        const blob = new Blob(['\uFEFF' + csvFinal], { type: 'text/csv;charset=utf-8;' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `sudoku_${DateUtils.paraISO(dataAtiva)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        op.current?.hide();
+    };
+
+    const exportarPDF = async () => {
+        const doc = new jsPDF('l', 'pt', 'a4');
+        
+        const TAMANHO_IMG = 18;
+        const FONTE_SIGLA = 9; 
+        const FONTE_HEADER = 10;
+    
+        const imagensCache = new Map<number, string>();
+        const itensComImagem = escalas.flatMap(e => e.itens || [])
+            .filter(i => i.estabelecimentoId && i.icone);
+    
+        for (const item of itensComImagem) {
+            if (!imagensCache.has(item.estabelecimentoId || 0)) {
+                const src = item.icone.startsWith('data:') 
+                    ? item.icone 
+                    : `data:image/png;base64,${item.icone}`;
+                imagensCache.set(item.estabelecimentoId || 0, src);
+            }
+        }
+    
+        const colunasHeader = ['MÉDICO', ...HORARIOS.map(h => h.header)];
+        const linhasCorpo = escalas.map(escala => {
+            const row = [escala.medicoSigla?.toUpperCase() || ''];
+            HORARIOS.forEach(() => row.push('')); 
+            return row;
+        });
+    
+        autoTable(doc, {
+            head: [colunasHeader],
+            body: linhasCorpo,
+            startY: 30,
+            theme: 'grid',
+            styles: { 
+                fontSize: FONTE_SIGLA, 
+                halign: 'center', 
+                valign: 'middle', 
+                minCellHeight: 22,
+                cellPadding: 1
+            },
+            headStyles: { 
+                fillColor: [37, 99, 235], 
+                fontSize: FONTE_HEADER,
+                cellPadding: 4
+            },
+            columnStyles: {
+                0: { cellWidth: 50, fontStyle: 'bold' } 
+            },
+            didDrawPage: (data) => {
+                doc.setFontSize(12); 
+                doc.setTextColor(40);
+                doc.text(`Sudoku AnestesiaFlow - ${DateUtils.formatarParaBR(dataAtiva)}`, data.settings.margin.left, 20);
+            },
+            didDrawCell: (data) => {
+                if (data.section === 'body' && data.column.index > 0) {
+                    const escala = escalas[data.row.index];
+                    const horario = HORARIOS[data.column.index - 1];
+                    
+                    const item = escala.itens?.find(i => 
+                        (i.hora?.substring(0, 5) || i.hora) === (horario.field?.substring(0, 5) || horario.field)
+                    );
+    
+                    if (item && item.estabelecimentoId) {
+                        const imgData = imagensCache.get(item.estabelecimentoId);
+                        const sigla = item.estabelecimentoSigla || '';
+    
+                        if (imgData) {
+                            const paddingInter = 3;
+                            const textWidth = doc.getTextWidth(sigla);
+                            const totalContentWidth = TAMANHO_IMG + paddingInter + textWidth;
+                            
+                            const posX = data.cell.x + (data.cell.width - totalContentWidth) / 2;
+                            const posY = data.cell.y + (data.cell.height - TAMANHO_IMG) / 2;
+    
+                            try {
+                                doc.addImage(imgData, 'PNG', posX, posY, TAMANHO_IMG, TAMANHO_IMG, undefined, 'FAST');
+                            } catch (e) {
+                                console.error(e);
+                            }
+    
+                            doc.setFontSize(FONTE_SIGLA);
+                            doc.setTextColor(40);
+                            doc.text(sigla, posX + TAMANHO_IMG + paddingInter, data.cell.y + (data.cell.height / 2) + 3);
+                        }
+                    }
+                }
+            },
+            margin: { top: 20, right: 20, bottom: 20, left: 20 }
+        });
+    
+        doc.save(`sudoku_${DateUtils.paraISO(dataAtiva)}.pdf`);
+        op.current?.hide();
+    };
 
     return (
         <div className="flex flex-col h-screen bg-slate-50 overflow-hidden">
@@ -116,7 +280,6 @@ export const SudokuResumoView = () => {
                             icon="pi pi-chevron-left" 
                             className="p-button-rounded p-button-text text-slate-500 h-auto" 
                             onClick={() => { const d = new Date(dataAtiva); d.setDate(d.getDate() - 1); setDataAtiva(d); }} 
-                            disabled={isHoje} 
                         />
                         <div className="text-center flex flex-col items-center h-full w-full">
                             <div className="flex items-center gap-2">
@@ -131,7 +294,7 @@ export const SudokuResumoView = () => {
                             </div>
 
                             <div className="relative group">
-                                {/* Camada Visual */}
+
                                 <div className="flex items-center gap-2 px-3 py-1 rounded-lg group-hover:bg-slate-100 transition-all cursor-pointer border border-transparent group-hover:border-slate-200">
                                     <span className="sm:text-lg text-[9px] font-black text-slate-700 capitalize leading-none">
                                         {dataAtiva.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
@@ -139,19 +302,17 @@ export const SudokuResumoView = () => {
                                     <i className="pi pi-calendar text-blue-600 sm:text-lg text-[9px]" />
                                 </div>
 
-                                {/* Calendar realçado e resetado por KEY para evitar travamento */}
                                 <div className="absolute inset-0 opacity-0">
                                     <Calendar 
-                                        key={dataAtiva.getTime()} // Força o refresh do componente interno
+                                        key={dataAtiva.getTime()}
                                         value={dataAtiva} 
                                         onChange={(e) => {
                                             if (e.value) {
                                                 setDataAtiva(e.value as Date);
                                             }
                                         }} 
-                                        minDate={new Date()} 
-                                        showButtonBar // ATIVA O BOTÃO HOJE E LIMPAR
-                                        hideOnDateTimeSelect={true} // Fecha ao selecionar
+                                        showButtonBar
+                                        hideOnDateTimeSelect={true} 
                                         locale="pt-BR"
                                         appendTo={document.body}
                                         touchUI={window.innerWidth < 768}
@@ -174,6 +335,13 @@ export const SudokuResumoView = () => {
             <main className="flex-grow sm:!p-2 !p-0 overflow-hidden">
                 <div className="h-full rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white">
                 <DataTable 
+                    ref={dt}
+                    header={renderTableHeader()}
+                    pt={{
+                        header: { 
+                            className: '!p-0 !border-none !bg-transparent' 
+                        }
+                    }}
                     value={escalas}
                     dataKey="medicoId" 
                     loading={loading} 
@@ -182,6 +350,7 @@ export const SudokuResumoView = () => {
                     className="sudoku-table-custom"
                     emptyMessage="Nenhuma escala encontrada."
                     rowHover={false}
+                    exportFilename={`sudoku_${DateUtils.paraISO(dataAtiva)}`}
                 >
                     {/* Coluna do Médico (Fixa) */}
                     <Column 

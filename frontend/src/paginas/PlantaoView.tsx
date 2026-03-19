@@ -234,10 +234,7 @@ export const PlantaoView = () => {
               };
             }
 
-            return { 
-              ...escalaLocal,
-              itens: [] 
-            };
+            return escalaLocal;
           });
 
           return novoEstado;
@@ -629,7 +626,7 @@ export const PlantaoView = () => {
                 
                 <Button 
                   icon={sendMessaging ? "pi pi-spin pi-spinner" : "pi pi-send"} 
-                  disabled={!permiteArquivar || loading || sendMessaging}
+                  disabled={colunasPorEstabelecimento.length === 0 || loading || sendMessaging}
                   onClick={handleEnciarMensagem}
                   tooltip="Notificar" 
                   className={clsx(

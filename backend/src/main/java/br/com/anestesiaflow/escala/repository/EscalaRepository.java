@@ -45,6 +45,7 @@ public interface EscalaRepository extends JpaRepository<Escala, Integer> {
 			    FROM Escala e
 			    INNER JOIN Medico m ON e.medicoid = m.id
 			    WHERE (:medicoId IS NULL OR e.medicoid = :medicoId)
+			      AND e.plantao = false
 			    GROUP BY 
 			        e.medicoid, 
 			        m.nome, 

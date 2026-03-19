@@ -32,6 +32,11 @@ export const SimetriaView = () => {
 
     const canALTERAR = hasPerm(Recurso.SIMETRIA, 'ALTERAR');
 
+    const cbOptions = [{name:'Arquivado', value: 'A'},
+                       {name: 'Executado', value: 'E'},
+                       {name: 'Plantão Arquivado.', value: 'PA'},
+                       {name: 'Plantão Executado', value: 'PE'}];
+
     const abrirLancamento = (rowData: any, colIndex: any) => {
         const medico = rowData.medico[colIndex];
         setFormData({data: new Date(), horas: []});
@@ -306,7 +311,7 @@ export const SimetriaView = () => {
                                         <div className="w-full h-full md:w-64 mt-2">
                                             <AppSelect
                                                 className={`sm:text-leg text-sm transition-all duration-200}`}
-                                                options={[{name:'Arquivado', value: 'A'} ,{name: 'Executado', value: 'E'}]}
+                                                options={cbOptions}
                                                 showClear={false}
                                                 filter={false}
                                                 label="Tipo"

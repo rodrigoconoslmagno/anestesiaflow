@@ -109,8 +109,10 @@ public interface EscalaRelatorioRepository extends JpaRepository<Escala, Integer
 	                JOIN escala esc ON ei.escalaid = esc.id
 	                WHERE esc.data >= (CURRENT_DATE - INTERVAL '90 days')
 			     	  AND esc.data <= (CURRENT_DATE + INTERVAL '30 days')
-			     	  AND (ei.arquivado is not null AND :arquivado = 'A' OR
-			     	       ei.reagendado = false AND :arquivado = 'E')
+			     	  AND ((esc.plantao = false AND ei.arquivado is not null AND :arquivado = 'A') OR
+			     	       (esc.plantao = false AND ei.reagendado = false AND :arquivado = 'E') OR 
+			     	       (esc.plantao = true AND ei.reagendado = false AND :arquivado = 'PE') OR
+			     	       (esc.plantao = true AND ei.arquivado is not null AND :arquivado = 'PA'))
 	                GROUP BY ei.estabelecimentoid, esc.medicoid
 	            ) contagem ON contagem.estabelecimentoid = e.id AND contagem.medicoid = m.id
 	            where m.ativo = true and e.ativo = true 

@@ -1,5 +1,6 @@
 package br.com.anestesiaflow.escala.repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -98,7 +99,7 @@ public interface EscalaRelatorioRepository extends JpaRepository<Escala, Integer
 	                e.id as estid,
 	                m.sigla AS sigla_medico,
 	                m.dataassociacao,
-	                (CURRENT_DATE - INTERVAL '90 days')::date AS datainicio,
+	                COALESCE(cast(:dataBase as date), CURRENT_DATE - INTERVAL '90 days')::date AS datainicio,
 					(CURRENT_DATE + INTERVAL '30 days')::date AS datafim,
 	                COALESCE(contagem.total, 0) AS total
 	            FROM estabelecimento e
@@ -107,7 +108,7 @@ public interface EscalaRelatorioRepository extends JpaRepository<Escala, Integer
 	                SELECT ei.estabelecimentoid, esc.medicoid, COUNT(ei.id) AS total
 	                FROM escalaitem ei
 	                JOIN escala esc ON ei.escalaid = esc.id
-	                WHERE esc.data >= (CURRENT_DATE - INTERVAL '90 days')
+	                WHERE esc.data >= COALESCE(cast(:dataBase as date), CURRENT_DATE - INTERVAL '90 days')
 			     	  AND esc.data <= (CURRENT_DATE + INTERVAL '30 days')
 			     	  AND ((esc.plantao = false AND ei.arquivado is not null AND :arquivado = 'A') OR
 			     	       (esc.plantao = false AND ei.reagendado = false AND :arquivado = 'E') OR 
@@ -120,5 +121,5 @@ public interface EscalaRelatorioRepository extends JpaRepository<Escala, Integer
 	        GROUP BY base.sigla, base.cor, base.icone, base.estid, base.datainicio, base.datafim
 	        ORDER BY base.sigla
 	        """, nativeQuery = true)
-	    List<EscalaSimetriaDTO> buscarRelatorioAssimetria(@Param("arquivado") String arquivado);
+	    List<EscalaSimetriaDTO> buscarRelatorioAssimetria(@Param("arquivado") String arquivado, @Param("dataBase") LocalDate dataBase );
 }

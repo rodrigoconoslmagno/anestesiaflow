@@ -1,11 +1,15 @@
 package br.com.anestesiaflow.escala.service;
 
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import br.com.anestesiaflow.auth.config.util.ConfigManager;
+import br.com.anestesiaflow.configs.entidade.ConfigUI;
 import br.com.anestesiaflow.escala.dto.EscalaResumoAnualClinicaResponseDTO;
 import br.com.anestesiaflow.escala.dto.EscalaResumoAnualMedicoResponseDTO;
 import br.com.anestesiaflow.escala.dto.EscalaSimetriaDTO;
@@ -18,10 +22,13 @@ public class EscalaRelatorioService {
 
 	private final EscalaRelatorioRepository escalaRepository;
 	private final ObjectMapper objectMapper;
+	private final ConfigManager configManager;
 	
-	public EscalaRelatorioService(EscalaRelatorioRepository escalaRepository, ObjectMapper objectMapper) {
+	public EscalaRelatorioService(EscalaRelatorioRepository escalaRepository, ObjectMapper objectMapper,
+				ConfigManager configManager) {
 		this.escalaRepository = escalaRepository;
 		this.objectMapper = objectMapper;
+		this.configManager = configManager;
 	}
 	
 	public List<Integer> anosEscala(){
@@ -42,7 +49,13 @@ public class EscalaRelatorioService {
 	
 	public List<EscalaSimetriaEstResponseDTO> resumoAssimetria(Map<String, Object> filtros){
 		String arquivado = (String) filtros.get("tipo");
-		return escalaRepository.buscarRelatorioAssimetria(arquivado).stream()
+		LocalDate dataBase = configManager.getLocalDate(ConfigUI.DATA_CORTE_SIMETRIA);
+		if (dataBase != null) {
+			if (ChronoUnit.DAYS.between(dataBase, LocalDate.now()) > 90) {
+				dataBase = null;
+			}
+		}
+		return escalaRepository.buscarRelatorioAssimetria(arquivado, dataBase).stream()
 	            .map(this::convert)
 	            .toList();
 		

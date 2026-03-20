@@ -44,6 +44,9 @@ public enum Permissoes {
 	PLANTAO_ALTERAR("Plantão", "Criar / Escluir", "ALTERAR", "pi pi-pencil", false, null),
 	PLANTAO_ARQUIVAR("Plantão", "Arquivar", "ARQUIVAR", "pi pi-box", false, null),
 	PLANTAO_NOTIFICAR("Plantão", "Notificar", "NOTIFICAR", "pi pi-send", false, null),
+	
+	CONFIG_ACESSAR("Configuração", "Configurações", "ACESSAR", "pi pi-clone", true, "/configview"),
+	CONFIG_ALTERAR("Plantão", "Criar / Alterar / Escluir", "ALTERAR", "pi pi-pencil", false, null),
     ;
 	
 	private final String modulo;

@@ -7,7 +7,6 @@ import { FloatLabel } from 'primereact/floatlabel';
 import { addLocale } from 'primereact/api';
 import { DateUtils } from '@/utils/DateUtils';
 
-// Configuração básica para PT-BR (opcional, mas recomendado)
 addLocale('pt-br', {
     firstDayOfWeek: 0,
     dayNames: ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'],
@@ -50,7 +49,7 @@ export const AppCalendar = <T extends FieldValues>({
             {...field} 
             {...props} 
             id={name}
-            value={DateUtils.paraDate(field.value) ?? null}
+            value={(field.value && DateUtils.paraDate(field.value)) ?? null}
             onChange={(e) => field.onChange(e.value)}
             showTime={showTime}
             hourFormat="24"
@@ -58,7 +57,6 @@ export const AppCalendar = <T extends FieldValues>({
             dateFormat="dd/mm/yy"
             showIcon
             showButtonBar
-            // autoComplete="off"
             className={classNames(
                 'w-full border border-gray-500 rounded-lg outline-none transition-all duration-200 text-lg', 
                 props.className, 

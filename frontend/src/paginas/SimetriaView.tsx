@@ -301,9 +301,9 @@ export const SimetriaView = () => {
                                             <span className="sm:text-lg text-sm font-semibold text-slate-600">
                                                 Período analisado: 
                                                 <span className="text-blue-600 ml-1">
-                                                    {new Date((resumoSimetria[0] as any).dataInicio).toLocaleDateString('pt-BR')} 
+                                                    {DateUtils.formatarParaBR(resumoSimetria[0].dataInicio)}
                                                     {" à "} 
-                                                    {new Date((resumoSimetria[0] as any).dataFim).toLocaleDateString('pt-BR')}
+                                                    {DateUtils.formatarParaBR(resumoSimetria[0].dataFim)}
                                                 </span>
                                             </span>
 

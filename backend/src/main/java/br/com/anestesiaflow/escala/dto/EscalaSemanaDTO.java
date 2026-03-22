@@ -9,5 +9,6 @@ public record EscalaSemanaDTO(
     String medicoSigla,
 	LocalDate dataInicio,
 	LocalDate dataFim,
-	List<EscalaResponseDTO> escala
+	List<EscalaResponseDTO> escala,
+	List<EscalaResponseDTO> plantao
 ) {}

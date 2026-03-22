@@ -4,5 +4,5 @@ import java.util.List;
 
 public record EscalaEdicaoDTO(
 		int medicoId,
-		List<EscalaSemanaDTO> semana 
+		List<EscalaSemanaDTO> semana
 ) {}

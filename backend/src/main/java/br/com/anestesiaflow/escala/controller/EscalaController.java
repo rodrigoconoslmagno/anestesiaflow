@@ -1,3 +1,4 @@
+
 package br.com.anestesiaflow.escala.controller;
 
 import java.time.LocalDate;

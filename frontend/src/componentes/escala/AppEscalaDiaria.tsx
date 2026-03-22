@@ -7,7 +7,7 @@ import { useWatch, type Control, useFormContext, type FieldValues, type Path } f
 import { server } from '@/api/server';
 import { getIntervalosEscala } from '@/types/escalaHelper';
 import type { Estabelecimento } from '@/types/estabelecimento';
-import { type EscalaItem, type EscalaSemana } from '@/types/escala';
+import { type Escala, type EscalaItem, type EscalaSemana } from '@/types/escala';
 import { DateUtils } from '@/utils/DateUtils';
 
 interface CelulaGridProps {
@@ -129,6 +129,7 @@ export const AppEscalaDiaria = <T extends FieldValues>({
     const [loading, setLoading] = useState(true);
     const [ arquivada, setArquivada] = useState(false);
     const dataStr = useMemo(() => DateUtils.paraISO(dataAtiva), [dataAtiva]);
+    const [ plantoes, setPlantoes ] = useState<Escala[]>([]);
 
     const isHoje = useMemo(() => {
         const hojeStr = DateUtils.paraISO(new Date());
@@ -182,6 +183,7 @@ export const AppEscalaDiaria = <T extends FieldValues>({
         }
     
         for (const semana of semanas) {
+            setPlantoes(semana.plantao);
             if (!semana.escala) {
                 continue;
             }
@@ -238,7 +240,8 @@ export const AppEscalaDiaria = <T extends FieldValues>({
                 dataInicio: dataInicioISO,
                 dataFim: dataFimISO,
                 medicoId: medicoId,
-                escala: []
+                escala: [],
+                plantao: []
             };
             semanasAtuais.push(novaSemana);
             semanaIndex = semanasAtuais.length - 1;
@@ -283,21 +286,26 @@ export const AppEscalaDiaria = <T extends FieldValues>({
 
     const isHoraBloqueada = (horaStr: string, dataStr: string) => {
         const agora = new Date();
-        const hojeStr = DateUtils.paraISO(agora.toISOString());
-    
+        const hojeStr = DateUtils.paraISO(agora);
         if (dataStr < hojeStr) {
             return true; 
         }
         if (dataStr > hojeStr) {
             return false; 
         }
-
+        
         const [h, m] = horaStr.split(':').map(Number);
         const limite = new Date();
         limite.setHours(h, m, 0, 0);
-    
+        
         return limite <= agora;
     };
+
+    const isHoraBloqueadaPlantao = (dia: string, hora: string, estId: number) => {
+        return plantoes.filter((escala: Escala) => escala.data === dia &&
+            escala.itens?.some((item: EscalaItem) => estId === item.estabelecimentoId && item.hora === hora+':00')
+        ).length > 0
+    }
 
     const getNomeEstabelecimento = (estabelecimento: Estabelecimento): string => {
         if (estabelecimento.sigla) {
@@ -390,7 +398,7 @@ export const AppEscalaDiaria = <T extends FieldValues>({
                 />
 
                 {HORARIOS.map(horario => {
-                    const estaBloqueado = isHoraBloqueada(horario.field, dataStr); 
+                    let estaBloqueado = isHoraBloqueada(horario.field, dataStr); 
                     return (<Column
                         key={`${dataStr}-${horario.field}`}
                         header={(
@@ -409,7 +417,7 @@ export const AppEscalaDiaria = <T extends FieldValues>({
                         body={(est) => {
                             const item = marcacoesPorHora.get(horario.field);
                             const estaMarcado = Number(item?.estabelecimentoId) === Number(est.id);
-
+                            estaBloqueado = isHoraBloqueadaPlantao(dataStr, horario.field, Number(est.id));
                             return (
                                 <CelulaGrid
                                     key={`${dataStr}-${horario.field}-${est.id}-${item?.estabelecimentoId}`}

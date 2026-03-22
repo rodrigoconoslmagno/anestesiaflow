@@ -3,9 +3,10 @@ import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Button } from 'primereact/button';
 import { useWatch, type Control, type FieldValues } from 'react-hook-form';
-import type { EscalaSemana } from '@/types/escala';
+import type { Escala, EscalaItem, EscalaSemana } from '@/types/escala';
 import { getIntervalosEscala } from '@/types/escalaHelper';
 import { DateUtils } from '@/utils/DateUtils';
+import clsx from 'clsx';
 
 interface AppEscalaSemanalProps<T extends FieldValues> {
     control: Control<T>;
@@ -14,6 +15,8 @@ interface AppEscalaSemanalProps<T extends FieldValues> {
 
 export const AppEscalaSemanal = <T extends FieldValues>({ control, onAgendar }: AppEscalaSemanalProps<T>) => {
     const [dataReferencia, setDataReferencia] = useState(new Date());
+    const [ plantoes, setPlantoes ] = useState<Escala[]>([]);
+
     const watchValue = useWatch({ control });
     const medicoIdForm = watchValue?.medicoId;
 
@@ -65,7 +68,7 @@ export const AppEscalaSemanal = <T extends FieldValues>({ control, onAgendar }: 
         if (!Array.isArray(semanas)) return [];
 
         const semanaEncontrada = semanas.find(s => s.dataInicio === segundaISO);
-
+        setPlantoes(semanaEncontrada?.plantao || [])
         return semanaEncontrada ? semanaEncontrada.escala : [];
     }, [dataReferencia, semanas]);
 
@@ -125,16 +128,22 @@ export const AppEscalaSemanal = <T extends FieldValues>({ control, onAgendar }: 
         return dataInicioIntervalo <= agora;
     };
 
+    const verificarBloqueioPlantao = (dataEscala: string, horaStr: string) => {
+        return plantoes.filter((escala: Escala) => escala.data === dataEscala &&
+            escala.itens?.some((item: EscalaItem) => item.hora === horaStr+':00')
+        ).length > 0;
+    };
+
     const linhasDias = useMemo(() => {
         const base = new Date(dataReferencia);
         const diaSemana = base.getDay(); 
-        const diff = base.getDate() - diaSemana + (diaSemana === 0 ? -6 : 1);
+        const diff = base.getDate() - diaSemana + (diaSemana === 0 ? -4 : 1);
         
         const segundaRef = new Date(base);
         segundaRef.setDate(diff);
         segundaRef.setHours(0, 0, 0, 0);
     
-        return Array.from({ length: 7 }, (_, i) => {
+        return Array.from({ length: 5 }, (_, i) => {
             const dataDia = new Date(segundaRef);
             dataDia.setDate(segundaRef.getDate() + i);
             const dataISO = DateUtils.paraISO(dataDia);
@@ -159,7 +168,7 @@ export const AppEscalaSemanal = <T extends FieldValues>({ control, onAgendar }: 
 
     const labelSemana = useMemo(() => {
         const inicio = new Date(linhasDias[0].data + 'T12:00:00');
-        const fim = new Date(linhasDias[6].data + 'T12:00:00');
+        const fim = new Date(linhasDias[4].data + 'T12:00:00');
         return `${inicio.getDate()} a ${fim.getDate()} de ${inicio.toLocaleDateString('pt-BR', { month: 'long' })}`;
     }, [linhasDias]);
 
@@ -170,7 +179,8 @@ export const AppEscalaSemanal = <T extends FieldValues>({ control, onAgendar }: 
             return hItem === hora;
         });
 
-        const bloqueado = !medicoAtivo || verificarBloqueio(rowData.data, hora);
+        const bloqueado = !medicoAtivo || verificarBloqueio(rowData.data, hora) ||
+                          verificarBloqueioPlantao(rowData.data, hora);
         const almoco = hora === "11:00" || hora === "12:00"
         if (alocacao) {
             const iconeBase64 = formatarIcone(alocacao.icone);
@@ -230,68 +240,130 @@ export const AppEscalaSemanal = <T extends FieldValues>({ control, onAgendar }: 
     };
 
     return (
-        <div className="flex flex-col w-full bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between bg-slate-50 p-4 border-b border-slate-200">
-                <Button icon="pi pi-chevron-left" className="p-button-rounded p-button-text text-slate-400" onClick={() => navegarSemana(-7)} />
-                <div className="text-center flex flex-col items-center">
-                    <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Escala Semanal</span>
-                        {isSemanaAtual && <span className="bg-emerald-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-sm uppercase">Semana Atual</span>}
+        <>
+            <div className="flex flex-col w-full bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="flex items-center justify-between bg-slate-50 p-4 border-b border-slate-200">
+                    <Button icon="pi pi-chevron-left" className="p-button-rounded p-button-text text-slate-400" onClick={() => navegarSemana(-7)} />
+                    <div className="text-center flex flex-col items-center">
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Escala Semanal</span>
+                            {isSemanaAtual && <span className="bg-emerald-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-sm uppercase">Semana Atual</span>}
+                        </div>
+                        <span className="text-lg font-black text-slate-700 capitalize leading-none">{labelSemana}</span>
                     </div>
-                    <span className="text-lg font-black text-slate-700 capitalize leading-none">{labelSemana}</span>
+                    <Button icon="pi pi-chevron-right" className="p-button-rounded p-button-text text-slate-400" onClick={() => navegarSemana(7)} />
                 </div>
-                <Button icon="pi pi-chevron-right" className="p-button-rounded p-button-text text-slate-400" onClick={() => navegarSemana(7)} />
-            </div>
 
-            <div className="overflow-auto">
-                <DataTable value={linhasDias} 
-                           showGridlines 
-                           className="p-datatable-sm" 
-                           responsiveLayout="scroll"
-                           stateStorage="local"
-                           scrollable
-                >
-                    <Column 
-                        header="" 
-                        className="bg-slate-200 border-r" 
-                        style={{ minWidth: '15px' }} 
-                        frozen
-                        alignFrozen="left"  
-                        bodyClassName="!p-1.8 sm:!p-2 w-1"
-                        body={(rowData) => (
-                            <div className={`flex flex-row items-center justify-center gap-2 
-                                    ${rowData.isHoje ? 'text-blue-600' : 'text-slate-500'}`}>
-                                <span className="sm:text-[12px] text-[10px] font-black leading-none">
-                                    {rowData.nomeDia}
-                                </span>
-                            </div>
-                        )}
-                    />
-                    {colunasHoras.map(hora => (
+                <div className="overflow-auto">
+                    <DataTable value={linhasDias} 
+                            showGridlines 
+                            className="p-datatable-sm" 
+                            responsiveLayout="scroll"
+                            stateStorage="local"
+                            scrollable
+                    >
                         <Column 
-                            key={hora.field} 
-                            header={(
-                                <div className="flex justify-center items-center bg-slate-200">
-                                    <span className={`sm:text-[12px] text-[10px] font-bold tracking-tight`}>
-                                        {hora.header}
+                            header="" 
+                            className="bg-slate-200 border-r" 
+                            style={{ minWidth: '15px' }} 
+                            frozen
+                            alignFrozen="left"  
+                            bodyClassName="!p-1.8 sm:!p-2 w-1"
+                            body={(rowData) => (
+                                <div className={`flex flex-row items-center justify-center gap-2 
+                                        ${rowData.isHoje ? 'text-blue-600' : 'text-slate-500'}`}>
+                                    <span className="sm:text-[12px] text-[10px] font-black leading-none">
+                                        {rowData.nomeDia}
                                     </span>
                                 </div>
                             )}
-                            bodyClassName="!p-0 !text-center"
-                            headerClassName="bg-slate-200 border-b border-slate-100 sm:p-1.5 p-0 sm:min-w-[28px] min-w-[24px]"
-                            headerStyle={{ justifyContent: 'center' }}  
-                            align="center" 
-                            alignHeader="center"
-                            pt={{
-                                headerContent: { className: 'justify-center' },
-                                bodyCell: { className: 'text-center sm:min-w-[28px] sm:min-h-[28px] w-[24px] h-[24px]' }
-                            }}
-                            className='p-0'
-                            body={(rowData) => renderCelulaHorario(rowData, hora.field)}
                         />
-                    ))}
-                </DataTable>
+                        {colunasHoras.map(hora => (
+                            <Column 
+                                key={hora.field} 
+                                header={(
+                                    <div className="flex justify-center items-center bg-slate-200">
+                                        <span className={`sm:text-[12px] text-[10px] font-bold tracking-tight`}>
+                                            {hora.header}
+                                        </span>
+                                    </div>
+                                )}
+                                bodyClassName="!p-0 !text-center"
+                                headerClassName="bg-slate-200 border-b border-slate-100 sm:p-1.5 p-0 sm:min-w-[28px] min-w-[24px]"
+                                headerStyle={{ justifyContent: 'center' }}  
+                                align="center" 
+                                alignHeader="center"
+                                pt={{
+                                    headerContent: { className: 'justify-center' },
+                                    bodyCell: { className: 'text-center sm:min-w-[28px] sm:min-h-[28px] w-[24px] h-[24px]' }
+                                }}
+                                className='p-0'
+                                body={(rowData) => renderCelulaHorario(rowData, hora.field)}
+                            />
+                        ))}
+                    </DataTable>
+                </div>
             </div>
-        </div>
+
+            {plantoes.length > 0 && <section className="mt-6 animate-fadein">
+                <div className="bg-slate-100/50 border border-slate-200 rounded-2xl p-4 shadow-inner">
+                    
+                    <div className="flex items-center gap-2 mb-4 px-1">
+                        <div className="w-1.5 h-5 bg-blue-600 rounded-full"></div>
+                        <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest">
+                            Próximos Plantões
+                        </h2>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 justify-start">
+                        {plantoes.map((plantao: Escala) => (
+                            plantao.itens?.map((item: EscalaItem, idx: number) => {
+                                const apenasNumeros = item.hora.replace(/\D/g, '');
+                                const horaSlot = parseInt(apenasNumeros.substring(0, 2), 10);                            
+                                if (horaSlot === 7 || horaSlot === 13 || horaSlot === 19) {
+                                    return (
+                                    <div 
+                                        key={idx}
+                                        className={clsx(
+                                            "flex-col md:flex-row bg-white p-3 rounded-xl border border-slate-100 hover:border-blue-200 transition-all shadow-sm flex items-center gap-3 group hover:z-50",
+                                            "basis-[calc(33.33%-8px)]", 
+                                            "md:basis-[calc(20%-8px)]",
+                                            "lg:basis-[calc(16.66%-8px)]",
+                                            "flex-none"
+                                        )}
+                                    >
+                                        <div className="flex items-center justify-center min-h-[28px] min-w-[28px]">
+                                            <div
+                                            className="w-[28px] h-[28px] rounded-full border border-white shadow-inner flex items-center justify-center overflow-hidden"
+                                            style={{ backgroundColor: item.cor?.startsWith('#') ? item.cor : `#${item.cor}` }}
+                                            >
+                                            {item.icone ? (
+                                                <img 
+                                                src={String(item.icone).startsWith('data:') ? (item.icone as string) : `data:image/png;base64,${item.icone}`}
+                                                className="object-contain"
+                                                alt={""}
+                                                />
+                                            ) : <i className="text-white text-[11px]" />}
+                                            </div>
+                                        </div>
+                            
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-blue-600 font-black text-[9px] uppercase tracking-tight flex items-center gap-1 mb-0.5">
+                                            <i className="pi pi-clock text-[10px]"></i>
+                                            {horaSlot} - {horaSlot=== 7 ? 13 : horaSlot=== 13 ? 19 : 7}h
+                                            </div>
+                                            <div className="text-[10px] font-black text-blue-600 leading-none uppercase">
+                                                {DateUtils.formatarParaBR(plantao.data)}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    )
+                                }
+                            })
+                        ))}
+                    </div>
+                </div>
+            </section>}
+        </>
     );
 };

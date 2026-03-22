@@ -119,10 +119,17 @@ public class EscalaService {
 		            List<Escala> escalasDaquelaSemana = entry.getValue();
 
 		            List<EscalaResponseDTO> dtosDaSemana = escalasDaquelaSemana.stream()
+		            	.filter(escala -> !escala.isPlantao())	
 		                .map(escala -> mapperToDto(escala, false))
 		                .collect(Collectors.toList());
 
-		            return new EscalaSemanaDTO(medicoId, null, null, inicioSemana, null, dtosDaSemana);
+		            List<EscalaResponseDTO> dtosDePlantao = escalasDaquelaSemana.stream()
+			            	.filter(escala -> escala.isPlantao())	
+			                .map(escala -> mapperToDto(escala, false))
+			                .collect(Collectors.toList());
+		            
+		            return new EscalaSemanaDTO(medicoId, null, null, inicioSemana, 
+		            							null, dtosDaSemana, dtosDePlantao);
 		        })
 		        .collect(Collectors.toList());
 	}
@@ -148,7 +155,8 @@ public class EscalaService {
 			    null,
 				null,
 				null,
-				Arrays.asList(dto));
+				Arrays.asList(dto),
+				null);
 		return salvar(semana, null).get(0);
 	}
 	

@@ -38,6 +38,7 @@ export interface EscalaSemana extends BaseEntity {
     dataInicio: string | undefined;
     dataFim: string;
     escala: Escala[]; 
+    plantao: Escala[]; 
 }
 
 export const escalaSemanaSchema = z.object({
@@ -50,7 +51,8 @@ export const escalaSemanaSchema = z.object({
             }),
     dataInicio: z.string().optional(),
     dataFim: z.string().optional(),
-    escala: z.array(escalaSchema)
+    escala: z.array(escalaSchema),
+    plantao: z.array(escalaSchema)
 })
 .refine((data) => {
     const totalItens = data.escala.reduce((acc, dia) => {

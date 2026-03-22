@@ -50,7 +50,8 @@ public class SudokuController {
 			    null,
 				null,
 				null,
-				dto);
+				dto,
+				null);
 		List<EscalaResponseDTO> escalass = escalaService.salvar(semana);
         return ResponseEntity.status(HttpStatus.CREATED).body(escalass);
     }

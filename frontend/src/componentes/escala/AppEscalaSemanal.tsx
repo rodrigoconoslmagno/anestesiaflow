@@ -7,6 +7,7 @@ import type { Escala, EscalaItem, EscalaSemana } from '@/types/escala';
 import { getIntervalosEscala } from '@/types/escalaHelper';
 import { DateUtils } from '@/utils/DateUtils';
 import clsx from 'clsx';
+import { IconeSirenePlantao } from '@/utils/IconeSirene';
 
 interface AppEscalaSemanalProps<T extends FieldValues> {
     control: Control<T>;
@@ -178,9 +179,9 @@ export const AppEscalaSemanal = <T extends FieldValues>({ control, onAgendar }: 
             const hItem = item.hora?.substring(0, 5) || item.hora;
             return hItem === hora;
         });
-
-        const bloqueado = !medicoAtivo || verificarBloqueio(rowData.data, hora) ||
-                          verificarBloqueioPlantao(rowData.data, hora);
+        const plantao = verificarBloqueioPlantao(rowData.data, hora);
+        const bloqueado = !medicoAtivo || verificarBloqueio(rowData.data, hora) || plantao;
+                          
         const almoco = hora === "11:00" || hora === "12:00"
         if (alocacao) {
             const iconeBase64 = formatarIcone(alocacao.icone);
@@ -204,9 +205,13 @@ export const AppEscalaSemanal = <T extends FieldValues>({ control, onAgendar }: 
 
         if (bloqueado) {
             return (
-                <div className={`flex items-center justify-center w-full h-full cursor-not-allowed
-                        ${almoco ? 'bg-red-100' : ' bg-slate-50/50'} `}>
-                    <div className={`w-[14px] h-[14px]  rounded-full ${almoco ? 'bg-slate-300' : 'bg-slate-200'} `} />
+                 <div className={`flex items-center justify-center w-full h-full cursor-not-allowed
+                         ${almoco ? 'bg-red-100' : ' bg-slate-50/50'} `}>
+                    {plantao ? 
+                        <IconeSirenePlantao className="w-6 h-6 animate-pulse" />
+                    :
+                        <div className={`w-[14px] h-[14px]  rounded-full ${almoco ? 'bg-slate-300' : 'bg-slate-200'} `} />
+                    }
                 </div>
             );
         }
@@ -313,6 +318,7 @@ export const AppEscalaSemanal = <T extends FieldValues>({ control, onAgendar }: 
                         <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest">
                             Próximos Plantões
                         </h2>
+                        <IconeSirenePlantao className="w-7 h-7 animate-pulse" />
                     </div>
 
                     <div className="flex flex-wrap gap-2 justify-start">

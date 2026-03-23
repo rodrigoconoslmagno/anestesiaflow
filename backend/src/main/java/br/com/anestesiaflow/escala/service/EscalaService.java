@@ -66,7 +66,7 @@ public class EscalaService {
 		return escalaRepository.findEscalasAgrupadasComMedico(null);
 	}
 	
-	public List<EscalaResponseDTO> listarPorData(LocalDate data, boolean plantao){
+	public List<EscalaResponseDTO> listarPorData(LocalDate data, Boolean plantao){
 		List<Escala> escalas = escalaRepository.findByData(data, plantao);
 		
 		return medicoService.listarAtivos().stream().map(medico -> {
@@ -163,7 +163,14 @@ public class EscalaService {
 	@Transactional
 	private List<EscalaResponseDTO> salvar(EscalaSemanaDTO dto, Permissoes permissoes) {
 		List<EscalaResponseDTO> resultados = new ArrayList<>();
-		for (var escalaDto : dto.escala()) {
+		for (EscalaResponseDTO escalaDto : dto.escala()) {
+			DayOfWeek diaDaSemana = escalaDto.data().getDayOfWeek();
+
+	        if (diaDaSemana == DayOfWeek.SATURDAY || diaDaSemana == DayOfWeek.SUNDAY) {
+	        	throw new BusinessException("Não é possível agendar um final de semana pelo Sudoku, " +
+	        			"utilize os plantões.");
+	        }
+			
 	        Escala entidadeEscala;
 	
 	        if (escalaDto.id() != null) {

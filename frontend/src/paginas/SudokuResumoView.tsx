@@ -14,6 +14,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { IconeSirenePlantao } from "@/utils/IconeSirene";
 
 addLocale('pt-BR', {
     firstDayOfWeek: 0,
@@ -27,7 +28,7 @@ addLocale('pt-BR', {
   });
   locale('pt-BR');
 
-const StaticCell = ({ alocacao, hora }: { alocacao?: EscalaItem, hora: string }) => {
+const StaticCell = ({ alocacao, hora, plantao }: { alocacao?: EscalaItem, hora: string, plantao: boolean }) => {
     const almoco = hora === "11:00" || hora === "12:00"
     if (!alocacao) {
       return (
@@ -52,12 +53,14 @@ const StaticCell = ({ alocacao, hora }: { alocacao?: EscalaItem, hora: string })
           style={{ backgroundColor: bgColor }}
           className="sm:w-[28px] sm:h-[28px] w-[24px] h-[24px] rounded-full border border-white shadow-sm flex items-center justify-center overflow-hidden"
         >
-          {alocacao.icone && (
+          {alocacao.icone && !plantao ? (
             <img 
               src={alocacao.icone.startsWith('data:') ? alocacao.icone : `data:image/png;base64,${alocacao.icone}`} 
               className="object-contain w-full h-full"
               alt="ícone" 
             />
+          ) : (
+            <IconeSirenePlantao className="w-6 h-6 animate-pulse" />
           )}
         </div>
       </div>
@@ -279,7 +282,16 @@ export const SudokuResumoView = () => {
                         <Button 
                             icon="pi pi-chevron-left" 
                             className="p-button-rounded p-button-text text-slate-500 h-auto" 
-                            onClick={() => { const d = new Date(dataAtiva); d.setDate(d.getDate() - 1); setDataAtiva(d); }} 
+                            onClick={() => { 
+                                const d = new Date(dataAtiva); 
+                                d.setDate(d.getDate() - 1); 
+                                if (d.getDay() === 0) {// Se cair no Domingo (0), volta mais 2 dias para Sextas
+                                    d.setDate(d.getDate() - 2);
+                                } else if (d.getDay() === 6) {// Se cair no Sábado (6), volta mais 1 dia para Sexta
+                                    d.setDate(d.getDate() - 1);
+                                }
+                                setDataAtiva(d); 
+                            }} 
                         />
                         <div className="text-center flex flex-col items-center h-full w-full">
                             <div className="flex items-center gap-2">
@@ -317,6 +329,8 @@ export const SudokuResumoView = () => {
                                         appendTo={document.body}
                                         touchUI={window.innerWidth < 768}
                                         readOnlyInput
+                                        disabledDays={[0, 6]}
+                                        panelClassName="hide-weekends"
                                         className="w-full h-full"
                                         inputClassName="w-full h-full cursor-pointer"
                                     />
@@ -326,7 +340,16 @@ export const SudokuResumoView = () => {
                         <Button 
                             icon="pi pi-chevron-right" 
                             className="p-button-rounded p-button-text text-slate-500 h-auto" 
-                            onClick={() => { const d = new Date(dataAtiva); d.setDate(d.getDate() + 1); setDataAtiva(d); }} 
+                            onClick={() => { 
+                                const d = new Date(dataAtiva); 
+                                d.setDate(d.getDate() + 1); 
+                                if (d.getDay() === 6) { // Se cair no Sábado (6), pula mais 2 dias para Segunda
+                                    d.setDate(d.getDate() + 2);
+                                } else if (d.getDay() === 0) {// Se cair no Domingo (0), pula mais 1 dia para Segunda
+                                    d.setDate(d.getDate() + 1);
+                                }
+                                setDataAtiva(d); 
+                            }} 
                         />
                     </div>
                 </div>
@@ -396,7 +419,12 @@ export const SudokuResumoView = () => {
                                     const hItem = i.hora?.substring(0, 5) || i.hora;
                                     return hItem === h.field;
                                 });
-                                return <StaticCell alocacao={itemAlocado} hora={h.field} />;
+                                console.log("plantao", escala)
+                                return <StaticCell 
+                                            alocacao={itemAlocado} 
+                                            hora={h.field} 
+                                            plantao={itemAlocado && escala.plantao || false}
+                                        />;
                             }} 
                         />
                         ))} 

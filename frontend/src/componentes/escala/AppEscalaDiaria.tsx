@@ -9,11 +9,13 @@ import { getIntervalosEscala } from '@/types/escalaHelper';
 import type { Estabelecimento } from '@/types/estabelecimento';
 import { type Escala, type EscalaItem, type EscalaSemana } from '@/types/escala';
 import { DateUtils } from '@/utils/DateUtils';
+import { IconeSirenePlantao } from '@/utils/IconeSirene';
 
 interface CelulaGridProps {
     cor?: string;
     icone?: string;
     bloqueado: boolean;
+    plantao: boolean;
     estId: number;
     hora: string;
     marcado: boolean;
@@ -26,9 +28,9 @@ interface AppEscalaDiariaProps<T extends FieldValues> {
     medicoId: number;
 }
 
-const CelulaGrid = memo(({ marcado, cor, icone, bloqueado, estId, hora, onToggle }: CelulaGridProps) => {
+const CelulaGrid = memo(({ marcado, cor, icone, bloqueado, plantao, estId, hora, onToggle }: CelulaGridProps) => {
     const [localSelected, setLocalSelected] = useState(marcado);
-
+    
     useEffect(() => {
         setLocalSelected(marcado);
     }, [marcado]);
@@ -65,7 +67,9 @@ const CelulaGrid = memo(({ marcado, cor, icone, bloqueado, estId, hora, onToggle
         <div
             onClick={handleInternalToggle}
             className={`flex items-center justify-center transition-all min-h-[28px] min-w-[28px] border-r border-b  border-slate-300
-                ${bloqueado ? 'cursor-not-allowed opacity-40 bg-slate-50/50' : 'cursor-pointer hover:bg-blue-50/50'}`}
+                ${bloqueado ? 'cursor-not-allowed bg-slate-50/50' : 'cursor-pointer hover:bg-blue-50/50'}
+                ${!plantao && bloqueado ? 'opacity-40' : ''}
+                `}
         >
             {localSelected ? (
                 <div
@@ -81,8 +85,13 @@ const CelulaGrid = memo(({ marcado, cor, icone, bloqueado, estId, hora, onToggle
                     ) : <i className=" text-white text-[11px]" />}
                 </div>
             ) : (
-                !bloqueado && <div className="w-[28px] h-[p28x] bg-slate-200 rounded-full opacity-30"></div>
-            )}
+                plantao ? 
+                    <IconeSirenePlantao className="w-6 h-6 animate-pulse" />
+                :                
+                    !bloqueado && <div className="w-[28px] h-[p28x] bg-slate-200 rounded-full opacity-30"></div>
+                
+            )
+            }
         </div>
     );
 });
@@ -144,6 +153,21 @@ export const AppEscalaDiaria = <T extends FieldValues>({
     }, [watchSemanas]);
 
     useEffect(() => {
+        const diaSemana = dataAtiva.getDay();
+        
+        // 0 = Domingo, 6 = Sábado
+        if (diaSemana === 0 || diaSemana === 6) {
+            const novaData = new Date(dataAtiva);
+            
+            // Se for Sábado (6), adiciona 2 dias. Se for Domingo (0), adiciona 1.
+            const diasParaSomar = diaSemana === 6 ? 2 : 1;
+            novaData.setDate(novaData.getDate() + diasParaSomar);
+            
+            setDataAtiva(novaData);
+        }
+    }, [dataAtiva]);
+
+    useEffect(() => {
         setLoading(true);
         server.api.listar<any>('/estabelecimento', { ativo: true })
             .then(res => setEstabelecimentos(res))
@@ -183,7 +207,7 @@ export const AppEscalaDiaria = <T extends FieldValues>({
         }
     
         for (const semana of semanas) {
-            setPlantoes(semana.plantao);
+            setPlantoes(pres => [...pres, ...(semana.plantao || [])]);
             if (!semana.escala) {
                 continue;
             }
@@ -329,7 +353,16 @@ export const AppEscalaDiaria = <T extends FieldValues>({
               <Button
                     icon="pi pi-chevron-left"
                     className="p-button-rounded p-button-text text-slate-400"
-                    onClick={() => { const d = new Date(dataAtiva); d.setDate(d.getDate() - 1); setDataAtiva(d); }}
+                    onClick={() => { 
+                        const d = new Date(dataAtiva); 
+                        d.setDate(d.getDate() - 1); 
+                        if (d.getDay() === 0) {// Se cair no Domingo (0), volta mais 2 dias para Sextas
+                            d.setDate(d.getDate() - 2);
+                        } else if (d.getDay() === 6) {// Se cair no Sábado (6), volta mais 1 dia para Sexta
+                            d.setDate(d.getDate() - 1);
+                        }
+                        setDataAtiva(d); 
+                    }}
                     disabled={isHoje}
                 />
                 <div className="text-center flex flex-col items-center">
@@ -355,7 +388,16 @@ export const AppEscalaDiaria = <T extends FieldValues>({
                 <Button
                     icon="pi pi-chevron-right"
                     className="p-button-rounded p-button-text text-slate-400"
-                    onClick={() => { const d = new Date(dataAtiva); d.setDate(d.getDate() + 1); setDataAtiva(d); }}
+                    onClick={() => { 
+                        const d = new Date(dataAtiva); 
+                        d.setDate(d.getDate() + 1); 
+                        if (d.getDay() === 6) { // Se cair no Sábado (6), pula mais 2 dias para Segunda
+                            d.setDate(d.getDate() + 2);
+                        } else if (d.getDay() === 0) {// Se cair no Domingo (0), pula mais 1 dia para Segunda
+                            d.setDate(d.getDate() + 1);
+                        }
+                        setDataAtiva(d); 
+                    }}
                 />
             </div>
 
@@ -398,7 +440,7 @@ export const AppEscalaDiaria = <T extends FieldValues>({
                 />
 
                 {HORARIOS.map(horario => {
-                    let estaBloqueado = isHoraBloqueada(horario.field, dataStr); 
+                    const estaBloqueado = isHoraBloqueada(horario.field, dataStr); 
                     return (<Column
                         key={`${dataStr}-${horario.field}`}
                         header={(
@@ -417,13 +459,14 @@ export const AppEscalaDiaria = <T extends FieldValues>({
                         body={(est) => {
                             const item = marcacoesPorHora.get(horario.field);
                             const estaMarcado = Number(item?.estabelecimentoId) === Number(est.id);
-                            estaBloqueado = isHoraBloqueadaPlantao(dataStr, horario.field, Number(est.id));
+                            const plantao = isHoraBloqueadaPlantao(dataStr, horario.field, Number(est.id));
                             return (
                                 <CelulaGrid
                                     key={`${dataStr}-${horario.field}-${est.id}-${item?.estabelecimentoId}`}
                                     cor={estaMarcado ? (item?.cor || est.cor) : est.cor}
                                     icone={estaMarcado ? (item?.icone || est.icone) : est.icone}
-                                    bloqueado={estaBloqueado}
+                                    bloqueado={estaBloqueado || plantao}
+                                    plantao={plantao}
                                     estId={est.id}
                                     hora={horario.field}
                                     marcado={estaMarcado}

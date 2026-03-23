@@ -24,7 +24,7 @@ public class SudokuService {
 	}
 	
 	public List<EscalaResponseDTO> listarPorData(LocalDate data){
-		List<Escala> escalas = escalaRepository.findByData(data, false);
+		List<Escala> escalas = escalaRepository.findByData(data, null);
 		
 		return medicoService.listarAtivos().stream().map(medico -> {
 			
@@ -54,9 +54,9 @@ public class SudokuService {
 					escala.getMedico().getSigla(),
 					escala.getData(),
 					escala.isPlantao(),
-					escala.getItens().stream().
-					filter(item -> !item.isReagendado()).
-					map(this::mapperToDto).toList());
+					escala.getItens().stream()
+							.filter(item -> !item.isReagendado())
+							.map(this::mapperToDto).toList());
 	}
 	
 	private EscalaItemResponseDTO mapperToDto(EscalaItem escalaItem) {	

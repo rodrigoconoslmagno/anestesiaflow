@@ -243,3 +243,13 @@
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
     z-index: 999;
 }
+
+.hide-weekends .p-datepicker-calendar > thead > tr > th:first-child,
+.hide-weekends .p-datepicker-calendar > thead > tr > th:last-child {
+    display: none;
+}
+
+.hide-weekends .p-datepicker-calendar > tbody > tr > td:first-child,
+.hide-weekends .p-datepicker-calendar > tbody > tr > td:last-child {
+    display: none;
+}

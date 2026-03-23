@@ -22,6 +22,7 @@ import { useAppToast } from '@/context/ToastContext';
 import { useAuthStore } from '@/permissoes/authStore';
 import { Recurso } from '@/permissoes/recurso';
 import { confirmDialog } from 'primereact/confirmdialog';
+import { IconeSirenePlantao } from '@/utils/IconeSirene';
 
 addLocale('pt-BR', {
   firstDayOfWeek: 0,
@@ -35,7 +36,7 @@ addLocale('pt-BR', {
 });
 locale('pt-BR');
 
-const DroppableCell = ({ id, alocacao, bloqueado, isPaintingMode, onMouseDown, onMouseEnter, disabled}: any) => {
+const DroppableCell = ({ id, alocacao, bloqueado, plantao, isPaintingMode, onMouseDown, onMouseEnter, disabled}: any) => {
   const { isOver, setNodeRef } = useDroppable({ 
     id, 
     disabled: bloqueado || disabled
@@ -65,6 +66,7 @@ const DroppableCell = ({ id, alocacao, bloqueado, isPaintingMode, onMouseDown, o
           horaOriginal={hora} 
           isPaintingMode={isPaintingMode}
           bloqueado={bloqueado}
+          plantao={plantao}
           disabled={disabled}
         />
       ) : (
@@ -75,7 +77,7 @@ const DroppableCell = ({ id, alocacao, bloqueado, isPaintingMode, onMouseDown, o
   );
 };
 
-const DraggableItem = ({ alocacao, medicoId, horaOriginal, isPaintingMode, bloqueado, disabled }: any) => {
+const DraggableItem = ({ alocacao, medicoId, horaOriginal, isPaintingMode, bloqueado, plantao, disabled }: any) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `alocado|${medicoId}|${horaOriginal}`,
     disabled: bloqueado || disabled,
@@ -88,7 +90,7 @@ const DraggableItem = ({ alocacao, medicoId, horaOriginal, isPaintingMode, bloqu
   const styleFinal = {
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     zIndex: isDragging ? 999 : 1,
-    opacity: isDragging ? 0.5 : (bloqueado ? 0.6 : 1),
+    opacity: isDragging ? 0.5 : (bloqueado && !plantao ? 0.6 : 1),
     cursor: disabled ? "default" : (bloqueado ? 'not-allowed' : (isPaintingMode ? 'cell' : 'grab')),
     backgroundColor: alocacao.cor?.startsWith('#') ? alocacao.cor : `#${alocacao.cor}`,
     touchAction: 'none', 
@@ -105,11 +107,13 @@ const DraggableItem = ({ alocacao, medicoId, horaOriginal, isPaintingMode, bloqu
       onDragStart={(e) => (isPaintingMode || bloqueado) && e.preventDefault()}  
       className="w-[28px] h-[28px] rounded-full border border-white shadow-sm flex items-center
                  justify-center overflow-hidden active:cursor-grabbing">
-      {alocacao.icone && (
+      {alocacao.icone && !plantao ? (
         <img 
           src={alocacao.icone.startsWith('data:') ? alocacao.icone : `data:image/png;base64,${alocacao.icone}`} 
           className="object-contain w-full h-full pointer-events-none" 
         />
+      ) : (
+        <IconeSirenePlantao className="w-6 h-6 animate-pulse" />
       )}
     </div>
   );
@@ -146,6 +150,7 @@ export const SudokuView = () => {
   const { showError, showSuccess } = useAppToast();
   const menu = useRef<Menu>(null);
   const [ permiteArquivar, setPermiteArquivar ] = useState(false);
+  const ultimoEstadoConfirmado = useRef<Escala[]>([]);
 
   const hasPerm = useAuthStore(state => state.hasPermission);
 
@@ -197,7 +202,7 @@ export const SudokuView = () => {
 
         setPermiteArquivar(!arquivado)
         setEscalas(resEscalas || []);
-       
+
         setLastUpdate(Date.now());
       } catch (error: any) {
         if (error.status = 403) {
@@ -224,6 +229,7 @@ export const SudokuView = () => {
 
     if (hasChangesToSave && interacaoFinalizada) {
       const sincronizarComBackend = async () => {
+        const snapshotAnterior = [...ultimoEstadoConfirmado.current];
         try {
           setIsSyncing(true);
           
@@ -245,31 +251,34 @@ export const SudokuView = () => {
           if (response && Array.isArray(response)) {
             const mapaBack = new Map(response.map(e => [e.medicoId, e]));
 
-            setEscalas((prev) => {
-              const novoEstado = prev.map((escalaLocal) => {
-                const escalaDoBanco = mapaBack.get(escalaLocal.medicoId);
+            const novoEstadoIntegrado = escalas.map((escalaLocal) => {
+              const escalaDoBanco = mapaBack.get(escalaLocal.medicoId);
 
-                if (escalaDoBanco) {
-                  return {
-                    ...escalaDoBanco,
-                    medicoSigla: escalaLocal.medicoSigla 
-                  };
-                }
-
-                return { 
-                  ...escalaLocal, 
-                  id: undefined, 
-                  itens: [] 
+              if (escalaDoBanco) {
+                return {
+                  ...escalaDoBanco,
+                  medicoSigla: escalaLocal.medicoSigla 
                 };
-              });
+              }
 
-              return novoEstado;
+              return { 
+                ...escalaLocal, 
+                id: undefined, 
+                itens: [] 
+              };
             });
+
+            setEscalas(novoEstadoIntegrado);
+            ultimoEstadoConfirmado.current = novoEstadoIntegrado;
           }
 
           setHasChangesToSave(false);
         } catch (err: any) {
           console.error("Falha na sincronização:", err);
+
+          setEscalas(snapshotAnterior);
+          setHasChangesToSave(false);
+
           if (err.status === 403) {
             const errorMessage = err.response?.data?.mensagem || "Você não tem permissão para excluir este registro.";
             showError('Ação Bloqueada', errorMessage);
@@ -285,7 +294,13 @@ export const SudokuView = () => {
 
       sincronizarComBackend();
     }
-  }, [hasChangesToSave, isDraggingWithinGrid, activeDragData, escalas, dataStr]);
+  }, [hasChangesToSave, isDraggingWithinGrid, activeDragData, dataStr]);
+
+  useEffect(() => {
+    if (escalas.length > 0 && !hasChangesToSave) {
+        ultimoEstadoConfirmado.current = escalas;
+    }
+  }, [escalas, hasChangesToSave]);
 
   const atualizarStatusBloqueio = useCallback(async (data: any) => {
     try {
@@ -307,6 +322,13 @@ export const SudokuView = () => {
   const navegar = (dias: number) => {
     const novaData = new Date(dataAtiva);
     novaData.setDate(novaData.getDate() + dias);
+
+    if (novaData.getDay() === 6) { // Se cair no Sábado (6), pula mais 2 dias para Segunda
+      novaData.setDate(novaData.getDate() + 2 * (dias > 0 ? 1 : -1));
+    } else if (novaData.getDay() === 0) {// Se cair no Domingo (0), pula mais 1 dia para Segunda
+      novaData.setDate(novaData.getDate() + 1 * (dias > 0 ? 1 : -2));
+    }
+
     setDataAtiva(novaData);
 
     setIsPaintingMode(false);
@@ -658,8 +680,7 @@ export const SudokuView = () => {
 
         <div className="flex items-center gap-2">
           <div className="hidden md:flex gap-2">
-            {canArquivar && <Button icon="pi pi-box" 
-                    // label="Arquivar"
+            {canArquivar && <Button icon="pi pi-box"
                     onClick={confirmArquivamento}
                     disabled={!permiteArquivar || loading || hasChangesToSave}
                     tooltip="Arquivar" 
@@ -782,9 +803,11 @@ export const SudokuView = () => {
                             showButtonBar
                             hideOnDateTimeSelect={true}
                             locale="pt-BR"
+                            disabledDays={[0, 6]}
                             appendTo={document.body}
                             touchUI={window.innerWidth < 768}
                             readOnlyInput
+                            panelClassName="hide-weekends"
                             className="w-full h-full"
                             inputClassName="w-full h-full cursor-pointer"
                         />
@@ -932,13 +955,14 @@ export const SudokuView = () => {
                           const hItem = i.hora?.substring(0, 5) || i.hora;
                           return hItem === h.field;
                         });
-                        
+
                         return (
                           <DroppableCell 
                             id={`${escala.medicoId}|${h.field}`} 
                             alocacao={itemAlocado}
                             sigla={escala.medicoSigla}
-                            bloqueado={bloqueado}
+                            bloqueado={bloqueado || (itemAlocado && escala.plantao)}
+                            plantao={itemAlocado && escala.plantao}
                             isPaintingMode={isPaintingMode}
                             // Quando clica na célula, chama a função que busca o que tem nela
                             onMouseDown={isPaintingMode ? (e: any) => handleStartPainting(e.clientX, e.clientY) : undefined}

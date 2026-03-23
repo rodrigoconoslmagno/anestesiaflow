@@ -25,9 +25,9 @@ public interface EscalaRepository extends JpaRepository<Escala, Integer> {
 		    LEFT JOIN FETCH i.estabelecimento 
 		    JOIN FETCH e.medico 
 		    WHERE e.data = :data
-		      AND e.plantao = :plantao 	
+		      AND (e.plantao = :plantao OR :plantao is null) 	
 		    """)
-	List<Escala> findByData(LocalDate data, boolean plantao);
+	List<Escala> findByData(LocalDate data, Boolean plantao);
 	
 	@EntityGraph(attributePaths = {"itens.estabelecimento", "medico"})
 	List<Escala> findByDataAndPlantao(LocalDate data, boolean plantao);

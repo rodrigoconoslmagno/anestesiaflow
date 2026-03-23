@@ -17,6 +17,7 @@ import { BlockUI } from 'primereact/blockui';
 import { confirmDialog } from "primereact/confirmdialog";
 import { Recurso } from "@/permissoes/recurso";
 import { useAuthStore } from "@/permissoes/authStore";
+import { IconeSirenePlantao } from "@/utils/IconeSirene";
 
 addLocale('pt-BR', {
   firstDayOfWeek: 0,
@@ -689,10 +690,13 @@ export const PlantaoView = () => {
 
                     <div className="flex-1 p-4 md:p-6 bg-slate-50/30 flex flex-col">
                       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 md:mb-6 gap-3 md:gap-4">
+                        <div className="flex flex-row items-center gap">
                         <h2 className="text-base md:text-xl font-bold text-slate-800 flex items-center gap-2">
                             <i className="pi pi-clock text-blue-500"></i>
                             {date?.toLocaleDateString('pt-BR')}
                         </h2>
+                        <IconeSirenePlantao className="w-8 h-8 animate-pulse" />
+                        </div>
                         {canALTERAR && <Button 
                           label="Novo" 
                           icon="pi pi-plus" 

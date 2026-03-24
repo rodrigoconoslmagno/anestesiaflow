@@ -176,20 +176,26 @@ public class EscalaService {
 	        if (escalaDto.id() != null) {
 	            entidadeEscala = escalaRepository.findById(escalaDto.id())
 	                .orElseThrow(() -> new BusinessException("Escala não encontrada"));
-	            
-	            entidadeEscala = mapperToEscala(escalaDto, entidadeEscala);
-	            sincronizarItens(entidadeEscala, escalaDto.itens(), permissoes);
+	            if (!entidadeEscala.isPlantao()) {
+	            	entidadeEscala = mapperToEscala(escalaDto, entidadeEscala);
+	            	sincronizarItens(entidadeEscala, escalaDto.itens(), permissoes);
+	            } else {
+	            	entidadeEscala = null;
+	            }
 	        } else {
 	        	entidadeEscala = escalaRepository.findByMedico_IdAndDataAndPlantao(escalaDto.medicoId(), escalaDto.data(), false);
 		        
-	        	if (entidadeEscala == null) {
-	        		entidadeEscala = mapperToEscala(escalaDto);	        		
-	        	} else {
+	        	if (entidadeEscala != null) {
 	        		entidadeEscala = mapperToEscala(escalaDto, entidadeEscala);	
+	        		sincronizarItens(entidadeEscala, escalaDto.itens(), permissoes);
 	        	}
 	        	
-	            sincronizarItens(entidadeEscala, escalaDto.itens(), permissoes);
 	        }
+	        
+	        if (entidadeEscala == null) {
+        		entidadeEscala = mapperToEscala(escalaDto);	  
+        		sincronizarItens(entidadeEscala, escalaDto.itens(), permissoes);
+        	} 
 	
 	        if (entidadeEscala.getItens() == null || entidadeEscala.getItens().isEmpty()) {
 	            if (entidadeEscala.getId() != null) {

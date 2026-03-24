@@ -28,13 +28,25 @@ public class SudokuService {
 		
 		return medicoService.listarAtivos().stream().map(medico -> {
 			
-			Optional<Escala> escalaEncontrada = escalas.stream().
-					filter(escala -> escala.getMedico().getId().equals(medico.id())).
+			Optional<Escala> escalaPlantao = escalas.stream().
+					filter(escala -> escala.isPlantao() && escala.getMedico().getId().equals(medico.id())).
 					findFirst();
 			
-			if (escalaEncontrada.isPresent()) {
-				return mapperToDto(escalaEncontrada.get());
+			Optional<Escala> escalaNPlantao = escalas.stream().
+					filter(escala -> !escala.isPlantao() && escala.getMedico().getId().equals(medico.id())).
+					findFirst();
+			
+			if (!escalaPlantao.isPresent() && escalaNPlantao.isPresent()) {
+				return mapperToDto(escalaNPlantao.get());
+			}
+			
+			if (escalaPlantao.isPresent() && !escalaNPlantao.isPresent()) {
+				return mapperToDto(escalaPlantao.get());
 			} 
+			
+			if (escalaPlantao.isPresent() && escalaNPlantao.isPresent()) {
+				return mapperToDto(escalaNPlantao.get());
+			}
 				
 			return new EscalaResponseDTO(
 						null,

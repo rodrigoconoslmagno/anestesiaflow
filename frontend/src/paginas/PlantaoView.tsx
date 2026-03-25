@@ -76,7 +76,10 @@ export const PlantaoView = () => {
     
       escalas.forEach(escala => {
         escala.itensPlantao?.forEach(item => {
+          // Extrai a hora (ex: "07:00:00" -> 7)
           const horaSlot = parseInt(item.hora.substring(0, 2), 10);
+          
+          // Filtra apenas os horários principais para evitar duplicidade na listagem de resumo
           if ([7, 13, 19].includes(horaSlot)) {
             const idEst = item.estabelecimentoId;
             if (idEst && item.estabelecimento) {
@@ -88,10 +91,16 @@ export const PlantaoView = () => {
           }
         });
       });
-  
+    
       return Object.values(mapa).map(coluna => ({
         ...coluna,
         cards: coluna.cards.sort((a, b) => {
+          // 1. Ordenação por Horário (7h < 13h < 19h)
+          if (a.horaSlot !== b.horaSlot) {
+            return a.horaSlot - b.horaSlot;
+          }
+          
+          // 2. Ordenação por Senioridade (Data de Associação)
           const dataA = new Date(a.escala.medico?.dataAssociacao || 0).getTime();
           const dataB = new Date(b.escala.medico?.dataAssociacao || 0).getTime();
           return dataA - dataB;
@@ -663,10 +672,8 @@ export const PlantaoView = () => {
           <BlockUI blocked={loading} template={<i className="pi pi-spin pi-spinner text-3xl text-white"/>}>
             <div className="space-y-4 flex-1 min-h-[400px]">
               <div className="flex flex-col gap-4 md:gap-8 max-w-7xl mx-auto pb-10">
-                {/* Unified Card: Calendar and Day Schedule side-by-side */}
                 <div className="bg-white rounded-xl md:rounded-2xl shadow-lg md:shadow-xl border border-slate-200 overflow-hidden">
                   <div className="flex flex-col md:flex-row">
-                    {/* Calendar Section */}
                     <div className="flex-1 p-3 md:p-6 border-b md:border-b-0 md:border-r border-slate-100">
                       <div className="flex items-center gap-2 mb-2 md:mb-4 text-slate-700 font-bold text-sm md:text-base">
                           <i className="pi pi-calendar text-blue-500"></i>
@@ -687,86 +694,93 @@ export const PlantaoView = () => {
                         />
                       </div>
 
-                    <div className="flex-1 p-4 md:p-6 bg-slate-50/30 flex flex-col">
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 md:mb-6 gap-3 md:gap-4">
-                        <div className="flex flex-row items-center gap">
-                        <h2 className="text-base md:text-xl font-bold text-slate-800 flex items-center gap-2">
-                            <i className="pi pi-clock text-blue-500"></i>
-                            {date?.toLocaleDateString('pt-BR')}
-                        </h2>
-                        <IconeSirenePlantao className="w-8 h-8 animate-pulse" />
-                        </div>
-                        {canALTERAR && <Button 
-                          label="Novo" 
-                          icon="pi pi-plus" 
-                          className="p-button-sm p-button-primary w-full 
-                                sm:w-auto bg-blue-600 text-white p-2 rounded-xl" 
-                          onClick={handleNovoPlantao}
-                        />}
-                      </div>
-
-                      <div className="flex flex-row gap-4 overflow-x-auto min-h-[400px]">
-                      {colunasPorEstabelecimento.length === 0 ? (
-                          <div className="flex flex-col items-center justify-center w-full py-12 bg-white rounded-xl border border-dashed border-slate-200 text-slate-400">
-                            <i className="pi pi-clock text-4xl mb-3 opacity-20"></i>
-                            <p className="text-sm font-medium">Nenhum plantão para esta data.</p>
-                            {canALTERAR && <Button 
-                              label="Gerar Escala Agora" 
-                              link 
-                              className="mt-2 text-blue-600" 
-                              onClick={handleNovoPlantao}
-                            />}
+                    <div className="flex-1 min-w-0 p-4 md:p-6 bg-slate-50/30 flex flex-col overflow-hidden">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 md:mb-6 gap-3 md:gap-4 w-full">
+                        <div className="flex flex-row items-center gap-2">
+                            <h2 className="text-base md:text-xl font-bold text-slate-800 flex items-center gap-2">
+                              <i className="pi pi-clock text-blue-500"></i>
+                              {date?.toLocaleDateString('pt-BR')}
+                            </h2>
+                            <IconeSirenePlantao className="w-8 h-8 animate-pulse" />
                           </div>
-                        ) : (
-                          colunasPorEstabelecimento.map(coluna => (
-                            <div key={coluna.unidade.id} className="flex flex-col mt-2 gap-3 min-w-[30%] max-w-[33%]">
-                              {coluna.cards.map(({ escala, item, horaSlot }, idxItem) => (
-                                <div 
-                                  key={`${escala.medicoId}-${horaSlot}-${idxItem}`}
-                                  className="relative bg-white p-3 rounded-xl border border-slate-100 hover:border-blue-200 transition-all shadow-sm flex items-center gap-3 group hover:z-50">
-                                  
-                                  {canALTERAR && <button
-                                    onClick={() => confirmExclusao(escala.medicoId, escala.data, item.hora)}
-                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-20 hover:bg-red-600"
-                                  >
-                                    <i className="pi pi-times text-[10px]"></i>
-                                  </button>}
-                                  
-                                  <div className="flex items-center justify-center min-h-[28px] min-w-[28px]">
-                                    <div
-                                      className="w-[28px] h-[28px] rounded-full border border-white shadow-inner flex items-center justify-center overflow-hidden"
-                                      style={{ backgroundColor: item.cor?.startsWith('#') ? item.cor : `#${item.cor}` }}
-                                    >
-                                      {item.icone ? (
-                                        <img 
-                                          src={String(item.icone).startsWith('data:') ? (item.icone as string) : `data:image/png;base64,${item.icone}`}
-                                          className="object-contain"
-                                          alt={item.estabelecimento?.nome}
-                                        />
-                                      ) : <i className="text-white text-[11px]" />}
+                          {canALTERAR && (
+                            <Button 
+                              label="Novo" 
+                              icon="pi pi-plus" 
+                              className="p-button-sm p-button-primary w-full sm:w-auto bg-blue-600 text-white p-2 rounded-xl" 
+                              onClick={handleNovoPlantao}
+                            />
+                          )}
+                        </div>
+
+                        <div className="flex flex-row flex-nowrap gap-4 overflow-x-auto w-full max-w-full pb-4 custom-scrollbar">
+                          {colunasPorEstabelecimento.length === 0 ? (
+                              <div className="flex flex-col items-center justify-center w-full py-12 bg-white rounded-xl border border-dashed border-slate-200 text-slate-400">
+                                <i className="pi pi-clock text-4xl mb-3 opacity-20"></i>
+                                <p className="text-sm font-medium">Nenhum plantão para esta data.</p>
+                                {canALTERAR && <Button 
+                                  label="Gerar Escala Agora" 
+                                  link 
+                                  className="mt-2 text-blue-600" 
+                                  onClick={handleNovoPlantao}
+                                />}
+                              </div>
+                            ) : (
+                              <div className="flex-1 min-w-0 overflow-hidden flex flex-col"> 
+                                <div className="flex flex-row flex-nowrap gap-4 overflow-x-auto pb-4 custom-scrollbar scroll-smooth">
+                                  {colunasPorEstabelecimento.map(coluna => (
+                                    <div key={coluna.unidade.id} 
+                                         className="flex flex-col flex-none gap-2 w-[30%] max-h-[250px] md:max-h-[400px] overflow-y-auto pr-2 custom-scrollbar pt-2">
+                                      {coluna.cards.map(({ escala, item, horaSlot }, idxItem) => (
+                                        <div 
+                                          key={`${escala.medicoId}-${horaSlot}-${idxItem}`}
+                                          className="relative bg-white p-2 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3">
+                                          
+                                          {canALTERAR && <button
+                                            onClick={() => confirmExclusao(escala.medicoId, escala.data, item.hora)}
+                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-20 hover:bg-red-600"
+                                          >
+                                            <i className="pi pi-times text-[10px]"></i>
+                                          </button>}
+                                          
+                                          <div className="flex items-center justify-center min-h-[28px] min-w-[28px]">
+                                            <div
+                                              className="w-[28px] h-[28px] rounded-full border border-white shadow-inner flex items-center justify-center overflow-hidden"
+                                              style={{ backgroundColor: item.cor?.startsWith('#') ? item.cor : `#${item.cor}` }}
+                                            >
+                                              {item.icone ? (
+                                                <img 
+                                                  src={String(item.icone).startsWith('data:') ? (item.icone as string) : `data:image/png;base64,${item.icone}`}
+                                                  className="object-contain"
+                                                  alt={item.estabelecimento?.nome}
+                                                />
+                                              ) : <i className="text-white text-[11px]" />}
+                                            </div>
+                                          </div>
+                              
+                                          <div className="flex-1 min-w-0">
+                                            <div className="text-blue-600 font-black text-[9px] uppercase tracking-tight flex items-center gap-1 mb-0.5">
+                                              <i className="pi pi-clock text-[10px]"></i>
+                                              {item.hora.split(':')[0]} - {horaSlot === 7 ? 13 : horaSlot === 13 ? 19 : 7}h
+                                            </div>
+                                            <div className="text-slate-800 font-extrabold text-xs md:text-sm flex items-center gap-1.5">
+                                              {escala.medico?.sigla}              
+                                            </div>
+                                            <div className="text-slate-400 text-[9px] font-medium truncate">
+                                              {item.estabelecimento ? getNomeEstabelecimento(item.estabelecimento) : ""} 
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
                                     </div>
-                                  </div>
-                      
-                                  <div className="flex-1 min-w-0">
-                                    <div className="text-blue-600 font-black text-[9px] uppercase tracking-tight flex items-center gap-1 mb-0.5">
-                                      <i className="pi pi-clock text-[10px]"></i>
-                                      {item.hora.split(':')[0]} - {horaSlot === 7 ? 13 : horaSlot === 13 ? 19 : 7}h
-                                    </div>
-                                    <div className="text-slate-800 font-extrabold text-xs md:text-sm flex items-center gap-1.5">
-                                      {escala.medico?.sigla}              
-                                    </div>
-                                    <div className="text-slate-400 text-[9px] font-medium truncate">
-                                      {item.estabelecimento ? getNomeEstabelecimento(item.estabelecimento) : ""} 
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          ))
-                        )}
+                                  ))
+                                  }
+                              </div>
+                              </div>
+                            )}
+                        </div>
                       </div>
                     </div>
-                  </div>
                 </div>
               </div>
             </div>

@@ -74,37 +74,67 @@ addLocale('pt-BR', {
         carregarDados();
     }, [dataAtiva]);
 
-    const linhasPorEstabelecimento = useMemo(() => {
-        const mapa: Record<number, { 
-            unidade: Estabelecimento; 
+    // const linhasPorEstabelecimento = useMemo(() => {
+    //     const mapa: Record<number, { 
+    //         unidade: Estabelecimento; 
+    //         cards: { escala: EscalaPlantao; item: EscalaItemPlantao; horaSlot: number }[] 
+    //     }> = {};
+      
+    //     escalas.forEach(escala => {
+    //         escala.itensPlantao?.forEach(item => {
+    //             const horaSlot = parseInt(item.hora.substring(0, 2), 10);
+    //             if ([7, 13, 19].includes(horaSlot)) {
+    //                 const idEst = item.estabelecimentoId;
+    //                 if (idEst && item.estabelecimento) {
+    //                     if (!mapa[idEst]) {
+    //                         mapa[idEst] = { unidade: item.estabelecimento, cards: [] };
+    //                     }
+    //                     mapa[idEst].cards.push({ escala, item, horaSlot });
+    //                 }
+    //             }
+    //         });
+    //     });
+    
+    //     return Object.values(mapa).map(linha => ({
+    //         ...linha,
+    //         cards: linha.cards.sort((a, b) => {
+    //             // Ordenação por hora e depois por data de associação (senioridade)
+    //             if (a.horaSlot !== b.horaSlot) return a.horaSlot - b.horaSlot;
+    //             const dataA = new Date(a.escala.medico?.dataAssociacao || 0).getTime();
+    //             const dataB = new Date(b.escala.medico?.dataAssociacao || 0).getTime();
+    //             return dataA - dataB;
+    //         })
+    //     }));
+    // }, [escalas]);
+
+    const linhasPorMedico = useMemo(() => {
+        // Usamos um Map para garantir a preservação da ordem de inserção vinda do banco
+        const mapa = new Map<number, { 
+            profissional: Medico; 
             cards: { escala: EscalaPlantao; item: EscalaItemPlantao; horaSlot: number }[] 
-        }> = {};
+        }>();
       
         escalas.forEach(escala => {
+            const medico = escala.medico;
+            if (!medico?.id) return;
+    
             escala.itensPlantao?.forEach(item => {
                 const horaSlot = parseInt(item.hora.substring(0, 2), 10);
+                
+                // Filtro de turnos específicos do AnestesiaFlow
                 if ([7, 13, 19].includes(horaSlot)) {
-                    const idEst = item.estabelecimentoId;
-                    if (idEst && item.estabelecimento) {
-                        if (!mapa[idEst]) {
-                            mapa[idEst] = { unidade: item.estabelecimento, cards: [] };
-                        }
-                        mapa[idEst].cards.push({ escala, item, horaSlot });
+                    if (!mapa.has(medico.id!)) {
+                        mapa.set(medico.id!, { profissional: medico, cards: [] });
                     }
+                    
+                    // Como o array 'escalas' já vem ordenado, 
+                    // o 'push' manterá essa ordem cronológica dentro dos cards do médico.
+                    mapa.get(medico.id!)?.cards.push({ escala, item, horaSlot });
                 }
             });
         });
     
-        return Object.values(mapa).map(linha => ({
-            ...linha,
-            cards: linha.cards.sort((a, b) => {
-                // Ordenação por hora e depois por data de associação (senioridade)
-                if (a.horaSlot !== b.horaSlot) return a.horaSlot - b.horaSlot;
-                const dataA = new Date(a.escala.medico?.dataAssociacao || 0).getTime();
-                const dataB = new Date(b.escala.medico?.dataAssociacao || 0).getTime();
-                return dataA - dataB;
-            })
-        }));
+        return Array.from(mapa.values());
     }, [escalas]);
 
     const dateTemplate = (date: any) => {
@@ -231,20 +261,20 @@ addLocale('pt-BR', {
                 <div className="flex flex-col gap-2 w-full">
                     {loading ? (
                         <div className="flex justify-center p-10"><i className="pi pi-spin pi-spinner text-blue-500 text-2xl" /></div>
-                    ) : linhasPorEstabelecimento.length === 0 ? (
+                    ) : linhasPorMedico.length === 0 ? (
                         <div className="text-center p-10 bg-white rounded-xl border border-dashed border-slate-300 text-slate-400 text-sm">
                             Nenhum plantão escalado para hoje.
                         </div>
                     ) : (
-                        linhasPorEstabelecimento.map(linha => (
-                            <div key={linha.unidade.id} className="flex flex-col gap-2">
+                        linhasPorMedico.map(linha => (
+                            <div key={linha.profissional.id} className="flex flex-col gap-2 bottom-1">
                                 {/* Título da Unidade */}
                                 <div className="flex items-center gap-2 px-1">
                                     <div 
                                         className="w-1.5 h-4 rounded-full" 
                                     />
-                                    <span className="font-black text-slate-600 uppercase text-[10px] tracking-wider">
-                                        {linha.unidade.nome} - {linha.unidade.sigla}
+                                    <span className="font-black text-slate-600 uppercase text-[14px] tracking-wider">
+                                        {linha.profissional.sigla} - {linha.profissional.nome}
                                     </span>
                                 </div>
 
@@ -272,9 +302,9 @@ addLocale('pt-BR', {
                                                     <i className="pi pi-clock text-[9px]" />
                                                     {item.hora.substring(0,2)} - {horaSlot === 7 ? '13' : horaSlot === 13 ? '19' : '07'}h
                                                 </div>
-                                                <div className="text-slate-800 font-bold uppercase text-xs truncate">
+                                                {/* <div className="text-slate-800 font-bold uppercase text-xs truncate">
                                                     {escala.medico?.sigla}
-                                                </div>
+                                                </div> */}
                                             </div>
                                         </div>
                                     ))}

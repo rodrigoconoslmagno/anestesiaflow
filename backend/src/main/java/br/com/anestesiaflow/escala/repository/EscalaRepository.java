@@ -17,7 +17,7 @@ public interface EscalaRepository extends JpaRepository<Escala, Integer> {
 	List<Escala> findByMedico_IdAndDataBetweenOrderByDataAsc(Integer medicoId, LocalDate inicio, LocalDate fim);
 	
 	@EntityGraph(attributePaths = {"medico", "itens.estabelecimento"})
-	List<Escala> findByMedico_IdAndDataGreaterThanEqualOrderByDataAsc(Integer medicoId, LocalDate inicio);
+	List<Escala> findByMedico_IdAndDataGreaterThanEqualOrderByDataAscItensHoraAsc(Integer medicoId, LocalDate inicio);
 	
 	@Query("""
 		    SELECT DISTINCT e FROM Escala e 
@@ -32,7 +32,7 @@ public interface EscalaRepository extends JpaRepository<Escala, Integer> {
 	List<Escala> findByData(LocalDate data, Boolean plantao);
 	
 	@EntityGraph(attributePaths = {"itens.estabelecimento", "medico"})
-	List<Escala> findByDataAndPlantao(LocalDate data, boolean plantao);
+	List<Escala> findByDataAndPlantaoOrderByMedicoDataAssociacaoAscItensHoraAsc(LocalDate data, boolean plantao);
 	
 	@EntityGraph(attributePaths = {"itens.estabelecimento", "medico"})
 	Escala findByMedico_IdAndDataAndPlantao(Integer medicoId, LocalDate data, boolean plantao);

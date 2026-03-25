@@ -104,7 +104,7 @@ public class EscalaService {
 	public List<EscalaSemanaDTO> listarSemanasMedicos(int medicoId, LocalDate dataAlvo) {
 		
 		LocalDate segunda = dataAlvo.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
-		List<Escala> todasEscalas = escalaRepository.findByMedico_IdAndDataGreaterThanEqualOrderByDataAsc(medicoId, segunda);
+		List<Escala> todasEscalas = escalaRepository.findByMedico_IdAndDataGreaterThanEqualOrderByDataAscItensHoraAsc(medicoId, segunda);
 		
 		Map<LocalDate, List<Escala>> agrupadoPorSemana = todasEscalas.stream()
 		        .collect(Collectors.groupingBy(

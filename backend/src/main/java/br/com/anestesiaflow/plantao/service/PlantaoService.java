@@ -28,7 +28,7 @@ public class PlantaoService {
 	}
 	
 	public List<EscalaPlantaoDTO> listarPorData(LocalDate data){
-		return escalaRepository.findByDataAndPlantao(data, true).
+		return escalaRepository.findByDataAndPlantaoOrderByMedicoDataAssociacaoAscItensHoraAsc(data, true).
 				stream().map(this::mapperEstalaToPlantao).
 				filter(escalaBando -> escalaBando.itensPlantao().size() > 0).toList();
 	}

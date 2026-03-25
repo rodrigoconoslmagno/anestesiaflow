@@ -1,6 +1,7 @@
 package br.com.anestesiaflow.sudoku.service;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -45,7 +46,7 @@ public class SudokuService {
 			} 
 			
 			if (escalaPlantao.isPresent() && escalaNPlantao.isPresent()) {
-				return mapperToDto(escalaNPlantao.get());
+				return mapperToDtoMerge(escalaNPlantao.get(), escalaPlantao.get());
 			}
 				
 			return new EscalaResponseDTO(
@@ -71,6 +72,28 @@ public class SudokuService {
 							.map(this::mapperToDto).toList());
 	}
 	
+	private EscalaResponseDTO mapperToDtoMerge(Escala escala, Escala escalaPlantao) {
+		List<EscalaItem> itensMerge = new ArrayList<EscalaItem>();
+		escala.getItens().stream()
+				.filter(item -> !item.isReagendado())
+				.forEach(item -> itensMerge.add(item));
+		escalaPlantao.getItens().stream()
+			.filter(item -> {
+				LocalTime inicio = LocalTime.of(7, 0);
+		        LocalTime fim = LocalTime.of(19, 0);
+		        boolean estaNoIntervalo = !item.getHora().isBefore(inicio) && !item.getHora().isAfter(fim);
+				return !item.isReagendado() && estaNoIntervalo;
+			}).forEach(item -> itensMerge.add(item));;
+		return new EscalaResponseDTO(
+					escala.getId(), 
+					escala.getMedico().getId(),
+					escala.getMedico().getSigla(),
+					escala.getData(),
+					escala.isPlantao(),
+					itensMerge.stream().map(this::mapperToDto).toList()
+					);
+	}
+	
 	private EscalaItemResponseDTO mapperToDto(EscalaItem escalaItem) {	
 		return new EscalaItemResponseDTO(
 				escalaItem.getId(),
@@ -80,7 +103,8 @@ public class SudokuService {
 				escalaItem.getEstabelecimento().getCor(),
 				escalaItem.getEstabelecimento().getIcone(),
 				escalaItem.getArquivado(),
-				escalaItem.isReagendado()
+				escalaItem.isReagendado(),
+				escalaItem.getEscala().isPlantao()
 			);
 	}
 }

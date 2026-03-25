@@ -17,6 +17,7 @@ export const escalaItemSchema = z.object({
     icone: z.any().optional(),
     arquivado: z.union([z.date(), z.string()]).nullable().optional(), 
     reagendado: z.boolean().nullable().optional().default(false),
+    plantao: z.boolean().default(false),
 });
 
 export type EscalaItem = z.infer<typeof escalaItemSchema>;

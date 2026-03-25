@@ -36,7 +36,7 @@ addLocale('pt-BR', {
 });
 locale('pt-BR');
 
-const DroppableCell = ({ id, alocacao, bloqueado, plantao, isPaintingMode, onMouseDown, onMouseEnter, disabled}: any) => {
+const DroppableCell = ({ id, alocacao, bloqueado, isPaintingMode, onMouseDown, onMouseEnter, disabled}: any) => {
   const { isOver, setNodeRef } = useDroppable({ 
     id, 
     disabled: bloqueado || disabled
@@ -66,7 +66,6 @@ const DroppableCell = ({ id, alocacao, bloqueado, plantao, isPaintingMode, onMou
           horaOriginal={hora} 
           isPaintingMode={isPaintingMode}
           bloqueado={bloqueado}
-          plantao={plantao}
           disabled={disabled}
         />
       ) : (
@@ -77,7 +76,7 @@ const DroppableCell = ({ id, alocacao, bloqueado, plantao, isPaintingMode, onMou
   );
 };
 
-const DraggableItem = ({ alocacao, medicoId, horaOriginal, isPaintingMode, bloqueado, plantao, disabled }: any) => {
+const DraggableItem = ({ alocacao, medicoId, horaOriginal, isPaintingMode, bloqueado, disabled }: any) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `alocado|${medicoId}|${horaOriginal}`,
     disabled: bloqueado || disabled,
@@ -90,7 +89,7 @@ const DraggableItem = ({ alocacao, medicoId, horaOriginal, isPaintingMode, bloqu
   const styleFinal = {
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     zIndex: isDragging ? 999 : 1,
-    opacity: isDragging ? 0.5 : (bloqueado && !plantao ? 0.6 : 1),
+    opacity: isDragging ? 0.5 : (bloqueado && !alocacao.plantao ? 0.6 : 1),
     cursor: disabled ? "default" : (bloqueado ? 'not-allowed' : (isPaintingMode ? 'cell' : 'grab')),
     backgroundColor: alocacao.cor?.startsWith('#') ? alocacao.cor : `#${alocacao.cor}`,
     touchAction: 'none', 
@@ -107,7 +106,7 @@ const DraggableItem = ({ alocacao, medicoId, horaOriginal, isPaintingMode, bloqu
       onDragStart={(e) => (isPaintingMode || bloqueado) && e.preventDefault()}  
       className="w-[28px] h-[28px] rounded-full border border-white shadow-sm flex items-center
                  justify-center overflow-hidden active:cursor-grabbing">
-      {alocacao.icone && !plantao ? (
+      {alocacao.icone && !alocacao.plantao ? (
         <img 
           src={alocacao.icone.startsWith('data:') ? alocacao.icone : `data:image/png;base64,${alocacao.icone}`} 
           className="object-contain w-full h-full pointer-events-none" 
@@ -195,10 +194,8 @@ export const SudokuView = () => {
           setClinicas(resClinicas || []);
         } 
     
-        const [ resEscalas, arquivado ] = await Promise.all([
-          server.api.listarCustomizada<Escala>('/sudoku', '/listardia', { data: dataFormatada }),
-          server.api.postCustomizada<boolean>('/sudoku', '/arquivado', { data: dataFormatada })
-        ]);
+        const resEscalas = await server.api.listarCustomizada<Escala>('/sudoku', '/listardia', { data: dataFormatada });
+        const arquivado  = await server.api.postCustomizada<boolean>('/sudoku', '/arquivado', { data: dataFormatada });
 
         setPermiteArquivar(!arquivado)
         setEscalas(resEscalas || []);
@@ -241,6 +238,7 @@ export const SudokuView = () => {
               id: i.id || null, 
               estabelecimentoId: i.estabelecimentoId,
               hora: (i.hora?.substring(0, 5) || i.hora),
+              plantao: i.plantao
             })) || [] 
           }));
 
@@ -408,7 +406,8 @@ export const SudokuView = () => {
         cor: clinica.cor,
         icone: clinica.icone,
         arquivado: null,
-        reagendado: false
+        reagendado: false,
+        plantao: false
       };
   
       if (idxDest === -1) {
@@ -477,7 +476,8 @@ export const SudokuView = () => {
             cor: activePaintingClinica.cor,
             icone: activePaintingClinica.icone,
             arquivado: null,
-            reagendado: false
+            reagendado: false,
+            plantao: false
           }], 
           medicoSigla: '' 
         };
@@ -502,7 +502,8 @@ export const SudokuView = () => {
           cor: activePaintingClinica.cor,
           icone: activePaintingClinica.icone,
           arquivado: null,
-          reagendado: false
+          reagendado: false,
+          plantao: false
         }
       ];
 
@@ -961,8 +962,7 @@ export const SudokuView = () => {
                             id={`${escala.medicoId}|${h.field}`} 
                             alocacao={itemAlocado}
                             sigla={escala.medicoSigla}
-                            bloqueado={bloqueado || (itemAlocado && escala.plantao)}
-                            plantao={itemAlocado && escala.plantao}
+                            bloqueado={bloqueado || (itemAlocado && itemAlocado.plantao)}
                             isPaintingMode={isPaintingMode}
                             // Quando clica na célula, chama a função que busca o que tem nela
                             onMouseDown={isPaintingMode ? (e: any) => handleStartPainting(e.clientX, e.clientY) : undefined}

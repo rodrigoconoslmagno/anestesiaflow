@@ -11,4 +11,5 @@ public record EscalaItemResponseDTO(
 	    String cor,
 	    byte[] icone,
 	    LocalDateTime arquivado,
-	    boolean reagendado) {}
+	    boolean reagendado,
+	    boolean plantao) {}

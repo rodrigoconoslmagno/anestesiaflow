@@ -172,29 +172,29 @@ public class EscalaService {
 	        }
 			
 	        Escala entidadeEscala;
-	
+	        long temPlantao = escalaDto.itens().stream().filter(item -> item.plantao()).count();
+	        List<EscalaItemResponseDTO> itensDto = escalaDto.itens().stream().filter(item -> 
+	        			!item.plantao()).toList();
 	        if (escalaDto.id() != null) {
 	            entidadeEscala = escalaRepository.findById(escalaDto.id())
 	                .orElseThrow(() -> new BusinessException("Escala não encontrada"));
 	            if (!entidadeEscala.isPlantao()) {
 	            	entidadeEscala = mapperToEscala(escalaDto, entidadeEscala);
-	            	sincronizarItens(entidadeEscala, escalaDto.itens(), permissoes);
-	            } else {
-	            	entidadeEscala = null;
+	            	sincronizarItens(entidadeEscala, itensDto, permissoes);
 	            }
 	        } else {
 	        	entidadeEscala = escalaRepository.findByMedico_IdAndDataAndPlantao(escalaDto.medicoId(), escalaDto.data(), false);
 		        
-	        	if (entidadeEscala != null) {
+	        	if (entidadeEscala != null  && temPlantao < 12) {
 	        		entidadeEscala = mapperToEscala(escalaDto, entidadeEscala);	
-	        		sincronizarItens(entidadeEscala, escalaDto.itens(), permissoes);
+	        		sincronizarItens(entidadeEscala, itensDto, permissoes);
 	        	}
 	        	
 	        }
 	        
-	        if (entidadeEscala == null) {
+	        if ((entidadeEscala == null || entidadeEscala.isPlantao()) && temPlantao < 12) {
         		entidadeEscala = mapperToEscala(escalaDto);	  
-        		sincronizarItens(entidadeEscala, escalaDto.itens(), permissoes);
+        		sincronizarItens(entidadeEscala, itensDto, permissoes);
         	} 
 	
 	        if (entidadeEscala.getItens() == null || entidadeEscala.getItens().isEmpty()) {
@@ -202,9 +202,22 @@ public class EscalaService {
 	                escalaRepository.delete(entidadeEscala);
 	            }
 	        } else {
-	        	validaEscalaItens(entidadeEscala);
-	            Escala salva = escalaRepository.save(entidadeEscala);
-	            resultados.add(mapperToDto(salva, false));
+	        	if (!entidadeEscala.isPlantao()) {
+		        	validaEscalaItens(entidadeEscala);
+		            Escala salva = escalaRepository.save(entidadeEscala);
+		            
+		            if (temPlantao > 0) {
+		            	List<Escala> plantoes = escalaRepository.findByData(salva.getData(), temPlantao > 0);
+		            	Escala plantao = plantoes.stream().filter(escala -> 
+		            		escala.getMedico().getId().equals(salva.getMedico().getId())).
+		            			findFirst().get();
+		            	resultados.add(mapperToDtoMerge(salva, plantao, false));
+		            } else {	      
+		            	resultados.add(mapperToDto(salva, false));
+		            }
+	        	} else {
+	        		resultados.add(mapperToDto(entidadeEscala, false));
+	        	}
 	        }
 	    }
 	
@@ -275,6 +288,7 @@ public class EscalaService {
 		                        null,
 		                        null,
 		                        null,
+		                        false,
 		                        false
 		                    ));
 		                    break;
@@ -335,7 +349,8 @@ public class EscalaService {
 				escalaItem.getEstabelecimento().getCor(),
 				escalaItem.getEstabelecimento().getIcone(),
 				escalaItem.getArquivado(),
-				escalaItem.isReagendado()
+				escalaItem.isReagendado(),
+				escalaItem.getEscala().isPlantao()
 			);
 	}
 	
@@ -370,6 +385,27 @@ public class EscalaService {
 				() -> new BusinessException("Estabelecimento não encontrado"));
 	}
 		
+	private EscalaResponseDTO mapperToDtoMerge(Escala escala, Escala escalaPlantao, boolean reagendado) {
+		List<EscalaItem> itensMerge = new ArrayList<EscalaItem>();
+		escala.getItens().stream()
+				.filter(item -> !reagendado && !item.isReagendado())
+				.forEach(item -> itensMerge.add(item));
+		escalaPlantao.getItens().stream()
+			.filter(item -> {
+				LocalTime inicio = LocalTime.of(7, 0);
+		        LocalTime fim = LocalTime.of(19, 0);
+		        boolean estaNoIntervalo = !item.getHora().isBefore(inicio) && !item.getHora().isAfter(fim);
+				return !reagendado && !item.isReagendado() && estaNoIntervalo;
+			}).forEach(item -> itensMerge.add(item));;
+		return new EscalaResponseDTO(
+					escala.getId(), 
+					escala.getMedico().getId(),
+					escala.getMedico().getSigla(),
+					escala.getData(),
+					escala.isPlantao(),
+					itensMerge.stream().map(this::mapperToDto).toList()
+					);
+	}
 	
 	public List<String> processarPlanilhaEscala(MultipartFile file) throws IOException {
         List<String> logs = new ArrayList<>();

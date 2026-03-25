@@ -25,7 +25,9 @@ public interface EscalaRepository extends JpaRepository<Escala, Integer> {
 		    LEFT JOIN FETCH i.estabelecimento 
 		    JOIN FETCH e.medico 
 		    WHERE e.data = :data
-		      AND (e.plantao = :plantao OR :plantao is null) 	
+		      AND (e.plantao = :plantao OR :plantao is null) 
+			  AND i.hora >= CAST('07:00:00' AS LocalTime)
+			  AND i.hora <= CAST('19:00:00' AS LocalTime)
 		    """)
 	List<Escala> findByData(LocalDate data, Boolean plantao);
 	

@@ -174,7 +174,8 @@ export const PlantaoView = () => {
             estabelecimentoId: estabelecimentoId,
             cor: estabelecimento?.cor,
             icone: estabelecimento?.icone,
-            estabelecimento: estabelecimento
+            estabelecimento: estabelecimento,
+            plantao: true
           }
           periodo1.push(escalaItem);
           const array = horaSlot === 19 ? [1,2,3,4,5,6,7,8,9,10,11] : [1,2,3,4,5];
@@ -190,7 +191,8 @@ export const PlantaoView = () => {
               estabelecimentoId: estabelecimentoId,
               cor: estabelecimento?.cor,
               icone: estabelecimento?.icone,
-              estabelecimento: estabelecimento
+              estabelecimento: estabelecimento,
+              plantao: true
             }
             periodo1.push(escalaItem);
           })
@@ -212,7 +214,6 @@ export const PlantaoView = () => {
             }
             return escala;
           });
-          // setEscalas(novasEscalas);
         } else {
           escalaPersistir = {
             data: DateUtils.paraISO(formData.data),
@@ -221,7 +222,6 @@ export const PlantaoView = () => {
             itensPlantao: periodo1,
             medico: medico,
           }
-        //  setEscalas([...escalas, escalaPersistir])
         }
 
         setExibeDialogo(false)
@@ -368,13 +368,23 @@ export const PlantaoView = () => {
       let escalasAtualizadas = escalas.map(escala => {
         if (escala.medicoId === medicoId && escala.data === data) {
           const novosItens = escala.itensPlantao.filter(item => {
-            const apenasNumeros = horaInicio.replace(/\D/g, '');
-            const horaSlot = parseInt(apenasNumeros.substring(0, 2), 10);
+            const horaItem = parseInt(item.hora.split(':')[0], 10);
+          
+            const horaBase = parseInt(horaInicio.split(':')[0], 10);
 
-            const apenasNumerosArray = item.hora.replace(/\D/g, '');
-            const horaSlotArrau = parseInt(apenasNumerosArray.substring(0, 2), 10);
-            return (horaSlot === 7 && horaSlotArrau >= 13) || 
-                    horaSlot === 13 && horaSlotArrau < 13;
+            if (horaBase === 7) {
+              return !(horaItem >= 7 && horaItem < 13);
+            }
+
+            if (horaBase === 13) {
+              return !(horaItem >= 13 && horaItem < 19);
+            }
+
+            if (horaBase === 19) {
+              return (horaItem >= 7 && horaItem < 19);
+            }
+
+            return true;
           });
           escalaPersistir = {
             ...escala,
@@ -508,16 +518,13 @@ export const PlantaoView = () => {
         const analise = escalas.filter(escala => {
           if (escala.medicoId == medicoId && escala.data === DateUtils.paraISO(date)) {
             const itens = escala.itensPlantao.filter(item => {
-              if (item.estabelecimentoId === estabelecimentoId) {
-                const apenasNumeros = item.hora.replace(/\D/g, '');
-                const horaSlot = parseInt(apenasNumeros.substring(0, 2), 10);
-                if ((horaSlot === 7 && horaSlot === horaSlotParam) || 
-                    (horaSlot === 13 && horaSlot === horaSlotParam) || 
-                    ((horaSlot === 13 || horaSlot === 7) && horaSlotParam === 19) ||
-                    ((horaSlot === 19 && (horaSlotParam === 7 || horaSlotParam === 13 || horaSlotParam === 19)))
-                ) {
-                  return item 
-                }
+              const apenasNumeros = item.hora.replace(/\D/g, '');
+              const horaSlot = parseInt(apenasNumeros.substring(0, 2), 10);
+              if ((horaSlot === 7 && horaSlot === horaSlotParam) || 
+                  (horaSlot === 13 && horaSlot === horaSlotParam) || 
+                  (horaSlot === 19 && horaSlot === horaSlotParam)
+              ) {
+                return item 
               }
             })
             if (itens && itens.length > 0) {
@@ -538,14 +545,6 @@ export const PlantaoView = () => {
       const toggleHour = (hourField: string) => {
           if (analiseDesabilitar(hourField)) {
               return;
-          }
-          const apenasNumeros = hourField.replace(/\D/g, '');
-          const horaSlot = parseInt(apenasNumeros.substring(0, 2), 10);
-          if (horaSlot == 19 && selectedHours.length > 0 && selectedHours[0] !== '19:00:00') {
-            selectedHours = [];
-          }
-          if (horaSlot != 19 && selectedHours.length == 1 && selectedHours[0] == '19:00:00') {
-            selectedHours = [];
           }
           const newSelection = selectedHours.includes(hourField)
           ? selectedHours.filter((h: string) => h !== hourField)

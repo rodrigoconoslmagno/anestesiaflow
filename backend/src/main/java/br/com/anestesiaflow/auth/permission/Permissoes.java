@@ -45,6 +45,8 @@ public enum Permissoes {
 	PLANTAO_ARQUIVAR("Plantão", "Arquivar", "ARQUIVAR", "pi pi-box", false, null),
 	PLANTAO_NOTIFICAR("Plantão", "Notificar", "NOTIFICAR", "pi pi-send", false, null),
 	
+	PLANTAORESUMO_ACESSAR("Plantão", "Plantão Resumo", "ACESSAR", "pi pi-chart-bar", true, "/plantaoresumoview"),
+	
 	CONFIG_ACESSAR("Configuração", "Configurações", "ACESSAR", "pi pi-clone", true, "/configview"),
 	CONFIG_ALTERAR("Plantão", "Criar / Alterar / Escluir", "ALTERAR", "pi pi-pencil", false, null),
     ;

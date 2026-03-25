@@ -13,6 +13,7 @@ import { SudokuResumoView } from '@/paginas/SudokuResumoView';
 import { SimetriaView } from '@/paginas/SimetriaView';
 import { PlantaoView } from '@/paginas/PlantaoView';
 import { ConfigView } from '@/paginas/ConfigView';
+import { PlantaoResumoView } from '@/paginas/PlantaoResumoView';
 // import { TelaPlanilhaMedica } from '@/paginas/TelaPlanilhaMedica';
 
 export const AppRoutes = () => {
@@ -23,6 +24,7 @@ export const AppRoutes = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/view/escala/:sigla?" element={<EscalaMedicoView />} />
         <Route path="/view/sudoku" element={<SudokuResumoView />} />
+        <Route path="/view/plantao" element={<PlantaoResumoView />} />
 
         {/* Rotas protegidas com Layout */}
         <Route element={<ProtectedRoute />}>
@@ -37,6 +39,7 @@ export const AppRoutes = () => {
             <Route path="/sudokuresumoview" element={<SudokuResumoView />} />
             <Route path="/simetriaview" element={<SimetriaView />} />
             <Route path="/plantaoview" element={<PlantaoView />} />
+            <Route path='/plantaoresumoview' element={<PlantaoResumoView />} />
             <Route path="/configview" element={<ConfigView />} />
             {/* <Route path="/planilha" element={<TelaPlanilhaMedica />} /> */}
           </Route>

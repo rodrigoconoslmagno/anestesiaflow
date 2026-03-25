@@ -100,7 +100,8 @@ export const SimetriaView = () => {
                 let escalaItem: EscalaItem = {
                     estabelecimentoId: selectedCell?.row.estId,
                     hora: hora,
-                    reagendado: false
+                    reagendado: false,
+                    plantao: false
                 };
                 escala?.itens?.push(escalaItem);
             });             

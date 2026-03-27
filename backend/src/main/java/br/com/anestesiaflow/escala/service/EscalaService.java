@@ -253,6 +253,7 @@ public class EscalaService {
 	}
 	
 	private void sincronizarItens(Escala escala, List<EscalaItemResponseDTO> itensDto, Permissoes permissoes) {
+		List<EscalaItemResponseDTO> itensNoFront = new ArrayList<>(itensDto);
 		if (permissoes != null) {
 		    Set<Integer> idsNoGrid = itensDto.stream()
 		            .map(EscalaItemResponseDTO::id)
@@ -274,13 +275,13 @@ public class EscalaService {
 		        } 
 		        
 		        else if (estaArquivado) {
-		            for (int i = 0; i < itensDto.size(); i++) {
-		                EscalaItemResponseDTO dto = itensDto.get(i);
+		            for (int i = 0; i < itensNoFront.size(); i++) {
+		                EscalaItemResponseDTO dto = itensNoFront.get(i);
 		                if (itemBanco.getId().equals(dto.id()) && 
 		                		!itemBanco.getHora().equals(dto.hora())) {
 				            itemBanco.setReagendado(true);
 				            
-		                    itensDto.set(i, new EscalaItemResponseDTO(
+				            itensNoFront.set(i, new EscalaItemResponseDTO(
 		                        null,
 		                        dto.estabelecimentoId(),
 		                        dto.estabelecimentoSigla(),
@@ -300,7 +301,7 @@ public class EscalaService {
 		
 		escalaRepository.save(escala);
 		
-	    itensDto.forEach(dto -> {
+		itensNoFront.forEach(dto -> {
 	        if (dto.id() == null) {
 	            EscalaItem novoItem = mapperToEscalaItem(dto);
 	            novoItem.setEscala(escala);

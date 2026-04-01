@@ -9,6 +9,7 @@ import { Button } from "primereact/button";
 import { Calendar } from "primereact/calendar";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { processarHoras } from "@/utils/PlantoesUtils";
 
 interface EscalaPlantao extends Escala {
     medico: Medico | undefined;
@@ -74,67 +75,66 @@ addLocale('pt-BR', {
         carregarDados();
     }, [dataAtiva]);
 
-    // const linhasPorEstabelecimento = useMemo(() => {
-    //     const mapa: Record<number, { 
-    //         unidade: Estabelecimento; 
-    //         cards: { escala: EscalaPlantao; item: EscalaItemPlantao; horaSlot: number }[] 
-    //     }> = {};
-      
-    //     escalas.forEach(escala => {
-    //         escala.itensPlantao?.forEach(item => {
-    //             const horaSlot = parseInt(item.hora.substring(0, 2), 10);
-    //             if ([7, 13, 19].includes(horaSlot)) {
-    //                 const idEst = item.estabelecimentoId;
-    //                 if (idEst && item.estabelecimento) {
-    //                     if (!mapa[idEst]) {
-    //                         mapa[idEst] = { unidade: item.estabelecimento, cards: [] };
-    //                     }
-    //                     mapa[idEst].cards.push({ escala, item, horaSlot });
-    //                 }
-    //             }
-    //         });
-    //     });
-    
-    //     return Object.values(mapa).map(linha => ({
-    //         ...linha,
-    //         cards: linha.cards.sort((a, b) => {
-    //             // Ordenação por hora e depois por data de associação (senioridade)
-    //             if (a.horaSlot !== b.horaSlot) return a.horaSlot - b.horaSlot;
-    //             const dataA = new Date(a.escala.medico?.dataAssociacao || 0).getTime();
-    //             const dataB = new Date(b.escala.medico?.dataAssociacao || 0).getTime();
-    //             return dataA - dataB;
-    //         })
-    //     }));
-    // }, [escalas]);
-
     const linhasPorMedico = useMemo(() => {
-        // Usamos um Map para garantir a preservação da ordem de inserção vinda do banco
-        const mapa = new Map<number, { 
-            profissional: Medico; 
-            cards: { escala: EscalaPlantao; item: EscalaItemPlantao; horaSlot: number }[] 
-        }>();
-      
+        // 1. Criar uma lista de médicos únicos com seus respectivos cards processados
+        const mapaMedicos: Record<number, { 
+            medico: Medico; 
+            cards: { 
+                horarioFormatado: string; 
+                item: EscalaItemPlantao;
+                horaInicio: number; // Para ordenação
+            }[] 
+        }> = {};
+
         escalas.forEach(escala => {
-            const medico = escala.medico;
-            if (!medico?.id) return;
-    
-            escala.itensPlantao?.forEach(item => {
-                const horaSlot = parseInt(item.hora.substring(0, 2), 10);
+            if (!escala.medico) return;
+            const medId = escala.medicoId;
+
+            // Extraímos as horas brutas para a Utils
+            const horas = escala.itensPlantao.map(item => 
+                parseInt(item.hora.substring(0, 2), 10)
+            );
+
+            // Chamada à regra de negócio da Utils
+            const stringHorarios = processarHoras(horas); 
+            const grupos = stringHorarios.split(',').map(s => s.trim());
+
+            if (!mapaMedicos[medId]) {
+                mapaMedicos[medId] = { 
+                    medico: escala.medico, 
+                    cards: [] 
+                };
+            }
+
+            grupos.forEach(grupo => {
+                const horaInicio = parseInt(grupo.split('-')[0], 10);
                 
-                // Filtro de turnos específicos do AnestesiaFlow
-                if ([7, 13, 19].includes(horaSlot)) {
-                    if (!mapa.has(medico.id!)) {
-                        mapa.set(medico.id!, { profissional: medico, cards: [] });
-                    }
-                    
-                    // Como o array 'escalas' já vem ordenado, 
-                    // o 'push' manterá essa ordem cronológica dentro dos cards do médico.
-                    mapa.get(medico.id!)?.cards.push({ escala, item, horaSlot });
-                }
+                // Tenta achar o estabelecimento vinculado a essa hora de início para pegar o ícone/cor
+                const itemOriginal = escala.itensPlantao.find(i => 
+                    parseInt(i.hora.substring(0, 2), 10) === horaInicio
+                );
+
+                mapaMedicos[medId].cards.push({
+                    horarioFormatado: grupo,
+                    item: itemOriginal!,
+                    horaInicio: horaInicio
+                });
             });
         });
-    
-        return Array.from(mapa.values());
+
+        // 2. Transformar o mapa em array e aplicar as ordenações solicitadas
+        return Object.values(mapaMedicos)
+            .sort((a, b) => {
+                // Ordenação Primária: Data de Associação do Médico
+                const dataA = new Date(a.medico.dataAssociacao || 0).getTime();
+                const dataB = new Date(b.medico.dataAssociacao || 0).getTime();
+                return dataA - dataB;
+            })
+            .map(group => ({
+                ...group,
+                // Ordenação Secundária: Horas de início dos cards do médico
+                cards: group.cards.sort((a, b) => a.horaInicio - b.horaInicio)
+        }));
     }, [escalas]);
 
     const dateTemplate = (date: any) => {
@@ -267,44 +267,41 @@ addLocale('pt-BR', {
                         </div>
                     ) : (
                         linhasPorMedico.map(linha => (
-                            <div key={linha.profissional.id} className="flex flex-col gap-2 bottom-1">
+                            <div key={linha.medico.id} className="flex flex-col gap-2 bottom-1">
                                 {/* Título da Unidade */}
                                 <div className="flex items-center gap-2 px-1">
                                     <div 
                                         className="w-1.5 h-4 rounded-full" 
                                     />
                                     <span className="font-black text-slate-600 uppercase text-[14px] tracking-wider">
-                                        {linha.profissional.sigla} - {linha.profissional.nome}
+                                        {linha.medico.sigla} - {linha.medico.nome}
                                     </span>
                                 </div>
 
                                 {/* Lista Horizontal de Médicos */}
                                 <div className="flex flex-row flex-wrap gap-1 pb-2">
-                                    {linha.cards.map(({ escala, item, horaSlot }, idx) => (
+                                    {linha.cards.map((escalaItem, idx) => (
                                         <div 
                                             key={`${idx}`}
                                             className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3 min-w-[130px] shrink-0 active:scale-95 transition-transform"
                                         >
                                             <div 
                                                 className="w-8 h-8 rounded-full border border-slate-100 flex items-center justify-center overflow-hidden shrink-0"
-                                                style={{ backgroundColor: item.cor?.startsWith('#') ? item.cor : `#${item.cor}` }}
+                                                style={{ backgroundColor: escalaItem.item.cor?.startsWith('#') ? escalaItem.item.cor : `#${escalaItem.item.cor}` }}
                                             >
-                                                {item.icone ? (
+                                                {escalaItem.item.icone ? (
                                                     <img 
-                                                        src={String(item.icone).startsWith('data:') ? (item.icone as string) : `data:image/png;base64,${item.icone}`}
+                                                        src={String(escalaItem.item.icone).startsWith('data:') ? (escalaItem.item.icone as string) : `data:image/png;base64,${escalaItem.item.icone}`}
                                                         className="w-full h-full object-cover"
                                                     />
-                                                ) : <span className="text-white font-bold text-[10px]">{escala.medico?.sigla}</span>}
+                                                ) : <span className="text-white font-bold text-[10px]">{linha.medico?.sigla}</span>}
                                             </div>
 
                                             <div className="flex flex-col min-w-0">
                                                 <div className="text-blue-600 font-black text-[9px] flex items-center gap-1">
                                                     <i className="pi pi-clock text-[9px]" />
-                                                    {item.hora.substring(0,2)} - {horaSlot === 7 ? '13' : horaSlot === 13 ? '19' : '07'}h
+                                                    {escalaItem.horarioFormatado}
                                                 </div>
-                                                {/* <div className="text-slate-800 font-bold uppercase text-xs truncate">
-                                                    {escala.medico?.sigla}
-                                                </div> */}
                                             </div>
                                         </div>
                                     ))}

@@ -15,7 +15,7 @@ function App() {
       <ConfirmDialog />
       <AuthProvider> 
           <AppRoutes /> {/* O Login está aqui dentro */}
-`    </AuthProvider>`
+    </AuthProvider>
     </ToastProvider>
   )
 }

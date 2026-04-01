@@ -8,6 +8,7 @@ import { getIntervalosEscala } from '@/types/escalaHelper';
 import { DateUtils } from '@/utils/DateUtils';
 import clsx from 'clsx';
 import { IconeSirenePlantao } from '@/utils/IconeSirene';
+import { processarHoras } from "@/utils/PlantoesUtils";
 
 interface AppEscalaSemanalProps<T extends FieldValues> {
     control: Control<T>;
@@ -322,12 +323,22 @@ export const AppEscalaSemanal = <T extends FieldValues>({ control, onAgendar }: 
                     </div>
 
                     <div className="flex flex-wrap gap-2 justify-start">
-                        {plantoes.map((plantao: Escala) => (
-                            plantao.itens?.map((item: EscalaItem, idx: number) => {
-                                const apenasNumeros = item.hora.replace(/\D/g, '');
-                                const horaSlot = parseInt(apenasNumeros.substring(0, 2), 10);                            
-                                if (horaSlot === 7 || horaSlot === 13 || horaSlot === 19) {
-                                    return (
+                        {plantoes.map((plantao: Escala) => {
+                            const horasBrutas = plantao.itens!.map(i => 
+                                parseInt(i.hora.substring(0, 2), 10)
+                            );
+
+                            const stringHorarios = processarHoras(horasBrutas);
+                            const grupos = stringHorarios.split(',').map(s => s.trim());
+
+                            return grupos.map((horarioFormatado, idx) => {
+                                const horaInicio = parseInt(horarioFormatado.split('-')[0], 10);
+                                
+                                const itemOriginal = plantao.itens!.find(i => 
+                                    parseInt(i.hora.substring(0, 2), 10) === horaInicio
+                                )!;
+
+                                return (
                                     <div 
                                         key={idx}
                                         className={clsx(
@@ -341,11 +352,11 @@ export const AppEscalaSemanal = <T extends FieldValues>({ control, onAgendar }: 
                                         <div className="flex items-center justify-center min-h-[28px] min-w-[28px]">
                                             <div
                                             className="w-[28px] h-[28px] rounded-full border border-white shadow-inner flex items-center justify-center overflow-hidden"
-                                            style={{ backgroundColor: item.cor?.startsWith('#') ? item.cor : `#${item.cor}` }}
+                                            style={{ backgroundColor: itemOriginal.cor?.startsWith('#') ? itemOriginal.cor : `#${itemOriginal.cor}` }}
                                             >
-                                            {item.icone ? (
+                                            {itemOriginal.icone ? (
                                                 <img 
-                                                src={String(item.icone).startsWith('data:') ? (item.icone as string) : `data:image/png;base64,${item.icone}`}
+                                                src={String(itemOriginal.icone).startsWith('data:') ? (itemOriginal.icone as string) : `data:image/png;base64,${itemOriginal.icone}`}
                                                 className="object-contain"
                                                 alt={""}
                                                 />
@@ -356,17 +367,16 @@ export const AppEscalaSemanal = <T extends FieldValues>({ control, onAgendar }: 
                                         <div className="flex-1 min-w-0">
                                             <div className="text-blue-600 font-black text-[9px] uppercase tracking-tight flex items-center gap-1 mb-0.5">
                                             <i className="pi pi-clock text-[10px]"></i>
-                                            {horaSlot} - {horaSlot=== 7 ? 13 : horaSlot=== 13 ? 19 : 7}h
+                                            {horarioFormatado}
                                             </div>
                                             <div className="text-[10px] font-black text-blue-600 leading-none uppercase">
                                                 {DateUtils.formatarParaBR(plantao.data)}
                                             </div>
                                         </div>
                                     </div>
-                                    )
-                                }
+                                )
                             })
-                        ))}
+                        })}
                     </div>
                 </div>
             </section>}

@@ -18,6 +18,15 @@ import { confirmDialog } from "primereact/confirmdialog";
 import { Recurso } from "@/permissoes/recurso";
 import { useAuthStore } from "@/permissoes/authStore";
 import { IconeSirenePlantao } from "@/utils/IconeSirene";
+import { Dropdown } from "primereact/dropdown";
+import { processarHoras } from "@/utils/PlantoesUtils";
+
+interface TimeInterval {
+  id: string;
+  start: Date | null;
+  end: Date | null;
+  error?: string;
+}
 
 addLocale('pt-BR', {
   firstDayOfWeek: 0,
@@ -52,9 +61,13 @@ export const PlantaoView = () => {
     const [ sendMessaging, setSendMessaging ] = useState(false);
     const [ loading, setLoading ] = useState(false);
     const [ permiteArquivar, setPermiteArquivar ] = useState(false);
-    const { showError } = useAppToast();
+    const { showError, showWarn } = useAppToast();
     const [datasComPlantao, setDatasComPlantao] = useState<string[]>([]);
     const [mesVisualizado, setMesVisualizado] = useState<Date>(new Date());
+
+    const [customIntervals, setCustomIntervals] = useState<TimeInterval[]>([
+      { id: "", start: null, end: null }
+    ]);
 
     const hasPerm = useAuthStore(state => state.hasPermission);
 
@@ -66,44 +79,63 @@ export const PlantaoView = () => {
           {field: "07:00:00", header: '07-13h'},
           {field: "13:00:00", header: '13-19h'},
           {field: "19:00:00", header: '19-07h'}
-        ], []);
+    ], []);
 
     const colunasPorEstabelecimento = useMemo(() => {
       const mapa: Record<number, { 
         unidade: Estabelecimento; 
-        cards: { escala: EscalaPlantao; item: EscalaItemPlantao; horaSlot: number }[] 
+        cards: { escala: EscalaPlantao; 
+                 item: EscalaItemPlantao; 
+                 horarioFormatado: string;
+                 dataAssociacao: number }[]
       }> = {};
-    
-      escalas.forEach(escala => {
-        escala.itensPlantao?.forEach(item => {
-          // Extrai a hora (ex: "07:00:00" -> 7)
-          const horaSlot = parseInt(item.hora.substring(0, 2), 10);
-          
-          // Filtra apenas os horários principais para evitar duplicidade na listagem de resumo
-          if ([7, 13, 19].includes(horaSlot)) {
-            const idEst = item.estabelecimentoId;
-            if (idEst && item.estabelecimento) {
-              if (!mapa[idEst]) {
-                mapa[idEst] = { unidade: item.estabelecimento, cards: [] };
-              }
-              mapa[idEst].cards.push({ escala, item, horaSlot });
-            }
+
+      escalas.forEach(escala => {    
+        const itensPorEst: Record<number, number[]> = {};
+        
+        escala.itensPlantao.forEach(item => {
+          if (!item.estabelecimentoId) return;
+          if (!itensPorEst[item.estabelecimentoId]) {
+            itensPorEst[item.estabelecimentoId] = [];
           }
+          const horaNum = parseInt(item.hora.substring(0, 2), 10);
+          itensPorEst[item.estabelecimentoId].push(horaNum);
+        });
+
+        Object.keys(itensPorEst).forEach(estIdStr => {
+          const estId = parseInt(estIdStr, 10);
+          const horas = itensPorEst[estId];
+          
+          const stringHorarios = processarHoras(horas); 
+          
+          const grupos = stringHorarios.split(',').map(s => s.trim());
+
+          if (!mapa[estId]) {
+            const estObj = escala.itensPlantao.find(i => i.estabelecimentoId === estId)?.estabelecimento;
+            mapa[estId] = { unidade: estObj!, cards: [] };
+          }
+
+          grupos.forEach(grupo => {
+            mapa[estId].cards.push({
+              escala,
+              item: escala.itensPlantao.find(i => i.estabelecimentoId === estId)!,
+              horarioFormatado: grupo,
+              dataAssociacao: new Date(escala.medico?.dataAssociacao || 0).getTime()
+            });
+          });
         });
       });
     
       return Object.values(mapa).map(coluna => ({
         ...coluna,
         cards: coluna.cards.sort((a, b) => {
-          // 1. Ordenação por Horário (7h < 13h < 19h)
-          if (a.horaSlot !== b.horaSlot) {
-            return a.horaSlot - b.horaSlot;
+          const horaA = parseInt(a.horarioFormatado.split('-')[0], 10);
+          const horaB = parseInt(b.horarioFormatado.split('-')[0], 10);
+      
+          if (horaA !== horaB) {
+            return horaA - horaB;
           }
-          
-          // 2. Ordenação por Senioridade (Data de Associação)
-          const dataA = new Date(a.escala.medico?.dataAssociacao || 0).getTime();
-          const dataB = new Date(b.escala.medico?.dataAssociacao || 0).getTime();
-          return dataA - dataB;
+          return a.dataAssociacao - b.dataAssociacao;
         })
       }));
     }, [escalas]);
@@ -173,7 +205,7 @@ export const PlantaoView = () => {
 
     const saveEscala = () => {
       const dataString = DateUtils.paraISO(formData.data);
-        const periodo1: EscalaItemPlantao[] = []
+      const periodo1: EscalaItemPlantao[] = []
         formData.horas.forEach(hora => {
           const apenasNumeros = hora.replace(/\D/g, '');
           const horaSlot = parseInt(apenasNumeros.substring(0, 2), 10);
@@ -205,7 +237,45 @@ export const PlantaoView = () => {
             }
             periodo1.push(escalaItem);
           })
-        })
+        });
+
+        customIntervals.forEach(item => {
+          if (item.start != null) {
+            const diferenca = item.end!.getHours() - item.start!.getHours();
+            if (diferenca > 1){
+              let horaSlot = item.start!.getHours();
+              for(let i = 0; i < diferenca; i++) {
+                const horaFormatada = `${horaSlot.toString().padStart(2, '0')}:00:00`;
+                let escalaItem: EscalaItemPlantao = {
+                  hora: horaFormatada,
+                  reagendado: false,
+                  estabelecimentoId: estabelecimentoId,
+                  cor: estabelecimento?.cor,
+                  icone: estabelecimento?.icone,
+                  estabelecimento: estabelecimento,
+                  plantao: true
+                }
+                periodo1.push(escalaItem);
+                horaSlot++;
+                if (horaSlot > 23) {
+                  horaSlot = horaSlot - 24;
+                }
+              }
+            } else {
+              const horaFormatada = `${item.start!.getHours().toString().padStart(2, '0')}:00:00`;
+              let escalaItem: EscalaItemPlantao = {
+                hora: horaFormatada,
+                reagendado: false,
+                estabelecimentoId: estabelecimentoId,
+                cor: estabelecimento?.cor,
+                icone: estabelecimento?.icone,
+                estabelecimento: estabelecimento,
+                plantao: true
+              }
+              periodo1.push(escalaItem);
+            }
+          }
+        });
 
         let escalaPersistir: EscalaPlantao;
 
@@ -292,6 +362,7 @@ export const PlantaoView = () => {
         data: date,
         horas: []
       });
+      setCustomIntervals([{id: "", start: null, end: null}])
       setExibeDialogo(true);
     }
 
@@ -307,7 +378,8 @@ export const PlantaoView = () => {
           label="Salvar" 
           icon="pi pi-save" 
           onClick={saveEscala} 
-          disabled={!(medicoId && estabelecimentoId && formData.horas.length > 0)}
+          disabled={!(medicoId && estabelecimentoId && 
+              (formData.horas.length > 0 || customIntervals.length > 0))}
           autoFocus
           className={`p-button-primary text-white rounded-xl p-2 bg-blue-600`}
         />
@@ -372,28 +444,28 @@ export const PlantaoView = () => {
       }    
     }
 
-    const deleteItem = async (medicoId: number, data: string, horaInicio: string) => {
+    const deleteItem = async (medicoId: number, data: string, horarioFormatado: string) => {
       let escalaPersistir: EscalaPlantao; 
+
+      // Extraímos os números da string (ex: "7-13h" -> inicio: 7, fim: 13)
+      const matches = horarioFormatado.match(/\d+/g);
+      if (!matches || matches.length < 2) return;
+      
+      const inicioIntervalo = parseInt(matches[0], 10);
+      const fimIntervalo = parseInt(matches[1], 10);
+
       let escalasAtualizadas = escalas.map(escala => {
         if (escala.medicoId === medicoId && escala.data === data) {
           const novosItens = escala.itensPlantao.filter(item => {
             const horaItem = parseInt(item.hora.split(':')[0], 10);
           
-            const horaBase = parseInt(horaInicio.split(':')[0], 10);
-
-            if (horaBase === 7) {
-              return !(horaItem >= 7 && horaItem < 13);
+            if (inicioIntervalo > fimIntervalo) {
+              const isNoIntervaloNoturno = (horaItem >= inicioIntervalo || horaItem < fimIntervalo);
+              return !isNoIntervaloNoturno;
             }
 
-            if (horaBase === 13) {
-              return !(horaItem >= 13 && horaItem < 19);
-            }
-
-            if (horaBase === 19) {
-              return (horaItem >= 7 && horaItem < 19);
-            }
-
-            return true;
+            const isNoIntervaloSemediano = (horaItem >= inicioIntervalo && horaItem < fimIntervalo);
+            return !isNoIntervaloSemediano;
           });
           escalaPersistir = {
             ...escala,
@@ -506,6 +578,355 @@ export const PlantaoView = () => {
       );
     };
 
+    const isManualDisabled = formData && formData.horas.length === 3;
+
+    const setIntervaloManual = () =>{
+      if (isManualDisabled && customIntervals.length > 0) {
+        setCustomIntervals([])
+      } else {
+        if (!isManualDisabled && customIntervals.length == 0){
+          setCustomIntervals([{id: "", start: null, end: null}])
+        }
+      }
+    }
+
+    setIntervaloManual();
+
+    const timeOptions = Array.from({ length: 24 }, (_, i) => {
+      const time = `${i.toString().padStart(2, '0')}:00`;
+      return { label: time, value: time };
+    });
+
+    const getHoursValue = (date: Date | null) => {
+      if (!date) return null;
+      const hours = date.getHours();
+      const day = date.getDate();
+      return day === 2 ? hours + 24 : hours;
+    };
+
+    const formatDateToTimeString = (date: Date | null) => {
+      if (!date) {
+        return ''
+      }
+      return `${date.getHours().toString().padStart(2, '0')}:00`;
+    };
+
+    const getFilteredTimeOptions = (id: string, field: 'start' | 'end') => {
+      const now = new Date();
+      const isToday = date && 
+                      date.getDate() === now.getDate() && 
+                      date.getMonth() === now.getMonth() && 
+                      date.getFullYear() === now.getFullYear();
+      
+      const currentHour = now.getHours();
+  
+      const filtered = timeOptions.filter(opt => {
+        const h = parseInt(opt.value.split(':')[0], 10);
+        let hourVal = h;
+        
+        const currentInterval = customIntervals.find(i => i.id === id);
+        const startHour = currentInterval?.start ? getHoursValue(currentInterval.start)! : null;
+  
+        // For End Time, if hour is less than or equal to start hour, it's the next day
+        if (field === 'end' && startHour !== null && hourVal <= startHour % 24) {
+          hourVal += 24;
+        }
+  
+        // Rule 1: If today, no past hours
+        if (isToday && hourVal < currentHour) {
+          return false;
+        }
+  
+        // Rule 2 & 3: Check for conflicts with fixed intervals
+        const isFixedConflict = formData.horas.some(fixed => {
+          let fStart = 0, fEnd = 0;
+          if (fixed === '07:00:00') { 
+            fStart = 7; 
+            fEnd = 13; 
+          } else if (fixed === '13:00:00') { 
+            fStart = 13; 
+            fEnd = 19; 
+          } else if (fixed === '19:00:00') { 
+            fStart = 19; 
+            fEnd = 31; 
+          }
+  
+          if (field === 'start') {
+            return (hourVal >= fStart && hourVal < fEnd) || (hourVal >= fStart + 24 && hourVal < fEnd + 24);
+          } else {
+            return (hourVal > fStart && hourVal <= fEnd) || (hourVal > fStart + 24 && hourVal <= fEnd + 24);
+          }
+        });
+
+        if (isFixedConflict) {
+          return false;
+        }
+  
+        // Rule 5: Check for conflicts with other manual intervals
+        const isManualConflict = customIntervals.some(other => {
+          if (other.id === id || !other.start || !other.end) return false;
+          const oStart = getHoursValue(other.start)!;
+          const oEnd = getHoursValue(other.end)!;
+          
+          if (field === 'start') {
+            return hourVal >= oStart && hourVal < oEnd;
+          } else {
+            return hourVal > oStart && hourVal <= oEnd;
+          }
+        });
+        if (isManualConflict) return false;
+  
+        // Limit to 07:00 of next day
+        if (hourVal > 31) {
+          return false;
+        }
+  
+        // Visual Touch: For End Time, hide hours before Start Time on future dates
+        if (field === 'end' && startHour !== null && !isToday) {
+          if (hourVal <= startHour) return false;
+        }
+  
+        return true;
+      });
+  
+      // Sort for End field to show chronological order starting from the hour after Start
+      if (field === 'end') {
+        const currentInterval = customIntervals.find(i => i.id === id);
+        const startHour = currentInterval?.start ? getHoursValue(currentInterval.start)! : null;
+        
+        if (startHour !== null) {
+          return [...filtered].sort((a, b) => {
+            let aHour = parseInt(a.value.split(':')[0], 10);
+            let bHour = parseInt(b.value.split(':')[0], 10);
+            // Adjust for next day interpretation in sorting
+            if (aHour <= startHour % 24) aHour += 24;
+            if (bHour <= startHour % 24) bHour += 24;
+            return aHour - bHour;
+          });
+        }
+      }
+  
+      return filtered;
+    };
+
+    const getDynamicIntervalOptions = () => {
+      const now = new Date();
+      const isToday = date && 
+                      date.getDate() === now.getDate() && 
+                      date.getMonth() === now.getMonth() && 
+                      date.getFullYear() === now.getFullYear();
+      
+      const currentHour = now.getHours();
+
+      const hasManualConflict = (fStart: number, fEnd: number, crossesMidnight: boolean) => {
+        return customIntervals.some(manual => {
+          const start = getHoursValue(manual.start);
+          const end = getHoursValue(manual.end);
+          if (start === null || end === null) {
+            return false;
+          }
+
+          if (crossesMidnight) {
+            // Turno 19h-07h (19 a 31)
+            return (start < 24 && end > 19) || (start < 7 && end > 0);
+          } else {
+            return start < fEnd && end > fStart;
+          }
+        });
+      };
+
+      return [
+        { 
+          label: '07h - 13h', 
+          value: '7-13', 
+          disabled: (isToday && currentHour >= 7) || hasManualConflict(7, 13, false) 
+        },
+        { 
+          label: '13h - 19h', 
+          value: '13-19', 
+          disabled: (isToday && currentHour >= 13) || hasManualConflict(13, 19, false) 
+        },
+        { 
+          label: '19h - 07h', 
+          value: '19-7', 
+          disabled: (isToday && currentHour >= 19) || hasManualConflict(19, 7, true) 
+        }
+      ];
+    };
+
+    const validateIntervals = (intervals: TimeInterval[], fixedOverride?: string[]) => {
+      const activeFixed = fixedOverride !== undefined ? fixedOverride : formData.horas;
+      
+      return intervals.map((current, index) => {
+        const startHour = getHoursValue(current.start);
+        const endHour = getHoursValue(current.end);
+  
+        if (startHour === null || endHour === null) {
+          return { ...current, error: undefined };
+        }
+  
+        // 1. Check if end is before start
+        if (endHour <= startHour) {
+          return { ...current, error: 'A hora de término deve ser após a hora de início.' };
+        }
+  
+        // 2. Check for overlaps with other custom intervals
+        for (let i = 0; i < intervals.length; i++) {
+          if (i === index) continue;
+          const other = intervals[i];
+          const otherStart = getHoursValue(other.start);
+          const otherEnd = getHoursValue(other.end);
+  
+          if (otherStart === null || otherEnd === null) {
+            continue;
+          }
+  
+          // Overlap logic: (StartA < EndB) and (EndA > StartB)
+          if (startHour < otherEnd && endHour > otherStart) {
+            return { ...current, error: 'Este intervalo entra em conflito com outro intervalo manual.' };
+          }
+        }
+  
+        // 3. Check for overlaps with selected fixed intervals
+        if (activeFixed && activeFixed.length > 0) {
+          for (const fixed of activeFixed) {
+            let fStart = 0;
+            let fEnd = 0;
+            let crossesMidnight = false;
+  
+            if (fixed === '7-13') { fStart = 7; fEnd = 13; }
+            else if (fixed === '13-19') { fStart = 13; fEnd = 19; }
+            else if (fixed === '19-7') { fStart = 19; fEnd = 7; crossesMidnight = true; }
+  
+            if (crossesMidnight) {
+              // Check overlap with 19:00-24:00 (19-24)
+              if (startHour < 24 && endHour > 19) {
+                return { ...current, error: 'Conflito com o turno pré-definido 19h - 07h.' };
+              }
+              // Check overlap with 00:00-07:00 (0-7)
+              if (startHour < 7 && endHour > 0) {
+                return { ...current, error: 'Conflito com o turno pré-definido 19h - 07h.' };
+              }
+            } else {
+              if (startHour < fEnd && endHour > fStart) {
+                const label = getDynamicIntervalOptions().find(o => o.value === fixed)?.label;
+                return { ...current, error: `Conflito com o turno pré-definido ${label}.` };
+              }
+            }
+          }
+        }
+  
+        return { ...current, error: undefined };
+      });
+    };
+
+    const normalizeTime = (date: Date | null) => {
+      if (!date) {
+        return null;
+      }
+      // Preserve the day (Day 1 or Day 2) if it's already set correctly
+      const day = date.getDate();
+      const d = new Date(2000, 0, day, date.getHours(), date.getMinutes(), 0, 0);
+      return d;
+    };
+
+    const parseTimeStringToDate = (timeStr: string | null) => {
+      if (!timeStr) return null;
+      const parts = timeStr.split(':');
+      const hours = parseInt(parts[0], 10);
+      if (isNaN(hours) || hours > 23) return null;
+      return new Date(2000, 0, 1, hours, 0, 0, 0);
+    };
+
+    const updateInterval = (id: string, field: 'start' | 'end', value: Date | null) => {
+      let normalizedValue = normalizeTime(value);
+      const current = customIntervals.find(i => i.id === id);
+      if (!current) {
+        return;
+      }
+  
+      let updatedInterval = { ...current, [field]: normalizedValue };
+  
+      // Auto-fill end time if start is selected and end is empty
+      if (field === 'start' && normalizedValue && !current.end) {
+        const suggestedEnd = new Date(normalizedValue);
+        suggestedEnd.setHours(suggestedEnd.getHours() + 1);
+        let finalEnd = normalizeTime(suggestedEnd);
+        
+        // Handle midnight crossing for the suggested end
+        if (finalEnd) {
+          const startH = normalizedValue.getHours();
+          const endH = finalEnd.getHours();
+          if (endH <= startH) {
+            finalEnd = new Date(2000, 0, 2, endH, 0, 0, 0);
+          } else {
+            finalEnd = new Date(2000, 0, 1, endH, 0, 0, 0);
+          }
+        }
+        updatedInterval.end = finalEnd;
+      }
+  
+      // Handle midnight crossing for end time when manually selected
+      if (field === 'end' && normalizedValue) {
+        if (current.start) {
+          const startH = current.start.getHours();
+          const endH = normalizedValue.getHours();
+          // If end hour is less than or equal to start hour, it's next day
+          if (endH <= startH) {
+            updatedInterval.end = new Date(2000, 0, 2, endH, 0, 0, 0);
+          } else {
+            updatedInterval.end = new Date(2000, 0, 1, endH, 0, 0, 0);
+          }
+        }
+      }
+  
+      const updated = customIntervals.map(interval => 
+        interval.id === id ? updatedInterval : interval
+      );
+      const validated = validateIntervals(updated);
+      
+      // Check if a new error was introduced compared to previous state
+      const currentInterval = validated.find(i => i.id === id);
+      const previousInterval = customIntervals.find(i => i.id === id);
+      
+      if (currentInterval?.error && currentInterval.error !== previousInterval?.error) {
+        showError('Operação Bloqueada', currentInterval.error);
+        // Hard block: do not update state if it causes an error
+        return;
+      }
+      
+      setCustomIntervals(validated);
+    };
+
+    const canAddInterval = !isManualDisabled && customIntervals.every(i => i.start && i.end);
+
+    const addInterval = () => {
+      if (!canAddInterval) {
+        showWarn('Intervalo Incompleto', 'Preencha o início e o término do intervalo atual antes de adicionar um novo.');
+        return;
+      }
+  
+      const lastInterval = customIntervals[customIntervals.length - 1];
+      const nextStart = lastInterval ? lastInterval.end : null;
+      let nextEnd = null;
+  
+      if (nextStart) {
+        nextEnd = new Date(nextStart);
+        nextEnd.setHours(nextEnd.getHours() + 1);
+      }
+  
+      const newIntervals = [...customIntervals, { 
+                    id: nextStart!.toTimeString() + nextEnd!.toTimeString(), start: nextStart, end: nextEnd }];
+      setCustomIntervals(validateIntervals(newIntervals));
+    };
+
+    const removeInterval = (id: string) => {
+      if (customIntervals.length > 1) {
+        const filtered = customIntervals.filter(interval => interval.id !== id);
+        setCustomIntervals(validateIntervals(filtered));
+      }
+    };
+
     const TimeSlotPicker = ({ intervals, selectedHours, onChange }: any) => {
       const [isSelecting, setIsSelecting] = useState(false);
   
@@ -545,10 +966,33 @@ export const PlantaoView = () => {
         return analise && analise.length > 0
       }
   
+      const isIntervaloManual = (hourField: string) => {
+        // 1. Converte a string (ex: "07") para número
+        const startHourInput = parseInt(hourField, 10);
+        
+        // 2. Define o fim do intervalo (ex: se começa as 7, termina as 13)
+        // Ajuste o "+ 6" para o tamanho real do seu turno
+        const endHourInput = startHourInput + 6;
+
+        return customIntervals.some((interval) => {
+          if (!interval.start || !interval.end) {
+            return false;
+          }
+
+          const existingStart = interval.start.getHours();
+          const existingEnd = interval.end.getHours();
+
+          const hasOverlap = startHourInput < existingEnd && endHourInput > existingStart;
+
+          return hasOverlap;
+        });
+      }
+
       const analiseDesabilitar = (hora: string): boolean => {
         return !(medicoId && estabelecimentoId) ||
                 (medicoId && estabelecimentoId && isHoraPassada(hora)) ||
-                (medicoId && estabelecimentoId && isHoraAlocada(hora));
+                (medicoId && estabelecimentoId && isHoraAlocada(hora)) ||
+                (medicoId && estabelecimentoId && isIntervaloManual(hora));
       }
 
       const toggleHour = (hourField: string) => {
@@ -576,7 +1020,7 @@ export const PlantaoView = () => {
               }
           }
       };
-  
+
       return (
           <div 
               className="grid grid-cols-3 gap-2 p-2 bg-slate-100 rounded-xl select-none"
@@ -586,7 +1030,7 @@ export const PlantaoView = () => {
               {intervals.map((int: any) => {
                   const desabilitado = analiseDesabilitar(int.field);
                   const selecionado = selectedHours.includes(int.field);
-  
+
                   return (
                       <div
                           key={int.field}
@@ -731,16 +1175,16 @@ export const PlantaoView = () => {
                                   {colunasPorEstabelecimento.map(coluna => (
                                     <div key={coluna.unidade.id} 
                                          className="flex flex-col flex-none gap-2 w-[30%] max-h-[250px] md:max-h-[400px] overflow-y-auto pr-2 custom-scrollbar pt-2">
-                                      {coluna.cards.map(({ escala, item, horaSlot }, idxItem) => (
+                                      {coluna.cards.map(({ escala, item, horarioFormatado}, idxItem) => (
                                         <div 
-                                          key={`${escala.medicoId}-${horaSlot}-${idxItem}`}
-                                          className="relative bg-white p-2 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3">
+                                          key={`${escala.medicoId}-${horarioFormatado}-${idxItem}`}
+                                          className="group relative bg-white p-2 rounded-xl border border-slate-100 shadow-sm flex items-center gap-0 md:gap-2">
                                           
                                           {canALTERAR && <button
-                                            onClick={() => confirmExclusao(escala.medicoId, escala.data, item.hora)}
-                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-20 hover:bg-red-600"
+                                            onClick={() => confirmExclusao(escala.medicoId, escala.data, horarioFormatado)}
+                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-20 hover:bg-red-600"
                                           >
-                                            <i className="pi pi-times text-[10px]"></i>
+                                            <i className="pi pi-times text-[16px]"></i>
                                           </button>}
                                           
                                           <div className="flex items-center justify-center min-h-[28px] min-w-[28px]">
@@ -761,7 +1205,8 @@ export const PlantaoView = () => {
                                           <div className="flex-1 min-w-0">
                                             <div className="text-blue-600 font-black text-[9px] uppercase tracking-tight flex items-center gap-1 mb-0.5">
                                               <i className="pi pi-clock text-[10px]"></i>
-                                              {item.hora.split(':')[0]} - {horaSlot === 7 ? 13 : horaSlot === 13 ? 19 : 7}h
+                                              {/* {item.hora.split(':')[0]} - {horaSlot === 7 ? 13 : horaSlot === 13 ? 19 : 7}h */}
+                                              {horarioFormatado}
                                             </div>
                                             <div className="text-slate-800 font-extrabold text-xs md:text-sm flex items-center gap-1.5">
                                               {escala.medico?.sigla}              
@@ -797,7 +1242,7 @@ export const PlantaoView = () => {
           resizable={false}
           className="rounded-xl overflow-hidden"
         >
-          <div className="flex flex-col gap-5 py-2">
+          <div className="flex flex-col gap-3 py-2">
             <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 mb-2">
               <span className="text-blue-700 font-medium flex items-center gap-2">
                 <i className="pi pi-calendar"></i>
@@ -858,6 +1303,87 @@ export const PlantaoView = () => {
                     }
                 />
             </div>  
+
+            <div className={`flex flex-col transition-opacity duration-300 ${isManualDisabled ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+              <div className="flex justify-between items-center">
+                <label className="text-sm font-semibold text-slate-600 flex items-center gap-2">
+                  <i className="pi pi-plus text-blue-500" /> Intervalos de Horário
+                </label>
+                <Button 
+                  icon='pi pi-plus' 
+                  onClick={addInterval} 
+                  className="p-button-rounded p-button-text p-button-sm  text-blue-500" 
+                  tooltip="Adicionar"
+                  tooltipOptions={{ position: 'left' }}
+                  disabled={!(medicoId && estabelecimentoId) || !canAddInterval || customIntervals.length >= 24}
+                />
+              </div>
+
+              {isManualDisabled && (
+                <div className="bg-blue-50 border border-blue-100 p-3 rounded-lg flex items-center gap-3 text-blue-700 text-xs font-medium">
+                  <i className="pi pi-clock text-blue-500"></i>
+                  Intervalos manuais desabilitados pois o ciclo de 24h está completo com os turnos pré-definidos.
+                </div>
+              )}
+
+              <div className="flex flex-col">
+                {customIntervals.map((interval, index) => (
+                  <div key={interval.id + index} className="flex flex-col gap-2 p-1">
+                    <div className={`flex items-end gap-2 bg-slate-50 pl-1 pr-1 pb-1 border transition-all ${interval.error ? 'border-red-300 bg-red-50' : 'border-slate-100 hover:border-blue-200'}`}>
+                      <div className=" flex flex-col">
+                        <span className="text-sm px-3 font-medium text-slate-500">Início</span>
+                        <Dropdown 
+                          value={formatDateToTimeString(interval.start)} 
+                          onChange={(e) => updateInterval(interval.id, 'start', parseTimeStringToDate(e.value))} 
+                          options={getFilteredTimeOptions(interval.id, 'start')}
+                          placeholder="00:00"
+                          className="w-full"
+                          disabled={isManualDisabled || !(medicoId && estabelecimentoId)}
+                          dropdownIcon="pi pi-clock"
+                          showClear
+                          pt={{
+                            input: { 
+                              className: 'p-0 pt-1 pb-1 pr-5 !border-none'
+                            }
+                          }}
+                        />
+                      </div>
+                      <div className="flex-1 flex flex-col">
+                        <span className="text-sm px-3 font-medium text-slate-500">Término</span>
+                        <Dropdown 
+                          value={formatDateToTimeString(interval.end)} 
+                          onChange={(e) => updateInterval(interval.id, 'end', parseTimeStringToDate(e.value))} 
+                          options={getFilteredTimeOptions(interval.id, 'end')}
+                          placeholder="00:00"
+                          className="w-full"
+                          disabled={isManualDisabled || !interval.start}
+                          dropdownIcon="pi pi-clock"
+                          showClear
+                          pt={{
+                            input: { 
+                              className: 'p-0 pt-1 pb-1 pr-5 !border-none' 
+                            }
+                          }}
+                        />
+                      </div>
+                      {customIntervals.length > 1 && (
+                        <Button 
+                          icon='pi pi-trash' 
+                          onClick={() => removeInterval(interval.id)} 
+                          className="p-button-rounded p-button-danger p-button-text" 
+                          disabled={isManualDisabled}
+                        />
+                      )}
+                    </div>
+                    {interval.error && (
+                      <span className="text-xs text-red-500 font-medium px-2 flex items-center gap-1">
+                        <i className="pi pi-exclamation-circle text-[10px]" /> {interval.error}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </Dialog>
       

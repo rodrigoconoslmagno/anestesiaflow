@@ -78,7 +78,7 @@ export const Notificacao = () => {
     return (
         <div className={`p-1 flex flex-col md:flex-row items-start justify-between gap-4 rounded-xl border transition-all ${
             status === 'granted' 
-            ? 'bg-green-50/50 border-green-100' 
+            ? 'bg-green-50 border-green-100' 
             : 'bg-blue-50 border-blue-100 shadow-sm'
         }`}>
             <div className="w-full flex items-center justify-between gap-3">

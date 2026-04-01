@@ -3,29 +3,19 @@ import { Notificacao } from "@/componentes/notificacao/Notificacao";
 
 export const DashboardHome = () => {
     return (
-      <div className="min-h-screen w-full flex flex-col bg-white overflow-hidden">
+      <div className="h-[100dvh] w-full flex flex-col bg-white overflow-hidden">
         <div className="ml-[5%] w-[90%] pt-2 md:pt-4 z-40">
           <Notificacao />
         </div>
         
-        <div className="flex-1 bg-ap-blue-dark flex flex-col justify-center items-center text-white overflow-hidden">
+        <div className="flex-1 bg-ap-blue-dark flex flex-col justify-center items-center text-white overflow-hidden pb-20 md:pb-0">
 
           <div className="z-10 max-w-md text-center flex flex-col items-center">
-            <Logo className="h-16 lg:h-24 mb-6" light />
+            <Logo className="h-16 lg:h-24 mb-6" light showText={false} />
 
             <h1 className="text-4xl lg:text-7xl font-black mb-2 tracking-tighter">
               Anestesia<span className="text-ap-cyan drop-shadow-[0_0_15px_rgba(0,255,255,0.5)]">Flow</span>
             </h1>
-            
-            <div className="mb-6 lg:mb-8">
-              <span className="text-blue-200 text-xs lg:text-lg font-medium tracking-[0.2em] uppercase opacity-80">
-                Anestesia Piracicaba
-              </span>
-            </div>
-            
-            <p className="text-blue-100 text-base lg:text-xl opacity-90 font-light max-w-xs lg:max-w-sm leading-relaxed px-4">
-              Painel Geral: Resumo de escalas e produtividade.
-            </p>
           </div>
 
           <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-ap-blue-light opacity-20 blur-[100px] rounded-full z-0" />

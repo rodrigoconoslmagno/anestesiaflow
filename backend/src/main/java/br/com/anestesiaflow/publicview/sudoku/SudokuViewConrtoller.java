@@ -10,19 +10,19 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import br.com.anestesiaflow.escala.dto.EscalaResponseDTO;
-import br.com.anestesiaflow.escala.service.EscalaService;
 import br.com.anestesiaflow.publicview.BasePublicController;
+import br.com.anestesiaflow.sudoku.service.SudokuService;
 
 @RestController
 @RequestMapping("/sudoku") 
 public class SudokuViewConrtoller implements BasePublicController {
 	
 	@Autowired
-	private EscalaService escalaService;
+	private SudokuService sudokuService;
 	
 	@GetMapping("/sudokudia")
 	public ResponseEntity<List<EscalaResponseDTO>> listardia(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data) {
-		return ResponseEntity.ok(escalaService.listarPorData(data, null));
+		return ResponseEntity.ok(sudokuService.listarPorData(data));
 	}
 
 }

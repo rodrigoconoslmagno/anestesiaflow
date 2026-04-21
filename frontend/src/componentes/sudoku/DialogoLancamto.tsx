@@ -12,7 +12,7 @@ import { AppSwitch } from "../switch/AppSwitch";
 import clsx from "clsx";
 import { IconeSirenePlantao } from "@/utils/IconeSirene";
 
-interface TimeInterval {
+export interface TimeInterval {
     id: string;
     start: Date | null;
     end: Date | null;
@@ -22,10 +22,14 @@ interface TimeInterval {
 export interface DialogoLancamentoProps {
     forcarPlantao: boolean | null;
     date: Date;
-    saveEscala: ( plantao: boolean, medicoId: number, estabelecimentoId: number,
-            intervalorPreDefinido: any, intervaloManual: any) => void;
+    saveEscala: ( plantao: boolean, 
+              medicoId: number,
+              estabelecimentoId: number, 
+              intervalorPreDefinido: {data: Date, horas: string[]}, 
+              intervaloManual: TimeInterval[],
+              medico?: Medico, estabelecimento?: Estabelecimento) => void;
     escalas: Escala[];
-    exibeDialogo: boolean;
+    exibeDialogo: boolean;  
     closeDialog: () => void;
 }
 
@@ -40,6 +44,8 @@ export const DialogoLancamento = ({
     const { showError, showWarn } = useAppToast();
     const [ medicoId, setMedicoId] = useState<number | undefined>(undefined);
     const [ estabelecimentoId, setEstabelecimentoId] = useState<number | undefined>(undefined);
+    const [ medico, setMedico ] = useState<Medico>();
+    const [ estabelecimento, setEstabelecimento ] = useState<Estabelecimento>();
     const [ complementoTitulo, setComplementoTitulo ] = useState<string>("Escala")
     const [ plantao, setPlantao] = useState<boolean>(false);
     const [ formData, setFormData] = useState({
@@ -73,8 +79,9 @@ export const DialogoLancamento = ({
           <Button 
             label="Salvar" 
             icon="pi pi-save" 
-            onClick={() => saveEscala(plantao, medicoId!, estabelecimentoId!, 
-                        formData, customIntervals)} 
+            onClick={() => saveEscala(plantao, medicoId!,
+                          estabelecimentoId!, formData,
+                          customIntervals, medico, estabelecimento!)} 
             disabled={!(medicoId && estabelecimentoId && 
                 (formData.horas.length > 0 || customIntervals.length > 0))}
             autoFocus
@@ -677,6 +684,7 @@ export const DialogoLancamento = ({
                   valueTemplate={medicoTemplate}
                   public_back
                   onChange={(e) => setMedicoId(e.value)}
+                  onObjectChange={(medico) => setMedico(medico)}
               />
             </div>
             
@@ -693,6 +701,7 @@ export const DialogoLancamento = ({
                   itemTemplate={estabelecimentoTemplate}
                   valueTemplate={estabelecimentoTemplate}
                   onChange={(e) => setEstabelecimentoId(e.value)}
+                  onObjectChange={(estabelecimento) => setEstabelecimento(estabelecimento)}
               />
             </div>
 

@@ -30,7 +30,7 @@ public class PlantaoService {
 	public List<EscalaPlantaoDTO> listarPorData(LocalDate data){
 		return escalaRepository.findByDataAndPlantaoOrderByMedicoDataAssociacaoAscItensHoraAsc(data, true).
 				stream().map(this::mapperEstalaToPlantao).
-				filter(escalaBando -> escalaBando.itensPlantao().size() > 0).toList();
+				filter(escalaBando -> escalaBando.itens().size() > 0).toList();
 	}
 
 	@Transactional
@@ -63,11 +63,11 @@ public class PlantaoService {
 		boolean encontrou = false;
 		escala.getItens().removeIf(itemBanco -> 
 					itemBanco.getArquivado() == null &&
-					dto.itensPlantao().stream().noneMatch(itemDto -> 
+					dto.itens().stream().noneMatch(itemDto -> 
 									itemBanco.getEstabelecimento().getId().equals(itemDto.estabelecimentoId()) &&
 									itemBanco.getHora().equals(itemDto.hora())));
 		
-		for(EscalaItemPlantaoDTO itemDto : dto.itensPlantao()) {
+		for(EscalaItemPlantaoDTO itemDto : dto.itens()) {
 			encontrou = false;
 			for(EscalaItem item : escala.getItens()) {
 				if (itemDto.estabelecimentoId() == item.getEstabelecimento().getId() &&
@@ -86,7 +86,7 @@ public class PlantaoService {
 		
 		for(EscalaItem itemBanco : escala.getItens()) {
 			if (itemBanco.getArquivado() != null) {
-				itemBanco.setReagendado(!dto.itensPlantao().stream().anyMatch(itemDto ->
+				itemBanco.setReagendado(!dto.itens().stream().anyMatch(itemDto ->
 						itemBanco.getEstabelecimento().getId().equals(itemDto.estabelecimentoId()) &&
 						itemBanco.getHora().equals(itemDto.hora())
 						));
@@ -166,7 +166,7 @@ public class PlantaoService {
 		retorno.setData(dto.data());
 		retorno.setMedico(entityManager.getReference(Medico.class, dto.medicoId()));
 		retorno.setPlantao(dto.plantao());
-		retorno.getItens().addAll(dto.itensPlantao().stream().map(itemDto -> {
+		retorno.getItens().addAll(dto.itens().stream().map(itemDto -> {
 				EscalaItem item = mapperItemToEscalaItem(itemDto);
 				item.setEscala(retorno);
 				return item;

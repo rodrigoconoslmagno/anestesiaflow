@@ -10,5 +10,5 @@ public record EscalaPlantaoDTO(
 		int medicoId,
 		MedicoResponseDTO medico,
 		boolean plantao,
-		List<EscalaItemPlantaoDTO> itensPlantao
+		List<EscalaItemPlantaoDTO> itens
 ) {}

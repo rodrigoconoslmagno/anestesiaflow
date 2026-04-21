@@ -89,7 +89,7 @@ export const MedicoView = () => {
                 return (
                 <>
                     <div className="col-span-12">
-                    <TabView className="mt-2"
+                    <TabView
                         activeIndex={activeIndex}
                         onTabChange={(e) =>{
                             setActiveIndex(e.index);

@@ -38,11 +38,11 @@ public class SudokuService {
 					findFirst();
 			
 			if (!escalaPlantao.isPresent() && escalaNPlantao.isPresent()) {
-				return mapperToDto(escalaNPlantao.get());
+				return mapperToDto(escalaNPlantao.get(), false);
 			}
 			
 			if (escalaPlantao.isPresent() && !escalaNPlantao.isPresent()) {
-				return mapperToDto(escalaPlantao.get());
+				return mapperToDto(escalaPlantao.get(), false);
 			} 
 			
 			if (escalaPlantao.isPresent() && escalaNPlantao.isPresent()) {
@@ -60,7 +60,22 @@ public class SudokuService {
 		
 	}
 	
-	private EscalaResponseDTO mapperToDto(Escala escala) {
+	public List<EscalaResponseDTO> listarPorDataNorutno(LocalDate data){
+		List<Escala> escalas = escalaRepository.findByDataNoturno(data);
+		
+		return escalas.stream().
+				filter(escala -> escala.getItens().stream().filter(item -> 
+				!(item.getHora().getHour() >= 7 && item.getHora().getHour() < 19)).count() > 0).
+		map(escala -> {
+			return mapperToDto(escala, true);
+		}).toList();
+	}
+	
+	public boolean temPlantaoDiaSemana(LocalDate data) {
+		return escalaRepository.existsPlantaoDiaSemana(data);
+	}
+	
+	private EscalaResponseDTO mapperToDto(Escala escala, boolean noturno) {
 		return new EscalaResponseDTO(
 					escala.getId(), 
 					escala.getMedico().getId(),
@@ -68,7 +83,8 @@ public class SudokuService {
 					escala.getData(),
 					escala.isPlantao(),
 					escala.getItens().stream()
-							.filter(item -> !item.isReagendado())
+							.filter(item -> (!item.isReagendado() && !noturno) || 
+									(noturno && (item.getHora().getHour() > 18 || item.getHora().getHour() < 7)))
 							.map(this::mapperToDto).toList());
 	}
 	

@@ -165,59 +165,91 @@ public class EscalaService {
 		List<EscalaResponseDTO> resultados = new ArrayList<>();
 		for (EscalaResponseDTO escalaDto : dto.escala()) {
 			DayOfWeek diaDaSemana = escalaDto.data().getDayOfWeek();
+			
+			boolean finalDeSemana = (diaDaSemana == DayOfWeek.SATURDAY || diaDaSemana == DayOfWeek.SUNDAY);
 
-	        if (diaDaSemana == DayOfWeek.SATURDAY || diaDaSemana == DayOfWeek.SUNDAY) {
-	        	throw new BusinessException("Não é possível agendar um final de semana pelo Sudoku, " +
-	        			"utilize os plantões.");
+	        if (!escalaDto.plantao() && finalDeSemana) {
+	        	throw new BusinessException("Não é possível agendar um escala que não seja plantão " +
+	        			"no final de semana.");
 	        }
 			
-	        Escala entidadeEscala;
-	        long temPlantao = escalaDto.itens().stream().filter(item -> item.plantao()).count();
-	        List<EscalaItemResponseDTO> itensDto = escalaDto.itens().stream().filter(item -> 
-	        			!item.plantao()).toList();
-	        if (escalaDto.id() != null) {
-	            entidadeEscala = escalaRepository.findById(escalaDto.id())
-	                .orElseThrow(() -> new BusinessException("Escala não encontrada"));
-	            if (!entidadeEscala.isPlantao()) {
-	            	entidadeEscala = mapperToEscala(escalaDto, entidadeEscala);
-	            	sincronizarItens(entidadeEscala, itensDto, permissoes);
-	            }
-	        } else {
-	        	entidadeEscala = escalaRepository.findByMedico_IdAndDataAndPlantao(escalaDto.medicoId(), escalaDto.data(), false);
-		        
-	        	if (entidadeEscala != null  && temPlantao < 12) {
-	        		entidadeEscala = mapperToEscala(escalaDto, entidadeEscala);	
-	        		sincronizarItens(entidadeEscala, itensDto, permissoes);
-	        	}
-	        	
+	        boolean plantaoLancado = escalaRepository.existsPlantaoDiaSemana(escalaDto.data());
+	        
+	        if (plantaoLancado && !escalaDto.plantao() && !finalDeSemana) {
+	        	throw new BusinessException("Não é possível agendar um escala, pois já existe um plantão " +
+	        			"para esse dia, então só pode ser lançado nesse dia plantões.");
 	        }
 	        
-	        if ((entidadeEscala == null || entidadeEscala.isPlantao()) && temPlantao < 12) {
-        		entidadeEscala = mapperToEscala(escalaDto);	  
-        		sincronizarItens(entidadeEscala, itensDto, permissoes);
-        	} 
-	
-	        if (entidadeEscala.getItens() == null || entidadeEscala.getItens().isEmpty()) {
-	            if (entidadeEscala.getId() != null) {
-	                escalaRepository.delete(entidadeEscala);
-	            }
-	        } else {
-	        	if (!entidadeEscala.isPlantao()) {
-		        	validaEscalaItens(entidadeEscala);
-		            Escala salva = escalaRepository.save(entidadeEscala);
+	        Escala entidadeEscala = null;
+	        boolean temPlantaoDia = escalaDto.itens().stream().filter(item -> 
+	        			item.plantao() && item.hora().getHour() > 6 && item.hora().getHour() < 19).count() > 0;
+	        List<EscalaItemResponseDTO> itensDto = escalaDto.itens().stream().filter(item -> 
+	        		item.hora().getHour() > 6 && item.hora().getHour() < 19).toList();
+	        List<EscalaItemResponseDTO> itensDtoNoturno = escalaDto.itens().stream().filter(item -> 
+    				!escalaDto.plantao() && !(item.hora().getHour() > 6 && item.hora().getHour() < 19)).toList();
+	        
+	        if (itensDto.size() > 0 || (escalaDto.plantao() && itensDtoNoturno.size() == 0)) {
+	        	if (escalaDto.id() != null) {
+		            entidadeEscala = escalaRepository.findById(escalaDto.id())
+		            		.orElseThrow(() -> new BusinessException("Escala não encontrada"));
 		            
-		            if (temPlantao > 0) {
-		            	List<Escala> plantoes = escalaRepository.findByData(salva.getData(), temPlantao > 0);
-		            	Escala plantao = plantoes.stream().filter(escala -> 
-		            		escala.getMedico().getId().equals(salva.getMedico().getId())).
-		            			findFirst().get();
-		            	resultados.add(mapperToDtoMerge(salva, plantao, false));
-		            } else {	      
-		            	resultados.add(mapperToDto(salva, false));
+		            if (entidadeEscala.isPlantao() == escalaDto.plantao()) {
+		            	entidadeEscala = mapperToEscala(escalaDto, entidadeEscala);
+		            } else {
+		            	entidadeEscala = mapperToEscala(escalaDto);	
 		            }
 	        	} else {
-	        		resultados.add(mapperToDto(entidadeEscala, false));
+	        		entidadeEscala = escalaRepository.findByMedico_IdAndDataAndPlantao(escalaDto.medicoId(), escalaDto.data(), false);
+	        		if (entidadeEscala != null && !temPlantaoDia) {
+	        			entidadeEscala = mapperToEscala(escalaDto, entidadeEscala);
+	        		}
+	        		
+	        		if (entidadeEscala == null && temPlantaoDia) {
+	        			entidadeEscala = escalaRepository.findByMedico_IdAndDataAndPlantao(escalaDto.medicoId(), escalaDto.data(), true);
+	        			
+	        			if (entidadeEscala != null) {
+	        				entidadeEscala = mapperToEscala(escalaDto, entidadeEscala);	
+	        			}
+	        		}
+	        		
+	        		if (entidadeEscala == null) {
+	        			entidadeEscala = mapperToEscala(escalaDto);
+	        		}
 	        	}
+	        	sincronizarItens(entidadeEscala, !escalaDto.plantao() && itensDtoNoturno.size() > 0 ? itensDto : escalaDto.itens(), permissoes);
+	        	
+	        	if (entidadeEscala.getItens() == null || entidadeEscala.getItens().isEmpty()) {
+		            if (entidadeEscala.getId() != null) {
+		                escalaRepository.delete(entidadeEscala);
+		            }
+		        } else {
+			        validaEscalaItens(entidadeEscala);
+		            Escala salva = escalaRepository.save(entidadeEscala);
+		            resultados.add(mapperToDto(salva, false));
+		        }
+	        }
+	        
+	        if (itensDtoNoturno.size() > 0) {
+	        	if (entidadeEscala == null || !entidadeEscala.isPlantao()) {
+        			entidadeEscala = escalaRepository.findByMedico_IdAndDataAndPlantao(escalaDto.medicoId(), escalaDto.data(), true);
+        			
+        			if (entidadeEscala != null) {
+        				entidadeEscala = mapperToEscala(escalaDto, entidadeEscala);	
+        			}
+	        	} 
+	        	if (entidadeEscala == null) {
+	        		entidadeEscala = mapperToEscala(escalaDto);
+	        	}
+	        	entidadeEscala.setPlantao(true);
+	        	sincronizarItens(entidadeEscala, itensDtoNoturno, permissoes);
+	        	
+	        	if (entidadeEscala.getItens() == null || entidadeEscala.getItens().isEmpty()) {
+		            if (entidadeEscala.getId() != null) {
+		                escalaRepository.delete(entidadeEscala);
+		            }
+		        } else {
+		        	escalaRepository.save(entidadeEscala);
+		        }
 	        }
 	    }
 	
@@ -225,7 +257,7 @@ public class EscalaService {
 	}
 	
 	private void validaEscalaItens(Escala escala) {
-		if (escala.getItens().stream().filter(item -> !item.isReagendado()).count() > 12) {
+		if (escala.getItens().stream().filter(item -> !item.isReagendado() && !escala.isPlantao()).count() > 12) {
 			throw new BusinessException("Exedico o número de horas para uma escala");
 		}
 		
@@ -267,10 +299,12 @@ public class EscalaService {
 		        boolean estaArquivado = itemBanco.getArquivado() != null;
 
 		        if (!itemPermaneceNoGrid) {
-		            if (estaArquivado) {
-		                itemBanco.setReagendado(true);
-		            } else {
-		                escala.getItens().remove(itemBanco);
+		        	if (itemBanco.getHora().getHour() > 5 || itemBanco.getHora().getHour() < 19) {
+		        		if (estaArquivado) {
+		        			itemBanco.setReagendado(true);
+		        		} else {
+		            		escala.getItens().remove(itemBanco);
+		            	}
 		            }
 		        } 
 		        
@@ -301,19 +335,29 @@ public class EscalaService {
 		
 		escalaRepository.save(escala);
 		
-		itensNoFront.forEach(dto -> {
+		itensNoFront.forEach(dto -> {			
 	        if (dto.id() == null) {
 	            EscalaItem novoItem = mapperToEscalaItem(dto);
 	            novoItem.setEscala(escala);
+	            validaEstabelecimentoPlanta(escala.isPlantao(), novoItem.getEstabelecimento());
 	            escala.getItens().add(novoItem);
 	        } else {
 	            escala.getItens().stream()
 	                .filter(i -> i.getId().equals(dto.id()))
 	                .findFirst()
-	                .ifPresent(item -> mapperToEscalaItem(dto, item));
+	                .ifPresent(item -> {
+	                	validaEstabelecimentoPlanta(escala.isPlantao(), item.getEstabelecimento());
+	                	mapperToEscalaItem(dto, item);
+	                });
 	        }
 	    });    
 	}	
+	
+	private void validaEstabelecimentoPlanta(boolean plantao, Estabelecimento estabelecimento) {
+		if (plantao && !estabelecimento.isPlantao()) {
+			throw new BusinessException("Clinica / Hospital não habilitado para escala um plantão.");
+		}
+	}
 	
 	@Transactional
 	public void excluir(int id) {

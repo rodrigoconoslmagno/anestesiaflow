@@ -2,7 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-
 html, body, #root {
   margin: 0;
   padding: 0;
@@ -154,12 +153,12 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-@media (max-width: 1023px) {
+/* @media (max-width: 1023px) {
   main {
-    padding-bottom: rem !important;
-    padding-top: 1rem !important; /* Espaço para o Header Mobile */
-  }
-}
+    padding-bottom: rem !important; */
+    /* padding-top: 1rem !important; /* Espaço para o Header Mobile */
+  /* }
+} */
 
 .p-ripple {
   overflow: hidden;

@@ -80,7 +80,6 @@ export const EscalaView = () => {
             {(control) => {
                 return (<>
                     <AppSelectForm
-                        className='pt-5'
                         name='medicoId'
                         label='Médico'
                         url="/medico"

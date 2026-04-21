@@ -6,6 +6,7 @@ import { type ColSpan, getColSpanClass } from '@/utils/GridUtils';
 import { FloatLabel } from 'primereact/floatlabel';
 import { addLocale } from 'primereact/api';
 import { DateUtils } from '@/utils/DateUtils';
+import { useRenderMode } from '@/context/FormRenderContext';
 
 addLocale('pt-br', {
     firstDayOfWeek: 0,
@@ -34,84 +35,92 @@ export const AppCalendar = <T extends FieldValues>({
           colSpan = 12, 
           required,
           showTime = false,
-          ...props }: AppCalendarProps<T>) => (
-  <Controller
-    name={name}
-    control={control}
-    render={({ field, fieldState: { error } }) => (
-      <FieldWrapper 
-        label=""
-        error={error?.message} 
-        className={getColSpanClass(colSpan)}
-      >
-        <FloatLabel className="custom-app-calendar-float-label">
-          <Calendar 
-            {...field} 
-            {...props} 
-            id={name}
-            value={(field.value && DateUtils.paraDate(field.value)) ?? null}
-            onChange={(e) => field.onChange(e.value)}
-            showTime={showTime}
-            hourFormat="24"
-            locale="pt-br"
-            dateFormat="dd/mm/yy"
-            showIcon
-            showButtonBar
-            className={classNames(
-                'w-full border border-gray-500 rounded-lg outline-none transition-all duration-200 text-lg', 
-                props.className, 
-                { 'p-invalid border-red-500': error })} 
-          />
-          <label 
-            className="text-gray-500 transition-all duration-200 text-lg"
-            htmlFor={name}
-            style={{ left: '1rem' }}
-          >
-            {label}
-            {required && <span className="text-red-500 ml-1">*</span>}
-          </label>
-        </FloatLabel>
+          ...props }: AppCalendarProps<T>) => {
+    const { mode } = useRenderMode();
 
-        <style>{`
-          /* Sincronização visual com AppInputText e AppSelect */
-          .custom-app-calendar-float-label .p-calendar {
-            height: 40px; /* Ajuste para bater com a altura dos outros inputs */
-          }
+    const isCell = mode === 'cell';
+return (
+    <Controller
+      name={name}
+      control={control}
+      render={({ field, fieldState: { error } }) => (
+        <FieldWrapper 
+          label=""
+          error={error?.message} 
+          className={getColSpanClass(colSpan)}
+        >
+          <FloatLabel className="custom-app-calendar-float-label">
+            <Calendar 
+              {...field} 
+              {...props} 
+              id={name}
+              value={(field.value && DateUtils.paraDate(field.value)) ?? null}
+              onChange={(e) => field.onChange(e.value)}
+              showTime={showTime}
+              hourFormat="24"
+              locale="pt-br"
+              dateFormat="dd/mm/yy"
+              showIcon
+              showButtonBar
+              className={classNames(
+                  'w-full border border-gray-500 rounded-lg outline-none transition-all duration-200 text-lg', 
+                  props.className, 
+                  { 'p-invalid border-red-500': error })} 
+            />
+            
+            {!isCell && (
+              <label 
+                className="text-gray-500 transition-all duration-200 text-lg"
+                htmlFor={name}
+                style={{ left: '1rem' }}
+              >
+                {label}
+                {required && <span className="text-red-500 ml-1">*</span>}
+              </label>
+            )}
+          </FloatLabel>
 
-          .custom-app-calendar-float-label .p-inputtext {
-            border: none !important;
-            padding-left: 1rem !important;
-            background: transparent !important;
-            box-shadow: none !important;
-          }
+          <style>{`
+            /* Sincronização visual com AppInputText e AppSelect */
+            .custom-app-calendar-float-label .p-calendar {
+              height: 40px; /* Ajuste para bater com a altura dos outros inputs */
+            }
 
-          .custom-app-calendar-float-label.p-calendar:focus-within ~ label,
-          .custom-app-calendar-float-label .p-inputwrapper-filled ~ label {
-            font-weight: 700 !important;
-            font-size: 1.125rem !important;
-            color: #374151 !important;
-            background: white;
-            padding: 0 8px !important;
-            transform: translateY(-70%) scale(0.85) !important;
-            top: 0 !important;
-            left: 0px !important;
-            z-index: 10;
-          }
+            .custom-app-calendar-float-label .p-inputtext {
+              border: none !important;
+              padding-left: 1rem !important;
+              background: transparent !important;
+              box-shadow: none !important;
+            }
 
-          .custom-app-calendar-float-label label {
-            top: 63% !important;
-            transform: translateY(-50%) !important;
-            pointer-events: none;
-          }
+            .custom-app-calendar-float-label.p-calendar:focus-within ~ label,
+            .custom-app-calendar-float-label .p-inputwrapper-filled ~ label {
+              font-weight: 700 !important;
+              font-size: 1.125rem !important;
+              color: #374151 !important;
+              background: white;
+              padding: 0 8px !important;
+              transform: translateY(-70%) scale(0.85) !important;
+              top: 0 !important;
+              left: 0px !important;
+              z-index: 10;
+            }
 
-          /* Ajuste do ícone do calendário */
-          .p-datepicker-trigger {
-            background: transparent !important;
-            color: #6b7280 !important;
-            border: none !important;
-          }
-        `}</style>
-      </FieldWrapper>
-    )}
-  />
-);
+            .custom-app-calendar-float-label label {
+              top: 63% !important;
+              transform: translateY(-50%) !important;
+              pointer-events: none;
+            }
+
+            /* Ajuste do ícone do calendário */
+            .p-datepicker-trigger {
+              background: transparent !important;
+              color: #6b7280 !important;
+              border: none !important;
+            }
+          `}</style>
+        </FieldWrapper>
+      )}
+    />
+  )
+};

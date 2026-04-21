@@ -10,4 +10,4 @@ public record MedicoResponseDTO(
 			LocalDate dataAssociacao,
 			boolean ativo,
 			LocalDateTime dataCriacao,
-			LocalDateTime dataAlteracao) {}
+			LocalDateTime dataAtualizacao) {}

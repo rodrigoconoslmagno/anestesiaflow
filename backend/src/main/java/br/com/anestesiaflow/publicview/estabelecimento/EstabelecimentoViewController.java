@@ -21,7 +21,7 @@ public class EstabelecimentoViewController implements BasePublicController {
 	
     @GetMapping("/estabelecimentos")
 	public ResponseEntity<List<EstabelecimentoResponseDTO>> listar(@RequestParam(required = false) boolean ativo,
-			@RequestParam(required = false) boolean plantao) {
+			Boolean plantao) {
     	if (ativo) {
         	return ResponseEntity.ok(estService.listarAtivos(plantao));
         }

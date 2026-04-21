@@ -10,12 +10,13 @@ interface CrudHeaderProps {
   onAdd?: () => void;
   resurso: Recurso;
   filterContent?: React.ReactNode;
+  extraActions?: React.ReactNode;
   onClose?: () => void;
   onApplyFilters?: () => void;
   onClearFilters?: () => void;
 }
 
-export const CrudHeader = ({ title, onAdd, resurso, filterContent, 
+export const CrudHeader = ({ title, onAdd, resurso, filterContent, extraActions,
                              onClose, onApplyFilters, onClearFilters }: CrudHeaderProps) => {
   const [showDesktopFilters, setShowDesktopFilters] = useState(false);
   const navigate = useNavigate();
@@ -43,6 +44,12 @@ export const CrudHeader = ({ title, onAdd, resurso, filterContent,
             />
           )}
 
+          {extraActions && (
+            <div className="hidden md:flex items-center">
+              {extraActions}
+            </div>
+          )}
+
           {onAdd && hasPermission && (
             <Button 
               onClick={onAdd} 
@@ -58,14 +65,6 @@ export const CrudHeader = ({ title, onAdd, resurso, filterContent,
             outlined 
             severity="danger" 
             className="hidden md:flex h-11 px-4 items-center justify-center" 
-            onClick={handleClose} 
-          />
-
-          <Button 
-            icon="pi pi-times" 
-            text 
-            severity="secondary" 
-            className="md:hidden h-10 w-10 p-0 flex items-center justify-center" 
             onClick={handleClose} 
           />
         </div>

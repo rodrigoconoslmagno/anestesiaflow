@@ -23,6 +23,8 @@ import { useAuthStore } from '@/permissoes/authStore';
 import { Recurso } from '@/permissoes/recurso';
 import { confirmDialog } from 'primereact/confirmdialog';
 import { IconeSirenePlantao } from '@/utils/IconeSirene';
+import { AppCardsPlantaoNoturno } from '@/componentes/plantao/AppCardsPlantaoNorurno';
+import { DialogoLancamento } from '@/componentes/sudoku/DialogoLancamto';
 
 addLocale('pt-BR', {
   firstDayOfWeek: 0,
@@ -89,7 +91,6 @@ const DraggableItem = ({ alocacao, medicoId, horaOriginal, isPaintingMode, bloqu
   const styleFinal = {
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     zIndex: isDragging ? 999 : 1,
-    opacity: isDragging ? 0.5 : (bloqueado && !alocacao.plantao ? 0.6 : 1),
     cursor: disabled ? "default" : (bloqueado ? 'not-allowed' : (isPaintingMode ? 'cell' : 'grab')),
     backgroundColor: alocacao.cor?.startsWith('#') ? alocacao.cor : `#${alocacao.cor}`,
     touchAction: 'none', 
@@ -106,13 +107,14 @@ const DraggableItem = ({ alocacao, medicoId, horaOriginal, isPaintingMode, bloqu
       onDragStart={(e) => (isPaintingMode || bloqueado) && e.preventDefault()}  
       className="w-[28px] h-[28px] rounded-full border border-white shadow-sm flex items-center
                  justify-center overflow-hidden active:cursor-grabbing">
-      {alocacao.icone && !alocacao.plantao ? (
+      {/* {alocacao.icone && !alocacao.plantao ? ( */}
+      {alocacao.icone && (
         <img 
           src={alocacao.icone.startsWith('data:') ? alocacao.icone : `data:image/png;base64,${alocacao.icone}`} 
           className="object-contain w-full h-full pointer-events-none" 
         />
-      ) : (
-        <IconeSirenePlantao className="w-6 h-6 animate-pulse" />
+      // ) : (
+      //   <IconeSirenePlantao className="w-6 h-6 animate-pulse" />
       )}
     </div>
   );
@@ -150,6 +152,10 @@ export const SudokuView = () => {
   const menu = useRef<Menu>(null);
   const [ permiteArquivar, setPermiteArquivar ] = useState(false);
   const ultimoEstadoConfirmado = useRef<Escala[]>([]);
+  const [ ativaPlantao, setAtivaPlantao ] = useState(false);
+  const [ exibirDialogo, setExibeDialogo] = useState(false);
+  const [ plantaoNoturno, setPlantaoNoturno] = useState<boolean>(false);
+  const [ clinicasPlantoes, setClinicasPlantoes ] = useState<boolean>(false);
 
   const hasPerm = useAuthStore(state => state.hasPermission);
 
@@ -182,17 +188,15 @@ export const SudokuView = () => {
     return `${y}-${m}-${d}`;
   }, [dataAtiva]);
 
+  const existeEscalaDia = useMemo(() => {
+    return escalas.some(item => item.itens && item.itens?.length > 0);
+  }, [escalas]);
+
   useEffect(() => {
     const carregarDados = async () => {
       setLoading(true);
-
       try {
         const dataFormatada = DateUtils.paraISO(dataAtiva);
-
-        if (clinicas.length === 0) {
-          const resClinicas = await server.api.listar<Estabelecimento>('/estabelecimento', { ativo: true });
-          setClinicas(resClinicas || []);
-        } 
     
         const resEscalas = await server.api.listarCustomizada<Escala>('/sudoku', '/listardia', { data: dataFormatada });
         const arquivado  = await server.api.postCustomizada<boolean>('/sudoku', '/arquivado', { data: dataFormatada });
@@ -201,6 +205,19 @@ export const SudokuView = () => {
         setEscalas(resEscalas || []);
 
         setLastUpdate(Date.now());
+        let plantao = true;
+        if (!(dataAtiva.getDay() === 0 || dataAtiva.getDay() === 6)) {
+          plantao = await await server.api.postCustomizada<boolean>('/sudoku', '/templantaodiasemana', { data: dataFormatada });
+          setAtivaPlantao(plantao)
+        }
+
+        if (clinicas.length == 0 || clinicasPlantoes != ativaPlantao ) {
+          const resClinicas: Estabelecimento[] = await server.api_public.listar("/api/public/estabelecimento/estabelecimentos",
+          plantao ? { ativo: true, plantao: plantao } : { ativo: true });
+          
+          setClinicas(resClinicas || []);
+          setClinicasPlantoes(ativaPlantao);
+        }
       } catch (error: any) {
         if (error.status = 403) {
           const errorMessage = error.response?.data?.mensagem || "Você não tem permissão para excluir este registro.";
@@ -213,6 +230,7 @@ export const SudokuView = () => {
     };
 
     carregarDados();
+    setAtivaPlantao(dataAtiva.getDay() === 0 || dataAtiva.getDay() === 6);
   }, [dataAtiva]);
 
   useEffect(() => {
@@ -234,6 +252,7 @@ export const SudokuView = () => {
             id: p.id || null, 
             medicoId: p.medicoId,
             data: dataStr,
+            plantao: ativaPlantao,
             itens: p.itens?.map(i => ({
               id: i.id || null, 
               estabelecimentoId: i.estabelecimentoId,
@@ -241,7 +260,6 @@ export const SudokuView = () => {
               plantao: i.plantao
             })) || [] 
           }));
-
           const response = await server.api.criar<Escala[]>('/sudoku', payload as Escala[]);
 
           await atualizarStatusBloqueio(dataAtiva);
@@ -271,6 +289,19 @@ export const SudokuView = () => {
           }
 
           setHasChangesToSave(false);
+          setPlantaoNoturno(await await server.api.postCustomizada<boolean>('/sudoku', '/listardianoturno', { data: DateUtils.paraISO(dataAtiva) }))
+          let ativarPlantao = true;
+          if (!(dataAtiva.getDay() === 0 || dataAtiva.getDay() === 6)) {
+            ativarPlantao = await await server.api.postCustomizada<boolean>('/sudoku', '/templantaodiasemana', { data: DateUtils.paraISO(dataAtiva) });
+            setAtivaPlantao(ativarPlantao)
+          }
+          if (clinicasPlantoes != ativarPlantao) {
+            const resClinicas: Estabelecimento[] = await server.api_public.listar("/api/public/estabelecimento/estabelecimentos",
+            ativarPlantao ? { ativo: true, plantao: ativarPlantao } : { ativo: true });
+      
+            setClinicas(resClinicas || []);
+            setClinicasPlantoes(ativarPlantao)
+          }
         } catch (err: any) {
           console.error("Falha na sincronização:", err);
 
@@ -320,12 +351,6 @@ export const SudokuView = () => {
   const navegar = (dias: number) => {
     const novaData = new Date(dataAtiva);
     novaData.setDate(novaData.getDate() + dias);
-
-    if (novaData.getDay() === 6) { // Se cair no Sábado (6), pula mais 2 dias para Segunda
-      novaData.setDate(novaData.getDate() + 2 * (dias > 0 ? 1 : -1));
-    } else if (novaData.getDay() === 0) {// Se cair no Domingo (0), pula mais 1 dia para Segunda
-      novaData.setDate(novaData.getDate() + 1 * (dias > 0 ? 1 : -2));
-    }
 
     setDataAtiva(novaData);
 
@@ -407,14 +432,14 @@ export const SudokuView = () => {
         icone: clinica.icone,
         arquivado: null,
         reagendado: false,
-        plantao: false
+        plantao: ativaPlantao
       };
   
       if (idxDest === -1) {
         tempEscalas.push({ 
           medicoId: destMedicoId, 
           data: dataStr, 
-          plantao: false,
+          plantao: ativaPlantao,
           itens: [novoItem], 
           medicoSigla: ''
         });
@@ -468,7 +493,7 @@ export const SudokuView = () => {
         const novaEscala: Escala = { 
           medicoId, 
           data: dataStr, 
-          plantao: false,
+          plantao: ativaPlantao,
           itens: [{
             id: undefined,
             estabelecimentoId: activePaintingClinica.id,
@@ -477,7 +502,7 @@ export const SudokuView = () => {
             icone: activePaintingClinica.icone,
             arquivado: null,
             reagendado: false,
-            plantao: false
+            plantao: ativaPlantao
           }], 
           medicoSigla: '' 
         };
@@ -503,7 +528,7 @@ export const SudokuView = () => {
           icone: activePaintingClinica.icone,
           arquivado: null,
           reagendado: false,
-          plantao: false
+          plantao: ativaPlantao
         }
       ];
 
@@ -652,10 +677,10 @@ export const SudokuView = () => {
   }
 
   return (
-    <div className="sudoku-container flex flex-col h-screen bg-slate-50 overflow-hidden">
-      
+    <div className="sudoku-container w-full bg-slate-50 pb-20 sm:pb-0"
+        style={{ height: 'auto', minHeight: '100vh', overflow: 'auto' }}>
       <header className={clsx(
-          "flex items-center justify-between sm:px-4 sm:py-3 px-2 py-1 bg-white border-b transition-all duration-300 relative overflow-hidden",
+          "flex items-center justify-between sm:px-4 sm:py-3 px-2 bg-white border-b transition-all duration-300",
           isPaintingMode ? "border-blue-200" : "border-slate-200"
       )}>
         {(isSyncing || hasChangesToSave) && <div className="sync-glow-bar" />}
@@ -710,6 +735,18 @@ export const SudokuView = () => {
             )}
           </div>
 
+          <Button 
+            icon={"pi pi-plus-circle"} 
+            disabled={loading || sendMessaging}
+            onClick={() =>  setExibeDialogo(true)}
+            tooltip="Incluir" 
+            className={clsx(
+              "p-button-outlined p-button-secondary p-button-sm transition-all p-1 border-blue-400 hover:bg-slate-50 z-10",
+              "!rounded-md",
+              "text-blue-700"
+            )}
+          />
+
           {canALTERAR && <Button 
             icon={isSyncing ? "pi pi-spin pi-spinner" : (isEditing ? "pi pi-check" : "pi pi-pencil")}
             label={isEditing ? "Concluir" : "Editar"}  
@@ -761,7 +798,7 @@ export const SudokuView = () => {
           setIsOverTrash(over?.id === 'painel-clinicas-trash');
         }}
       >
-        <div className="flex flex-col sm:p-1 p-0 gap-2 flex-grow overflow-hidden">
+        <div className="flex flex-col sm:p-1 p-0 gap-2">
           
           <div className="flex items-center justify-between bg-slate-50 border-b border-slate-200">
               <Button 
@@ -770,49 +807,55 @@ export const SudokuView = () => {
                   onClick={() => navegar(-1)} 
                   disabled={isHoje} 
               />
-              <div className="text-center flex flex-col items-center w-full">
-                <div className="flex items-center gap-2">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">
-                        Escala Diária
-                    </span>
-                    {isHoje && (
-                        <span className="bg-emerald-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-sm uppercase">
-                            Hoje
-                        </span>
-                    )}
-                </div>
 
-                <div className="relative group">
-                    <div className="flex items-center gap-2 px-3 py-1 rounded-lg group-hover:bg-slate-100 transition-all cursor-pointer border border-transparent group-hover:border-slate-200">
-                        <span className="sm:text-lg text-[9px] font-black text-slate-700 capitalize leading-none">
-                            {dataAtiva.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
-                        </span>
-                        <i className="pi pi-calendar text-blue-600 sm:text-lg text-[9px]" />
-                    </div>
+              <div className="flex flex-row items-center w-auto">
 
-                    <div className="absolute inset-0 opacity-0">
-                        <Calendar 
-                            key={dataAtiva.getTime()} 
-                            value={dataAtiva} 
-                            onChange={(e) => {
-                                if (e.value) {
-                                    setDataAtiva(e.value as Date);
-                                    setIsPaintingMode(false);
-                                }
-                            }} 
-                            minDate={new Date()} 
-                            showButtonBar
-                            hideOnDateTimeSelect={true}
-                            locale="pt-BR"
-                            disabledDays={[0, 6]}
-                            appendTo={document.body}
-                            touchUI={window.innerWidth < 768}
-                            readOnlyInput
-                            panelClassName="hide-weekends"
-                            className="w-full h-full"
-                            inputClassName="w-full h-full cursor-pointer"
-                        />
-                    </div>
+                {ativaPlantao && (
+                  <IconeSirenePlantao className="w-8 sm:w-12 h-8 sm:h-12 animate-pulse" />
+                )}
+
+                <div className="text-center flex flex-col items-center w-auto">
+                  <div className="flex items-center gap-2">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">
+                          Escala Diária
+                      </span>
+                      {isHoje && (
+                          <span className="bg-emerald-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-sm uppercase">
+                              Hoje
+                          </span>
+                      )}
+                  </div>
+
+                  <div className="relative group">
+                      <div className="flex items-center gap-2 px-3 py-1 rounded-lg group-hover:bg-slate-100 transition-all cursor-pointer border border-transparent group-hover:border-slate-200">
+                          <span className="sm:text-lg text-[10px] font-black text-slate-700 capitalize leading-none">
+                              {dataAtiva.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
+                          </span>
+                          <i className="pi pi-calendar text-blue-600 sm:text-lg text-[9px]" />
+                      </div>
+
+                      <div className="absolute inset-0 opacity-0">
+                          <Calendar 
+                              key={dataAtiva.getTime()} 
+                              value={dataAtiva} 
+                              onChange={(e) => {
+                                  if (e.value) {
+                                      setDataAtiva(e.value as Date);
+                                      setIsPaintingMode(false);
+                                  }
+                              }} 
+                              minDate={new Date()} 
+                              showButtonBar
+                              hideOnDateTimeSelect={true}
+                              locale="pt-BR"
+                              appendTo={document.body}
+                              touchUI={window.innerWidth < 768}
+                              readOnlyInput
+                              className="w-full h-full"
+                              inputClassName="w-full h-full cursor-pointer"
+                          />
+                      </div>
+                  </div>
                 </div>
               </div>
               <Button 
@@ -833,7 +876,6 @@ export const SudokuView = () => {
                 </span>
               </div>
               
-              {/* <div className="overflow-x-auto pb-1 hide-scrollbar"> */}
               {isEditing && !isPaintingMode && (
                 <div className="p-2 animate-fadein"> 
                   <DroppableTrashZone>
@@ -847,14 +889,20 @@ export const SudokuView = () => {
           )}
 
           <div className={clsx(
-                "flex-1 overflow-hidden bg-slate-50",
-                isPaintingMode ? "p-1" : ""
-          )}>
+                "bg-slate-50 w-full",
+                isPaintingMode ? "p-1" : "")}
+                style={{ 
+                  display: 'block', // Garante que não herde flex do CSS
+                  height: 'auto', 
+                  width: '100%',
+                  overflow: 'visible' 
+              }}
+          >
           
             <div 
               key={`cell-${isPaintingMode}-${isEditing}`} 
               className={clsx(
-                "h-full rounded-xl overflow-hidden border shadow-sm transition-all",
+                "rounded-xl border shadow-sm transition-all",
                 isEditing ? "border-indigo-200" : "border-slate-200",
                 isPaintingMode && "ring-2 ring-indigo-400 cursor-cell",
                 isOverTrash && "opacity-60 transition-all grayscale-[0.5]"
@@ -888,9 +936,7 @@ export const SudokuView = () => {
               }}    
               style={{ 
                 overflowAnchor: 'none', 
-                height: '100%', // Garante que o container tenha altura para o scroll funcionar
-                display: 'flex',
-                flexDirection: 'column'
+                backgroundColor: 'white'
               }}
             >
               <DataTable 
@@ -898,11 +944,12 @@ export const SudokuView = () => {
                 value={escalas}
                 dataKey="medicoId" 
                 loading={loading} 
-                scrollable 
-                scrollHeight="flex" 
-                className="sudoku-table-custom"
+                scrollable
+                scrollHeight="auto"   
+                className="sudoku-table-custom w-full"
                 emptyMessage={`Nenhuma escala encontrado.`}
                 header={renderTableHeader()}
+                tableStyle={{ minWidth: '100%' }}
               >
                 <Column 
                   frozen 
@@ -962,7 +1009,7 @@ export const SudokuView = () => {
                             id={`${escala.medicoId}|${h.field}`} 
                             alocacao={itemAlocado}
                             sigla={escala.medicoSigla}
-                            bloqueado={bloqueado || (itemAlocado && itemAlocado.plantao)}
+                            bloqueado={bloqueado}
                             isPaintingMode={isPaintingMode}
                             // Quando clica na célula, chama a função que busca o que tem nela
                             onMouseDown={isPaintingMode ? (e: any) => handleStartPainting(e.clientX, e.clientY) : undefined}
@@ -979,7 +1026,7 @@ export const SudokuView = () => {
                 )} 
               </DataTable>
             </div>
-          </div>
+          </div> 
         </div>
 
         <DragOverlay 
@@ -1017,6 +1064,148 @@ export const SudokuView = () => {
           ) : null}
         </DragOverlay>
       </DndContext>
+
+      <AppCardsPlantaoNoturno dataAtual={dataAtiva} atualiza={plantaoNoturno} />
+
+      <DialogoLancamento 
+          forcarPlantao={!ativaPlantao && !existeEscalaDia ? null : ativaPlantao}
+          date={dataAtiva} 
+          saveEscala={(plantao, medicoId, estabelecimentoId, 
+                  intervaloPreDeinido, intervaloManual) => {
+            setExibeDialogo(false);
+            setAtivaPlantao(plantao);
+            if ((intervaloPreDeinido && intervaloPreDeinido.horas.length > 0) || 
+                (intervaloManual && intervaloManual.length > 0 && 
+                  intervaloManual[0].start != null && intervaloManual[0].end != null))  {
+              setEscalas(prev => {
+                let tempEscalas = prev.map(e => ({
+                  ...e,
+                  itens: e.itens ? [...e.itens] : []
+                }));
+
+                const horasInserir: Array<number> = [];                
+                if (intervaloPreDeinido && intervaloPreDeinido.horas.length > 0) {
+                  tempEscalas = tempEscalas.map(e => {
+                    if (e.medicoId === medicoId) {
+                      intervaloPreDeinido.horas.forEach((hora: string) => {
+                        const horaChecar = parseInt(hora.substring(0, 2), 10);
+
+                        const loopHoras: Array<number> = [];
+
+                        if (horaChecar == 7) {
+                          loopHoras.push(7, 8, 9, 10, 11, 12)
+                        } else if (horaChecar == 13) {
+                          loopHoras.push(13, 14, 15, 16, 17, 18)
+                        } else {
+                          loopHoras.push(1, 2, 3, 4, 5, 6, 19, 20, 21, 22, 23, 24)
+                        }
+                    
+                        loopHoras.forEach(h => {
+                          const teste = e.itens?.find(item => {
+                            const horaItem = parseInt(item.hora.substring(0, 2), 10)
+                            if (horaItem === h){
+                              item.estabelecimentoId = estabelecimentoId;
+                            }
+                            return horaItem === h;
+                          })
+                          if (!teste) {
+                            horasInserir.push(h);
+                          }
+                        })
+
+                      });
+                      horasInserir.forEach(hora => {
+                        let incHora = hora;
+                        if (hora > 23) {
+                          incHora = incHora - 24;
+                        }
+                        const horaFormatada = `${incHora.toString().padStart(2, '0')}:00:00`;
+                        const novoItem: EscalaItem = {
+                          id: undefined,
+                          estabelecimentoId: estabelecimentoId,
+                          hora: horaFormatada,
+                          cor: undefined,
+                          icone: undefined,
+                          arquivado: null,
+                          reagendado: false,
+                          plantao: hora > 6 && hora < 19 ? plantao : true
+                        };
+                        e.itens?.push(novoItem);
+                      })
+                      return {
+                        ...e
+                      };
+                    }
+                    return e;
+                  });
+                }
+                if (intervaloManual && intervaloManual.length > 0 &&
+                    intervaloManual[0].start != null && intervaloManual[0].end != null) {
+
+                  tempEscalas = tempEscalas.map(e => {
+                    if (e.medicoId === medicoId) {
+                      intervaloManual.forEach((item: any) => {
+                        const horaInicio = item.start.getHours();
+                        const horaFim = item.end.getHours();  
+
+                        const loopHoras: Array<number> = [];
+
+                        if ((horaFim - horaInicio) == 1){
+                          loopHoras.push(horaInicio);
+                        } else {
+                          for (let i = horaInicio; i < horaFim; i++) {
+                            loopHoras.push(i);
+                          }
+                        }
+
+                        loopHoras.forEach(h => {
+                          const teste = e.itens?.find(item => {
+                            const horaItem = parseInt(item.hora.substring(0, 2), 10)
+                            if (horaItem === h){
+                              item.estabelecimentoId = estabelecimentoId;
+                            }
+                            return horaItem === h;
+                          })
+                          if (!teste) {
+                            horasInserir.push(h);
+                          }
+                        })
+
+                      });
+                      horasInserir.forEach(hora => {
+                        let incHora = hora;
+                        if (hora > 23) {
+                          incHora = incHora - 24;
+                        }
+                        const horaFormatada = `${incHora.toString().padStart(2, '0')}:00:00`;
+                        const novoItem: EscalaItem = {
+                          id: undefined,
+                          estabelecimentoId: estabelecimentoId,
+                          hora: horaFormatada,
+                          cor: undefined,
+                          icone: undefined,
+                          arquivado: null,
+                          reagendado: false,
+                          plantao: hora > 6 && hora < 19 ? plantao : true
+                        };
+                        e.itens?.push(novoItem);
+                      })
+                      return {
+                        ...e
+                      };
+                    }
+                    return e;
+                  });
+
+                }
+                setHasChangesToSave(true);
+                return tempEscalas;
+              });
+            }
+          }} 
+          escalas={escalas} 
+          exibeDialogo={exibirDialogo}
+          closeDialog={() => setExibeDialogo(false)} />
     </div>
   );
 };

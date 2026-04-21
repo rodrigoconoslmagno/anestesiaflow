@@ -41,6 +41,24 @@ public class SudokuController {
 		return ResponseEntity.ok().build();
 	}
 	
+	@PreAuthorize("@auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).SUDOKU_ACESSAR)")
+	@PostMapping("/listardianoturno")
+	public ResponseEntity<List<EscalaResponseDTO>> listardianoturno(@RequestBody(required = false) Map<String, LocalDate> filtros) {
+		if (filtros != null && filtros.get("data") != null) {
+			return ResponseEntity.ok(sudokuService.listarPorDataNorutno(filtros.get("data")));
+		}
+		return ResponseEntity.ok().build();
+	}
+	
+	@PreAuthorize("@auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).SUDOKU_ACESSAR)")
+	@PostMapping("/templantaodiasemana")
+	public ResponseEntity<Boolean> temPlantaoDiaSemana(@RequestBody(required = false) Map<String, LocalDate> filtros) {
+		if (filtros != null && filtros.get("data") != null) {
+			return ResponseEntity.ok(sudokuService.temPlantaoDiaSemana(filtros.get("data")));
+		}
+		return ResponseEntity.ok().build();
+	}
+	
 	@PreAuthorize("@auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).SUDOKU_ALTERAR)")
 	@PostMapping
     public ResponseEntity<List<EscalaResponseDTO>> criar(@Validated @RequestBody List<EscalaResponseDTO> dto) {

@@ -27,9 +27,23 @@ public interface EscalaRepository extends JpaRepository<Escala, Integer> {
 		    WHERE e.data = :data
 		      AND (e.plantao = :plantao OR :plantao is null) 
 			  AND i.hora >= CAST('07:00:00' AS LocalTime)
-			  AND i.hora <= CAST('19:00:00' AS LocalTime)
+			  AND i.hora <= CAST('18:00:00' AS LocalTime)
 		    """)
 	List<Escala> findByData(LocalDate data, Boolean plantao);
+	
+	@Query("""
+		    SELECT DISTINCT e FROM Escala e 
+		    LEFT JOIN FETCH e.itens i 
+		    LEFT JOIN FETCH i.estabelecimento 
+		    JOIN FETCH e.medico 
+		    WHERE e.data = :data
+		      AND e.plantao = true 
+			  AND (i.hora >= CAST('19:00:00' AS LocalTime)
+			  		OR
+			  	   i.hora <= CAST('07:00:00' AS LocalTime)
+			  	  )
+		    """)
+	List<Escala> findByDataNoturno(LocalDate data);
 	
 	@EntityGraph(attributePaths = {"itens.estabelecimento", "medico"})
 	List<Escala> findByDataAndPlantaoOrderByMedicoDataAssociacaoAscItensHoraAsc(LocalDate data, boolean plantao);
@@ -87,6 +101,14 @@ public interface EscalaRepository extends JpaRepository<Escala, Integer> {
 		       "AND (:medicoId IS NULL OR e.medico.id = :medicoId)")
 	boolean existsByDataAndOptionalMedico(LocalDate data, Integer medicoId);
 	
+	@Query("SELECT COUNT(e) > 0 FROM Escala e " +
+			   "JOIN e.itens i 	" +
+		       "WHERE e.data = :data " +
+		       " AND e.plantao = true " +
+		       " AND i.hora >= CAST('07:00:00' AS LocalTime) " +
+		       " AND i.hora <= CAST('18:00:00' AS LocalTime)")
+	boolean existsPlantaoDiaSemana(LocalDate data);
+
 	@Query("SELECT DISTINCT e.data FROM Escala e " +
 			"JOIN e.itens i " +
 		    "WHERE i.reagendado is false " +

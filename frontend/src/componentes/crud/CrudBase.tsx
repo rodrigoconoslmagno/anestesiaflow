@@ -25,6 +25,7 @@ interface CrudBaseProps<T extends BaseEntity> {
   defaultValues: DefaultValues<T>;
   columns: { field: string; header: string; body?: (item: any) => React.ReactNode }[];
   filterContent?: React.ReactNode;
+  extraActions?: React.ReactNode;
   filterParams?: any;
   onApplyFilters?: () => void;
   onClearFilters?: () => void;
@@ -35,7 +36,7 @@ interface CrudBaseProps<T extends BaseEntity> {
 }
 
 export const CrudBase = <T extends { id?: any }>({
-  title, recurso, resourcePath, schema, defaultValues, columns, filterContent, 
+  title, recurso, resourcePath, schema, defaultValues, columns, filterContent, extraActions,
   filterParams, onApplyFilters, onClearFilters, onAdd, onEdit ,children, initialValues
 }: CrudBaseProps<T>) => {
   const { setFormData, getFormData, clearFormData } = useCrudStore();
@@ -289,6 +290,7 @@ export const CrudBase = <T extends { id?: any }>({
                   onAdd={handleAdd} 
                   resurso={recurso}
                   filterContent={filterContent}
+                  extraActions={extraActions}
                   onApplyFilters={handleApply} 
                   onClearFilters={onClearFilters}
                   onClose={() => {
@@ -382,6 +384,12 @@ export const CrudBase = <T extends { id?: any }>({
                   </button>
                 )}
                 
+                {extraActions && (
+                  <div className="flex items-center">
+                    {extraActions}
+                  </div>
+                )}
+
                 {/* Botão Novo (Principal - Azul) */}
                 <button 
                   onClick={handleAdd}
@@ -429,7 +437,7 @@ export const CrudBase = <T extends { id?: any }>({
               </div>
 
               <div className="flex-grow overflow-y-auto p-4 md:p-2 bg-white custom-scrollbar">
-                <div className="max-w-1xl mx-auto pb-10 grid grid-cols-12 gap-4">
+                <div className="max-w-1xl mx-auto pb-10 pt-4 grid grid-cols-12 gap-4">
                   <FormProvider {...methods}>
                     {children(Object.assign(control, { setValue, watch }), errors)}
                   </FormProvider>

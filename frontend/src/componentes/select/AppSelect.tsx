@@ -5,6 +5,7 @@ import { type ColSpan, getColSpanClass } from '@/utils/GridUtils';
 import { FloatLabel } from 'primereact/floatlabel';
 import { useEffect, useState } from 'react';
 import { server } from '@/api/server';
+import { useRenderMode } from '@/context/FormRenderContext';
 
 export interface AppSelectProps extends Omit<DropdownProps, 'onChange'> {
   name: string;
@@ -40,6 +41,10 @@ export const AppSelect = ({
     const [data, setData] = useState<any[]>(props.options || []);
     const [loading, setLoading] = useState(false);
     const [innerValue, setInnerValue] = useState(props.value);
+
+    const { mode } = useRenderMode();
+
+    const isCell = mode === 'cell';
 
     useEffect(() => {
       if (url && (!props.options || props.options.length === 0)) {
@@ -124,14 +129,17 @@ export const AppSelect = ({
                 }
               }}
             />
-            <label 
-              className="text-gray-500 transition-all duration-200 text-lg"
-              htmlFor={name}
-              style={{ left: '1rem' }}
-            >
-              {label}
-              {required && <span className="text-red-500 ml-1">*</span>}
-            </label>
+
+            {isCell && (
+              <label 
+                className="text-gray-500 transition-all duration-200 text-lg"
+                htmlFor={name}
+                style={{ left: '1rem' }}
+              >
+                {label}
+                {required && <span className="text-red-500 ml-1">*</span>}
+              </label>
+            )}
           </FloatLabel>
 
           <style>{`

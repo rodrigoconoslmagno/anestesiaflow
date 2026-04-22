@@ -299,7 +299,7 @@ public class EscalaService {
 		        boolean estaArquivado = itemBanco.getArquivado() != null;
 
 		        if (!itemPermaneceNoGrid) {
-		        	if (itemBanco.getHora().getHour() > 5 || itemBanco.getHora().getHour() < 19) {
+		        	if (itemBanco.getHora().getHour() > 6 || itemBanco.getHora().getHour() < 19) {
 		        		if (estaArquivado) {
 		        			itemBanco.setReagendado(true);
 		        		} else {
@@ -331,6 +331,10 @@ public class EscalaService {
 		            }
 		        }
 		    }
+		}
+		
+		if (itensNoFront.size() == 0) {
+			return;
 		}
 		
 		escalaRepository.save(escala);

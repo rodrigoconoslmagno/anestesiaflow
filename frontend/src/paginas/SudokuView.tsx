@@ -211,12 +211,12 @@ export const SudokuView = () => {
           setAtivaPlantao(plantao)
         }
 
-        if (clinicas.length == 0 || clinicasPlantoes != ativaPlantao ) {
-          const resClinicas: Estabelecimento[] = await server.api_public.listar("/api/public/estabelecimento/estabelecimentos",
-          plantao ? { ativo: true, plantao: plantao } : { ativo: true });
-          
-          setClinicas(resClinicas || []);
-          setClinicasPlantoes(ativaPlantao);
+        if (clinicas.length == 0 || clinicasPlantoes != plantao ) {
+            const resClinicas: Estabelecimento[] = await server.api_public.listar("/api/public/estabelecimento/estabelecimentos",
+            plantao ? { ativo: true, plantao: plantao } : { ativo: true });
+            
+            setClinicas(resClinicas || []);
+            setClinicasPlantoes(ativaPlantao);
         }
       } catch (error: any) {
         if (error.status = 403) {
@@ -1065,7 +1065,11 @@ export const SudokuView = () => {
         </DragOverlay>
       </DndContext>
 
-      <AppCardsPlantaoNoturno dataAtual={dataAtiva} atualiza={plantaoNoturno} />
+      <AppCardsPlantaoNoturno 
+        dataAtual={dataAtiva} 
+        atualiza={plantaoNoturno} 
+        canALTERAR={canALTERAR}
+      />
 
       <DialogoLancamento 
           forcarPlantao={!ativaPlantao && !existeEscalaDia ? null : ativaPlantao}

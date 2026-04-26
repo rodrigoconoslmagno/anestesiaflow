@@ -234,7 +234,7 @@ export const CrudBase = <T extends { id?: any }>({
       }
       setFormVisible(true);
     } catch (err: any) {
-      const errorMessage = err.response?.data?.mensagem || "Ocorreu um erro inesperado ao excluir.";
+      const errorMessage = err.response?.data?.message || "Ocorreu um erro inesperado ao excluir.";
       const errorCodigo = err.response?.data?.codigo;
 
       showError(errorCodigo === 'ACESSO_NEGADO' ? 'Acesso Negado' : 'Erro', errorMessage);

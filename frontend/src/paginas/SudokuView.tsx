@@ -155,7 +155,7 @@ export const SudokuView = () => {
   const [ ativaPlantao, setAtivaPlantao ] = useState(false);
   const [ exibirDialogo, setExibeDialogo] = useState(false);
   const [ plantaoNoturno, setPlantaoNoturno] = useState<boolean>(false);
-  const [ clinicasPlantoes, setClinicasPlantoes ] = useState<boolean>(false);
+  const [ clinicasPlantoes, setClinicasPlantoes ] = useState<boolean>();
 
   const hasPerm = useAuthStore(state => state.hasPermission);
 
@@ -209,14 +209,14 @@ export const SudokuView = () => {
         if (!(dataAtiva.getDay() === 0 || dataAtiva.getDay() === 6)) {
           plantao = await await server.api.postCustomizada<boolean>('/sudoku', '/templantaodiasemana', { data: dataFormatada });
           setAtivaPlantao(plantao)
-        }
+        } 
 
         if (clinicas.length == 0 || clinicasPlantoes != plantao ) {
             const resClinicas: Estabelecimento[] = await server.api_public.listar("/api/public/estabelecimento/estabelecimentos",
             plantao ? { ativo: true, plantao: plantao } : { ativo: true });
             
             setClinicas(resClinicas || []);
-            setClinicasPlantoes(ativaPlantao);
+            setClinicasPlantoes(plantao);
         }
       } catch (error: any) {
         if (error.status = 403) {

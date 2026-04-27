@@ -50,6 +50,7 @@ export const AppCameraInput = ({
     }
 
     try {
+      limparSelecao();
       const media = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: "user",
@@ -142,13 +143,19 @@ export const AppCameraInput = ({
   };
 
   const limparSelecao = () => {
-    if (preview) URL.revokeObjectURL(preview);
+    if (preview) {
+      URL.revokeObjectURL(preview);
+    }
 
     setPreview(null);
     onPhotoTaken(null);
 
-    if (fileInputRef.current) fileInputRef.current.value = "";
-    if (cameraInputRef.current) cameraInputRef.current.value = "";
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = "";
+    }
   };
 
   const compressImage = (file: File): Promise<File> => {
@@ -286,10 +293,10 @@ export const AppCameraInput = ({
 
         {cameraOpen ? (
           <Button
-            label="Cancelar câmera"
+            label="Cancelar"
             icon="pi pi-times"
             onClick={stopCamera}
-            className="p-button-outlined p-button-text shadow-md border-none p-2"
+            className="p-button-outlined bg-red-500 border-none shadow-md h-11 px-6 justify-center text-white"
           />
         ) : (
           <Button 

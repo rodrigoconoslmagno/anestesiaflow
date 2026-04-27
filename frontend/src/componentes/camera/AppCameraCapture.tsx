@@ -280,23 +280,24 @@ export const AppCameraInput = ({
             label="Capturar"
             icon="pi pi-check"
             onClick={capturePhoto}
-            className="bg-green-600 border-none text-white"
+            className="p-button-outlined bg-green-600 border-none shadow-md h-11 px-6 justify-center text-white"
           />
         )}
-        <Button 
-          label="Arquivo" 
-          icon="pi pi-upload" 
-          onClick={() => fileInputRef.current?.click()} 
-          className="p-button-outlined bg-blue-600 border-none shadow-md h-11 px-6 justify-center text-white "
-        />
 
-        {cameraOpen && (
+        {cameraOpen ? (
           <Button
             label="Cancelar câmera"
             icon="pi pi-times"
             onClick={stopCamera}
             className="p-button-danger"
           />
+        ) : (
+          <Button 
+            label="Arquivo" 
+            icon="pi pi-upload" 
+            onClick={() => fileInputRef.current?.click()} 
+            className="p-button-outlined p-button-text shadow-md border-none p-2"
+          />    
         )}
       </div>
 

@@ -31,7 +31,7 @@ export const AppFileUpload = ({
         setIsUploading(true);
 
         try {
-            const result = await server.api.upload(url, file);
+            const result = await server.api.upload(url, undefined, file    );
             
             showSuccess('Sucesso', `Planilha "${file.name}" processada com êxito!`);
 

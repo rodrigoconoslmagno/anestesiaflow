@@ -281,6 +281,7 @@ export const PacienteView = () => {
                         <AppCameraInput 
                             onPhotoTaken={(file) => setSelectedFile(file)}
                             loading={loadingIA}
+                            closeOnCapture={cameraVisible}
                         />
                     </div>
                 </div>

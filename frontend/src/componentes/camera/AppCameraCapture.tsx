@@ -5,11 +5,13 @@ import { Image as PrimeImage } from 'primereact/image';
 interface AppCameraInputProps {
   onPhotoTaken: (file: File | null) => void;
   loading?: boolean;
+  closeOnCapture?: boolean;
 }
 
 export const AppCameraInput = ({ 
   onPhotoTaken,
   loading = false, 
+  closeOnCapture = true
 }: AppCameraInputProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -27,7 +29,7 @@ export const AppCameraInput = ({
         URL.revokeObjectURL(preview);
       }
     };
-  }, []);
+  }, [closeOnCapture]);
 
   const isMobile = () => {
     return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(

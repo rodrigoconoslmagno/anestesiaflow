@@ -11,16 +11,16 @@ import com.google.cloud.vision.v1.ImageAnnotatorSettings;
 @Configuration
 public class VisionConfig {
 
-    @Value("${app.vision.credentials-path}")
+    @Value("${app.vision.credentials-path:#{null}}")
     private String credentialsPath;
 
     @Bean
     public ImageAnnotatorSettings imageAnnotatorSettings() throws Exception {
-
+    	System.out.println("Validanco classpath = " + credentialsPath);
         try(InputStream credentialsStream =
                 getClass().getClassLoader()
                         .getResourceAsStream(credentialsPath.replace("classpath:", ""))){
-
+        	
 	        GoogleCredentials credentials = GoogleCredentials.fromStream(credentialsStream);
 	
 	        return ImageAnnotatorSettings.newBuilder()

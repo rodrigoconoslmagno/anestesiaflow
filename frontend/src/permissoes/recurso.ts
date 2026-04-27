@@ -3,6 +3,7 @@ export enum Recurso {
     USUARIO = 'USUARIO',
     MEDICO = 'MEDICO',
     ESTABELECIMENTO = 'ESTABELECIMENTO',
+    PACIENTE = 'PACIENTE',
     ESCALA = 'ESCALA',
     SUDOKU = 'SUDOKU',
     SIMETRIA = 'SIMETRIA',

@@ -23,6 +23,11 @@ public enum Permissoes {
 	ESTABELECIMENTO_ALTERAR("Cadastro", "Alterar", "ALTERAR", "pi pi-pencil", false, null),
 	ESTABELECIMENTO_EXCLUIR("Cadastro", "Excluir", "EXCLUIR", "pi pi-trash", false, null),
 	
+	PACIENTE_ACESSAR("Cadastro", "Paciente", "ACESSAR", "pi pi-users", true, "/paciente"),
+	PACIENTE_NOVO("Cadastro", "Novo", "NOVO", "pi pi-plus", false, null),
+	PACIENTE_ALTERAR("Cadastro", "Alterar", "ALTERAR", "pi pi-pencil", false, null),
+	PACIENTE_EXCLUIR("Cadastro", "Excluir", "EXCLUIR", "pi pi-trash", false, null),
+	
 	ESCALA_ACESSAR("Escala", "Escala", "ACESSAR", "pi pi-calendar", true, "/escala"),
 	ESCALA_NOVO("Escala", "Novo", "NOVO", "pi pi-plus", false, null),
 	ESCALA_ALTERAR("Escala", "Alterar", "ALTERAR", "pi pi-pencil", false, null),

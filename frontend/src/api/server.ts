@@ -27,9 +27,14 @@ export const server = {
     postCustomizada: <T>(url: string, method: string, data: any = {}) => 
       httpClient.post<T>(`${url}${method}`, data).then(res => res.data),
 
-    upload: async (url: string, file: File, key: string = 'file') => {
+    upload: async (url: string, paramns: [{key: string, value: string | Blob }], file: File, key: string = 'file') => {
       const formData = new FormData();
       formData.append(key, file);
+      if (paramns) {
+        paramns.forEach(item => {
+          formData.append(item.key, item.value);
+        })
+      }
 
       const response = await httpClient.post(url, formData, {
             headers: {

@@ -14,6 +14,7 @@ import { SimetriaView } from '@/paginas/SimetriaView';
 import { PlantaoView } from '@/paginas/PlantaoView';
 import { ConfigView } from '@/paginas/ConfigView';
 import { PlantaoResumoView } from '@/paginas/PlantaoResumoView';
+import { PacienteView } from '@/paginas/PacienteView';
 // import { TelaPlanilhaMedica } from '@/paginas/TelaPlanilhaMedica';
 
 export const AppRoutes = () => {
@@ -39,6 +40,7 @@ export const AppRoutes = () => {
             <Route path="/sudokuresumoview" element={<SudokuResumoView />} />
             <Route path="/simetriaview" element={<SimetriaView />} />
             <Route path="/plantaoview" element={<PlantaoView />} />
+            <Route path="/paciente" element={<PacienteView />} />
             <Route path='/plantaoresumoview' element={<PlantaoResumoView />} />
             <Route path="/configview" element={<ConfigView />} />
             {/* <Route path="/planilha" element={<TelaPlanilhaMedica />} /> */}

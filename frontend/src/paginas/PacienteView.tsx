@@ -6,7 +6,6 @@ import { AppInputText } from '@/componentes/inputtext/AppInputText';
 import { AppSelect } from '@/componentes/select/AppSelect';
 import { AppSelectForm } from '@/componentes/select/AppSelectForm';
 import { AppSwitchForm } from '@/componentes/switch/AppSwitchForm';
-import { CellEditor } from '@/componentes/table/CellEditor';
 import { Recurso } from '@/permissoes/recurso';
 import type { Medico } from '@/types/medico';
 import { pacienteSchema, type Paciente } from '@/types/paciente';
@@ -16,14 +15,67 @@ import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
 import { useState } from 'react';
-import { useFieldArray } from 'react-hook-form';
+import { useFieldArray, useWatch } from 'react-hook-form';
 import { useAppToast } from '@/context/ToastContext';
+import type { Estabelecimento } from '@/types/estabelecimento';
 
-const ProcedimentosTable = ({ control }: { control: any }) => {
+const ProcedimentosTable = ({ control, activeIndex, onSelectRow }: { control: any, activeIndex: number, onSelectRow: (index: number) => void }) => {
     const { fields, append, remove } = useFieldArray({
         control,
-        name: "procedimentos"
+        name: "procedimentos",
+        keyName: "rowId"
     });
+
+    const [isEditing, setIsEditing] = useState(false);
+    const [isNewRecord, setIsNewRecord] = useState(false);
+    const [ estabelecimento, setEstabelecimento] = useState<Estabelecimento>();
+    const [ medico, setMedico] = useState<Medico>();
+
+    const watchProcedimentos = useWatch({
+        control,
+        name: "procedimentos",
+        defaultValue: fields
+    });
+
+    const onAdd = () => {
+        append({ medicoId: null, dataProcedimento: new Date(), cirurgiao: '', procedimento: '' });
+        onSelectRow(fields.length); // Foca na nova linha criada
+        setIsEditing(true);
+        setIsNewRecord(true);
+    };
+
+    const onSave = () => {
+        setIsEditing(false);
+        setIsNewRecord(false);
+        onSelectRow(-1);
+    };
+
+    const onEditRow = (index: number) => {
+        onSelectRow(index);
+        setIsEditing(true);
+        setIsNewRecord(false);
+    };
+
+    const onCancel = () => {
+        if (isNewRecord) {
+            remove(activeIndex); // Se era novo e cancelou, remove a linha
+        }
+        setIsEditing(false);
+        setIsNewRecord(false);
+        onSelectRow(-1);
+    };
+
+    const handleDelete = (index: number) => {
+        remove(index);
+        
+        // Ajusta o índice ativo após a remoção para não apontar para o vazio
+        if (fields.length <= 0) {
+            onSelectRow(-1);
+        } else if (activeIndex >= index) {
+            // Se deletou o item atual ou um anterior, volta um índice
+            onSelectRow(Math.max(0, activeIndex - 1));
+        }   
+    };
 
     const medicoTemplate = (option: Medico) => {
         if (!option) {
@@ -32,83 +84,183 @@ const ProcedimentosTable = ({ control }: { control: any }) => {
         return option.sigla ? `${option.nome} - ${option.sigla}` : option.nome;
     };
 
+    const getNomeEstabelecimento = (estabelecimento: Estabelecimento): string => {
+        let nomeExibir = estabelecimento.nome;
+        if (nomeExibir.length > 28) {
+            nomeExibir = nomeExibir.substring(0, 28);
+        }
+
+        return estabelecimento.sigla ? `${nomeExibir} - ${estabelecimento.sigla}` : nomeExibir;
+    };
+
+    const estabelecimentoTemplate = (option: Estabelecimento) => {
+        if (!option) {
+            return "Selecione uma clinica/hospital";
+        }
+  
+        return (
+          <div
+            className={`flex items-center justify-between transition-all min-h-[28px] min-w-[28px]
+              'cursor-pointer hover:bg-blue-50/50 gap-1`}
+          >
+            <div
+                className={`w-[28px] h-[28px] rounded-full border border-white shadow-inne flex items-center justify-center animate-fadein overflow-hidden`}
+                style={{ backgroundColor: option.cor?.startsWith('#') ? option.cor : `#${option.cor}` }}
+            >
+                {option.icone ? (
+                    <img 
+                          src={((option.icone as any) as string).startsWith('data:') 
+                          ? (option.icone as string) 
+                          : `data:image/png;base64,${option.icone}`}
+                        className="object-contain"
+                        alt={option.nome}
+                    />
+                ) : <i className=" text-white text-[11px]" />}
+            </div>
+            {getNomeEstabelecimento(option)}
+        </div>
+        )
+    };    
+
     return (
         <div className="flex flex-col gap-1.5 mb-2 w-full col-span-12">
-            <div className="flex justify-between align-items-center mb-3">
-                <span className="text-xl font-bold">Procedimentos</span>
-                <Button 
-                    type="button" 
-                    icon="pi pi-plus" 
-                    label="Adicionar" 
-                    className='bg-blue-600 text-white border-none shadow-md h-8 px-6 justify-betwenn items-center'
-                    onClick={() => append({ medicoId: null, dataProcedimento: new Date() })} 
-                />
+            <div className="flex justify-between items-center gap-2 border-b pb-2">
+                <span className="text-l sm:text-xl w-full font-bold text-gray-700">Procedimentos do Paciente</span>
+                <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+                    {!isEditing ? (
+                        <Button 
+                            type="button" 
+                            icon="pi pi-plus" 
+                            label="Adicionar" 
+                            className='bg-blue-600 text-white border-none shadow-md h-8 px-4 justify-betwenn items-center'
+                            onClick={onAdd} 
+                        />
+                    ) : (
+                        <>
+                            <Button 
+                                type="button" 
+                                icon="pi pi-times" 
+                                label="Cancelar" 
+                                className='bg-red-600 text-white border-none shadow-md h-8 px-4 justify-betwenn items-center'
+                                onClick={onCancel} 
+                            />
+                            <Button 
+                                type="button" 
+                                icon="pi pi-check" 
+                                label="Salvar" 
+                                className='bg-green-600 text-white border-none shadow-md h-8 px-4 justify-betwenn items-center'
+                                onClick={onSave} 
+                            />
+                        </>
+                    )}
+                </div>
             </div>
+              
+            {isEditing && activeIndex !== -1 && fields[activeIndex] && (
+                <div className="grid grid-cols-12 gap-4 p-4 bg-gray-50 border-round mt-4 border-1 border-200 shadow-inner">
+                    <div className="col-span-12 font-bold text-blue-700 flex items-center gap-2 mb-2">
+                        <i className="pi pi-pencil"></i>
+                        Informações do Procedimento
+                    </div>
+                    <AppSelectForm 
+                        label='Anestesista'
+                        name={`procedimentos.${activeIndex}.medicoId`}
+                        control={control} 
+                        url="/medico" 
+                        filterParams={{ ativo: true }}
+                        optionLabel="nome"
+                        optionValue="id"
+                        colSpan={6}
+                        valueTemplate={medicoTemplate}
+                        itemTemplate={medicoTemplate}
+                        onObjectChange={(medico) => setMedico(medico)}
+                    />
+
+                    <AppSelectForm
+                        control={control} 
+                        name={`procedimentos.${activeIndex}.estabelecimentoId`}
+                        label='Clinica/Hospital'
+                        url="/estabelecimento"
+                        filterParams={ {ativo: true} }
+                        optionLabel="nome"
+                        optionValue="id"
+                        colSpan={6}
+                        itemTemplate={estabelecimentoTemplate}
+                        valueTemplate={estabelecimentoTemplate}
+                        onObjectChange={(estabelecimento) => setEstabelecimento(estabelecimento)}
+                    />
+
+                    <AppInputText
+                        name={`procedimentos.${activeIndex}.cirurgiao`}
+                        label="Cirurgião" 
+                        control={control} 
+                        maxLength={60}
+                        colSpan={5}
+                    />
+
+                    <AppInputText
+                        name={`procedimentos.${activeIndex}.procedimento`} 
+                        label="Procedimento" 
+                        control={control} 
+                        maxLength={60}
+                        colSpan={5}
+                    />
+
+                    <AppCalendar
+                        name={`procedimentos.${activeIndex}.dataProcedimento`}
+                        label='Data'
+                        control={control}
+                        colSpan={2}
+                    />
+                </div>
+            )}
+
             <DataTable 
-                value={fields} 
-                editMode="row"
-                className="w-full shadow-sm border-round border-1 border-200 p-datatable-sm [&_.p-datatable-tbody>tr>td]:!p-0"
-                responsiveLayout="scroll"
+                dataKey="rowId" 
+                value={watchProcedimentos} 
+                selectionMode="single"
+                selection={fields[activeIndex]}
+                onRowClick={(e) => onEditRow(e.index)}
+                showGridlines
+                className="w-full shadow-sm border-1 border-gray-300 mt-2 overflow-hidden"
                 emptyMessage="Nenhum procedimento registrado."
-                rowClassName={() => 'm-0 p-0'}
-                scrollable
-                scrollHeight="400px"
+                breakpoint="960px"
+                rowClassName={(options: any) => options.rowIndex === activeIndex ? 'bg-blue-50' : ''}
             >
-                <Column header="Médico" body={(_, { rowIndex }) => (
-                    <CellEditor>
-                        <AppSelectForm 
-                            label=''
-                            name={`procedimentos.${rowIndex}.medicoId`} 
-                            control={control} 
-                            url="/medico" 
-                            filterParams={{ ativo: true }}
-                            optionLabel="nome"
-                            optionValue="id"
-                            valueTemplate={medicoTemplate}
-                            itemTemplate={medicoTemplate}
-                        />
-                    </CellEditor>
-                )} />
+                <Column header="Anestesista" 
+                        body={(rowData) => rowData.medicoId ? `Médico selecionado` : 'Não definido'} 
+                        headerClassName="bg-gray-200 text-gray-700 border-1 border-200"
+                        className="border-1 border-gray-300"/>
+                <Column header="Clinica/Hospital" 
+                        body={(rowData) => rowData.estabelecimentoId ? `Clinica/hospital selecionado` : 'Não definido'} 
+                        headerClassName="bg-gray-200 text-gray-700 border-1 border-200"
+                        className="border-1 border-gray-300"/>
                 <Column header="Cirurgião" 
-                    style={{ width: '19rem', minWidth: '19rem' }}
-                    body={(_, { rowIndex }) => (
-                    <CellEditor>
-                        <AppInputText
-                            name={`procedimentos.${rowIndex}.cirurgiao`} 
-                            label="" 
-                            control={control} 
-                            maxLength={60}
-                        />
-                    </CellEditor>
-                )} />
+                        field="cirurgiao" 
+                        headerClassName="bg-gray-200 text-gray-700 border-1 border-200"
+                        className="border-1 border-gray-300"/>
                 <Column header="Procedimento" 
-                    style={{ width: '19rem', minWidth: '19rem' }}
-                    body={(_, { rowIndex }) => (
-                    <CellEditor>
-                        <AppInputText
-                            name={`procedimentos.${rowIndex}.procedimento`} 
-                            label="" 
-                            control={control} 
-                            maxLength={60}
-                        />
-                    </CellEditor>
-                )} />
+                        field="procedimento" 
+                        headerClassName="bg-gray-200 text-gray-700 border-1 border-200"
+                        className="border-1 border-gray-300"/>
                 <Column header="Data" 
-                    style={{ width: '10.5rem', minWidth: '10.5rem' }}
+                        headerClassName="bg-gray-200 text-gray-700 border-1 border-200"
+                        body={(rowData) => DateUtils.formatarParaBR(rowData.dataProcedimento)} 
+                        className="border-1 border-gray-300" />
+                <Column 
+                    header="Excluir"
+                    headerClassName="bg-gray-200 text-gray-700 border-1 border-200"
+                    className="border-1 border-gray-300"
                     body={(_, { rowIndex }) => (
-                    <CellEditor>
-                        <AppCalendar
-                            name={`procedimentos.${rowIndex}.dataProcedimento`} 
-                            label=''
-                            control={control}
+                        <Button 
+                            type="button"
+                            icon="pi pi-trash" 
+                            className="p-button-danger p-button-text text-red-600" 
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(rowIndex);
+                            }}
                         />
-                    </CellEditor>
-                )} />
-                <Column body={(_, { rowIndex }) => (
-                    <Button 
-                        icon="pi pi-trash" 
-                        className="p-button-danger p-button-text text-red-600" 
-                        onClick={() => remove(rowIndex)} />
                 )} />
             </DataTable>
         </div>
@@ -122,6 +274,8 @@ export const PacienteView = () => {
     const [ selectedFile, setSelectedFile ] = useState<File | null>(null);
     const { showError } = useAppToast();
     const [ loadData, setLoadData ] = useState<(() => Promise<void>) | null>(null);
+
+    const [activeIndex, setActiveIndex] = useState<number>(-1);
 
     const handleCapture = async (file: File) => {
         try {
@@ -172,7 +326,8 @@ export const PacienteView = () => {
                 }}
                 defaultValues={{ 
                     nome: '', 
-                    ativo: true
+                    ativo: true,
+                    procedimentos: []
                 }}
                 extraActions={
                     <Button 
@@ -219,9 +374,14 @@ export const PacienteView = () => {
                             colSpan={3}
                             labelOn='Ativo'
                             labelOff='Inativo'
+                            className='!mt-0 md:!mt-3'
                         />
 
-                        <ProcedimentosTable control={control} />
+                        <ProcedimentosTable 
+                            control={control} 
+                            activeIndex={activeIndex}
+                            onSelectRow={(index) => setActiveIndex(index)}
+                        />
                     </>
                     )
                 }}

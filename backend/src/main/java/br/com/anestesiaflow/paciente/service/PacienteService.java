@@ -16,6 +16,8 @@ import com.google.cloud.vision.v1.Feature;
 import com.google.cloud.vision.v1.Image;
 import com.google.cloud.vision.v1.ImageAnnotatorClient;
 import com.google.protobuf.ByteString;
+
+import br.com.anestesiaflow.estabelecimento.model.Estabelecimento;
 import br.com.anestesiaflow.exception.BusinessException;
 import br.com.anestesiaflow.medico.model.Medico;
 import br.com.anestesiaflow.paciente.dto.PacienteImagemDTO;
@@ -110,6 +112,7 @@ public class PacienteService {
 				procedimento.getProcedimento(), 
 				procedimento.getCirurgiao(), 
 				procedimento.getMedico().getId(),
+				procedimento.getEstabelecimento().getId(),
 				procedimento.getDataCriacao(),
 				procedimento.getDataAtualizacao());
 	}
@@ -134,6 +137,7 @@ public class PacienteService {
 		procedimento.setMedico(entityManager.getReference(Medico.class, dto.medicoId()));
 		procedimento.setProcedimento(dto.procedimento());
 		procedimento.setCirurgiao(dto.cirurgiao());
+		procedimento.setEstabelecimento(entityManager.getReference(Estabelecimento.class, dto.estabelecimentoId()));
 		return procedimento;
 	}
 	

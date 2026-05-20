@@ -27,6 +27,7 @@ export const AppSwitch = ({
   errorMessage,
   value,
   onChange,
+  ...props
 }: AppSwitchProps) => {
   const isChecked = !!value;
   const statusText = isChecked ? labelOn : labelOff;
@@ -35,7 +36,7 @@ export const AppSwitch = ({
     <FieldWrapper
       label=""
       error={errorMessage}
-      className={classNames(getColSpanClass(colSpan))}
+      className={classNames(getColSpanClass(colSpan), props.className)}
     >
       <div className={classNames(
         "flex items-center justify-between sm:gap-4 p-1 border rounded-lg transition-all duration-300",

@@ -2,6 +2,8 @@ package br.com.anestesiaflow.paciente.entidade;
 
 import java.time.LocalDate;
 import com.fasterxml.jackson.annotation.JsonBackReference;
+
+import br.com.anestesiaflow.estabelecimento.model.Estabelecimento;
 import br.com.anestesiaflow.framework.persistence.BaseEntity;
 import br.com.anestesiaflow.medico.model.Medico;
 import jakarta.persistence.Column;
@@ -27,8 +29,14 @@ public class PacienteProcedimento extends BaseEntity<Integer>{
 	private String procedimento;
 	@Column
 	private String cirurgiao;
-	@Column
+	
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "medicoid")
 	private Medico medico;
+	
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "estabelecimentoid")
+	private Estabelecimento estabelecimento;
 	
 	public Paciente getPaciente() {
 		return paciente;
@@ -68,5 +76,13 @@ public class PacienteProcedimento extends BaseEntity<Integer>{
 	
 	public void setMedico(Medico medico) {
 		this.medico = medico;
+	}
+	
+	public Estabelecimento getEstabelecimento() {
+		return estabelecimento;
+	}
+	
+	public void setEstabelecimento(Estabelecimento estabelecimento) {
+		this.estabelecimento = estabelecimento;
 	}
 }

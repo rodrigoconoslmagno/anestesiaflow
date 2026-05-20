@@ -18,7 +18,7 @@ export const FieldWrapper = ({ label, error, children, className }: FieldWrapper
     <div className={classNames(
         'w-full',
         isCell ? 'flex flex-col gap-0 mb-0 h-full' :
-          'flex flex-col gap-1.5 mb-2', className)}>
+          'flex flex-col gap-1.5 mt-3', className)}>
       {!isCell && label && (
         <label className="text-sm font-bold text-gray-700 ml-1">
           {label}

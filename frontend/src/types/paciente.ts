@@ -20,6 +20,17 @@ export const pacienteProcedimentoSchema = baseEntitySchema.extend({
           }, {
               message: "Informe um médico"
           }),
+    medicoExibir: z.string().nullable().optional(),   
+    estabelecimentoId: z.any()
+          .refine((val) => {
+              const num = Number(val);
+              return !isNaN(num) && num !== null && num !== undefined && num > 0;
+          }, {
+              message: "Informe uma clinica/hospital"
+          }),
+    cor: z.string().nullable().optional(),
+    icone: z.any().optional(),     
+    estabelecimentoExibir: z.string().nullable().optional(),
 });
 
 export type PacienteProcedimento = z.infer<typeof pacienteProcedimentoSchema>;

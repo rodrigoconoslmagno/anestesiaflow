@@ -9,6 +9,7 @@ public record PacienteProcedimentoResponseDTO(
 		String procedimento,
 		String cirurgiao,
 		int medicoId,
+		int estabelecimentoId,
 		LocalDateTime dataCriacao,
 		LocalDateTime dataAtualizacao
 ) {}

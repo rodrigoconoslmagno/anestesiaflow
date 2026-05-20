@@ -130,7 +130,7 @@ export const AppSelect = ({
               }}
             />
 
-            {isCell && (
+            {!isCell && (
               <label 
                 className="text-gray-500 transition-all duration-200 text-lg"
                 htmlFor={name}

@@ -8,6 +8,7 @@ export const getColSpanClass = (span: ColSpan = 12) => {
     'md:col-span-2': span === 2,
     'md:col-span-3': span === 3,
     'md:col-span-4': span === 4,
+    'md:col-span-5': span === 5,
     'md:col-span-6': span === 6,
     'md:col-span-8': span === 8,
     'md:col-span-9': span === 9,

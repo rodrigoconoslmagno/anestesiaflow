@@ -1,6 +1,5 @@
 import { server } from "@/api/server";
 import type { Escala, EscalaItem } from "@/types/escala";
-import type { Estabelecimento } from "@/types/estabelecimento";
 import type { Medico } from "@/types/medico";
 import { DateUtils } from "@/utils/DateUtils";
 import clsx from "clsx";
@@ -13,11 +12,6 @@ import { processarHoras } from "@/utils/PlantoesUtils";
 
 interface EscalaPlantao extends Escala {
     medico: Medico | undefined;
-    itensPlantao: EscalaItemPlantao[];
-  }
-  
-  interface EscalaItemPlantao extends EscalaItem {
-      estabelecimento: Estabelecimento | undefined;
   }
 
 addLocale('pt-BR', {
@@ -81,7 +75,7 @@ addLocale('pt-BR', {
             medico: Medico; 
             cards: { 
                 horarioFormatado: string; 
-                item: EscalaItemPlantao;
+                item: EscalaItem;
                 horaInicio: number; // Para ordenação
             }[] 
         }> = {};
@@ -91,7 +85,7 @@ addLocale('pt-BR', {
             const medId = escala.medicoId;
 
             // Extraímos as horas brutas para a Utils
-            const horas = escala.itensPlantao.map(item => 
+            const horas = escala.itens!.map(item => 
                 parseInt(item.hora.substring(0, 2), 10)
             );
 
@@ -110,7 +104,7 @@ addLocale('pt-BR', {
                 const horaInicio = parseInt(grupo.split('-')[0], 10);
                 
                 // Tenta achar o estabelecimento vinculado a essa hora de início para pegar o ícone/cor
-                const itemOriginal = escala.itensPlantao.find(i => 
+                const itemOriginal = escala.itens!.find(i => 
                     parseInt(i.hora.substring(0, 2), 10) === horaInicio
                 );
 

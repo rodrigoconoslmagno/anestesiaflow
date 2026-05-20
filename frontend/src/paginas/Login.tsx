@@ -33,7 +33,7 @@ export const Login: FC = () => {
     setLoading(true);
     try {
       const usuario = await server.auth.login({ login, senha });
-      console.log("analise backend", usuario)
+
       loginSucesso(usuario);
 
       setLoginStore(usuario);

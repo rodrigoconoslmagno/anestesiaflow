@@ -2,7 +2,7 @@ import { server } from "@/api/server";
 import { AppColorPicker } from "@/componentes/color/AppColorPicker";
 import { CrudBase } from "@/componentes/crud/CrudBase";
 import { AppIconPicker } from "@/componentes/image/AppIconPicker";
-import { AppInputText } from "@/componentes/inputtext/AppInputText";
+import { AppInputTextForm } from "@/componentes/inputtext/AppInputTextForm";
 import { AppSelect } from "@/componentes/select/AppSelect";
 import { AppSwitchForm } from "@/componentes/switch/AppSwitchForm";
 import { Recurso } from "@/permissoes/recurso";
@@ -144,7 +144,7 @@ export const EstabelecimentoView = () => {
                         >
                             <TabPanel header="Cadastro" leftIcon="pi pi-user mr-2">
                                 <div className="grid grid-cols-12 gap-4 pt-4">
-                                    <AppInputText
+                                    <AppInputTextForm
                                         name="nome"
                                         label="Nome" 
                                         control={control} 
@@ -153,7 +153,7 @@ export const EstabelecimentoView = () => {
                                         required
                                     />
 
-                                    <AppInputText
+                                    <AppInputTextForm
                                         name="sigla"
                                         label="Sigla" 
                                         control={control} 

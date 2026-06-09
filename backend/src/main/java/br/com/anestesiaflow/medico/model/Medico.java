@@ -1,9 +1,12 @@
 package br.com.anestesiaflow.medico.model;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 import br.com.anestesiaflow.framework.persistence.BaseEntity;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 
 @Entity
@@ -17,6 +20,9 @@ public class Medico extends BaseEntity<Integer> {
 	private String sigla;
 	@Column(name = "dataassociacao")
 	private LocalDate dataAssociacao;
+	@Convert(converter = EspecialidadesConverter.class)
+    @Column(name = "especialidades")
+    private List<MedicoEspecialidade> especialidades;
 	@Column
 	private boolean ativo;
 
@@ -42,6 +48,17 @@ public class Medico extends BaseEntity<Integer> {
 	
 	public void setDataAssociacao(LocalDate dataAssociacao) {
 		this.dataAssociacao = dataAssociacao;
+	}
+	
+	public List<MedicoEspecialidade> getEspecialidades() {
+		if (especialidades == null) {
+			especialidades = new ArrayList<>();
+		}
+		return especialidades;
+	}
+	
+	public void setEspecialidades(List<MedicoEspecialidade> especialidades) {
+		this.especialidades = especialidades;
 	}
 	
 	public boolean isAtivo() {

@@ -12,6 +12,8 @@ export const medicoSchema = baseEntitySchema.extend({
   dataAssociacao: z.date().or(z.string()).transform((val) => 
     val instanceof Date ? DateUtils.paraISO(val) : val
   ),
+  especialidades: z.array(z.number()).min(1, 'Especialidades é obrigatório'),
+  especialidadesDescricao: z.string().optional(),
   ativo: z.boolean().default(true),
 });
 

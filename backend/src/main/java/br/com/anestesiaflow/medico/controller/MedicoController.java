@@ -1,8 +1,10 @@
 
 package br.com.anestesiaflow.medico.controller;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,8 +17,10 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
 import br.com.anestesiaflow.medico.dto.MedicoRequestDTO;
 import br.com.anestesiaflow.medico.dto.MedicoResponseDTO;
+import br.com.anestesiaflow.medico.model.MedicoEspecialidade;
 import br.com.anestesiaflow.medico.service.MedicoService;
 import jakarta.validation.Valid;
 
@@ -28,13 +32,23 @@ public class MedicoController {
 	private MedicoService medicoService;
 	
 	@PreAuthorize("@auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).MEDICO_ACESSAR)")
+	@PostMapping("/especialidades")
+	public ResponseEntity<List<Map<String, Object>>> listarEspecialidades() {
+		List<Map<String, Object>> especialidades = Arrays.stream(MedicoEspecialidade.values())
+			.map(esp -> {
+				Map<String, Object> map = new java.util.HashMap<>();
+				map.put("id", esp.getCodigo());
+				map.put("nome", esp.getDescricao());
+				return map;
+			})
+			.toList();
+		return ResponseEntity.ok(especialidades);
+	}
+
+	@PreAuthorize("@auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).MEDICO_ACESSAR)")
 	@PostMapping("/listar")
 	public ResponseEntity<List<MedicoResponseDTO>> listar(@RequestBody(required = false) Map<String, Object> filtros) {
-        if (filtros != null && filtros.get("ativo") != null) {
-        	return ResponseEntity.ok(medicoService.listarAtivos());
-        }
-        
-        return ResponseEntity.ok(medicoService.listarTodos());
+        return ResponseEntity.ok(medicoService.listar(filtros));
     }
 	
 	@PreAuthorize("@auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).MEDICO_ACESSAR)")

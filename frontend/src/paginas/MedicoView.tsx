@@ -2,6 +2,9 @@ import { server } from '@/api/server';
 import { CrudBase } from '@/componentes/crud/CrudBase';
 import { AppCalendar } from '@/componentes/datetime/AppCalendar';
 import { AppInputText } from '@/componentes/inputtext/AppInputText';
+import { AppInputTextForm } from '@/componentes/inputtext/AppInputTextForm';
+import { AppMultiSelect } from '@/componentes/select/AppMultiSelect';
+import { AppMultiSelectForm } from '@/componentes/select/AppMultiSelectForm';
 import { AppSelect } from '@/componentes/select/AppSelect';
 import { AppSwitchForm } from '@/componentes/switch/AppSwitchForm';
 import { Recurso } from '@/permissoes/recurso';
@@ -18,6 +21,11 @@ export const MedicoView = () => {
     const [resumoEscalas, setResumoEscalas] = useState([]);
     const [anoSelecionado, setAnoSelecionado] = useState(Number(new Date().getFullYear()));
     const [anosDisponiveis, setAnosDisponiveis] = useState<{nome: string, value: number}[]>([]);
+    const [especialidadeOptions, setEspecialidadeOptions] = useState<{ id: number; nome: string }[]>([]);
+    const [ filtroAtivo, setFiltroAtivo ] = useState<boolean | null>(null);
+    const [ filtroEspecialidades, setFiltroEspecialidades ] = useState<number[] | undefined>(undefined);
+    const [ filtroSigla, setFiltroSigla ] = useState<string | undefined>(undefined);
+    const [ paramsBusca, setParamsBusca ] = useState({});
 
     useEffect(() => {
         const carregarAnos = async () => {
@@ -29,6 +37,19 @@ export const MedicoView = () => {
             }
         };
         carregarAnos();
+    }, []);
+
+    useEffect(() => {
+        const carregarEspecialidades = async () => {
+        try {
+            const data = await server.api.listarCustomizada<{ id: number; nome: string }>('/medico/', 'especialidades');
+            setEspecialidadeOptions(data);
+        } catch (err) {
+            console.error('Erro ao carregar especialidades', err);
+        }
+        };
+
+        carregarEspecialidades();
     }, []);
 
     const buscarResumo = async (ano: number, medicoId: number) => {
@@ -52,23 +73,80 @@ export const MedicoView = () => {
         setResumoEscalas([]); 
     }
 
+    const handleClear = () => {
+        setFiltroAtivo(null);
+        setFiltroEspecialidades(undefined);
+        setFiltroSigla(undefined);
+        setParamsBusca({});
+    };
+
+    const handleApply = () => {
+        setParamsBusca({
+            sigla: filtroSigla ?? null,
+            ativo: filtroAtivo,
+            especialidades: filtroEspecialidades ?? null
+        });
+    };
+
     return (
         <CrudBase<Medico>
             title="Médico"
             recurso={Recurso.MEDICO}
-            // filterContent={<p>Teste de Filtro</p>}
+            filterContent={(
+                <div className="grid grid-cols-12 gap-4">
+                    <AppInputText
+                        name="sigla"
+                        label="Sigla"
+                        colSpan={2}
+                        value={filtroSigla}
+                        maxLength={3}
+                        minLength={3}
+                        onChange={(e) => setFiltroSigla(e.target.value)}
+                    />
+                    <AppMultiSelect
+                        name="especialidades"
+                        label="Especialidades"
+                        colSpan={8}
+                        options={especialidadeOptions}
+                        value={filtroEspecialidades}
+                        onChange={(e) => setFiltroEspecialidades((e.value as number[] | null) ?? undefined)}
+                        optionLabel="nome"
+                        optionValue="id"
+                    />
+                    <AppSelect
+                        name="ativo"
+                        label="Situação"
+                        value={filtroAtivo}
+                        options={[
+                            { nome: 'Ativo', value: true },
+                            { nome: 'Inativo', value: false }
+                        ]}
+                        optionLabel="nome"
+                        optionValue="value"
+                        showClear
+                        onChange={(e) => setFiltroAtivo(e.value ?? null)}
+                        colSpan={2}
+                        placeholder="Situação"
+                    />
+                </div>
+            )}
+            onApplyFilters={handleApply}
+            filterParams={paramsBusca}
+            onClearFilters={handleClear}
             resourcePath='/medico'
             schema={medicoSchema}
             defaultValues={{ 
                 nome: '', 
                 sigla: '',
-                ativo: true
+                ativo: true,
+                especialidades: []
             }}
             onAdd={handleResetResumo}
             onEdit={handleResetResumo}
             columns={[
             { field: 'nome', header: 'Nome' },
             { field: 'sigla', header: 'Sigla' },
+            { field: 'especialidadesDescricao', header: 'Especialidades' },
             { field: 'dataAssociacao', header: 'Sócio desde',
                 body: (rowData) => DateUtils.formatarParaBR(rowData.dataAssociacao)
             },
@@ -89,162 +167,174 @@ export const MedicoView = () => {
                 return (
                 <>
                     <div className="col-span-12">
-                    <TabView
-                        activeIndex={activeIndex}
-                        onTabChange={(e) =>{
-                            setActiveIndex(e.index);
-                            if (e.index === 1){
-                                buscarResumo(anoSelecionado, medicoId);
-                            } 
-                        }}
-                    >
-                        <TabPanel header="Cadastro" leftIcon="pi pi-user mr-2">
-                            <div className="grid grid-cols-12 gap-4 pt-4">
-                                <AppInputText
-                                    name="nome"
-                                    label="Nome" 
-                                    control={control} 
-                                    colSpan={12} 
-                                    maxLength={60}
-                                    required
-                                />
+                        <TabView
+                            activeIndex={activeIndex}
+                            onTabChange={(e) =>{
+                                setActiveIndex(e.index);
+                                if (e.index === 1){
+                                    buscarResumo(anoSelecionado, medicoId);
+                                } 
+                            }}
+                        >
+                            <TabPanel header="Cadastro" leftIcon="pi pi-user mr-2">
+                                <div className="grid grid-cols-12 gap-4 pt-4">
+                                    <AppInputTextForm
+                                        name="nome"
+                                        label="Nome"
+                                        control={control}
+                                        colSpan={12} 
+                                        maxLength={60}
+                                        required
+                                    />
 
-                                <AppInputText
-                                    name="sigla"
-                                    label="Sigla" 
-                                    control={control} 
-                                    colSpan={6} 
-                                    maxLength={3}
-                                    minLength={3}
-                                    required
-                                />
+                                    <AppInputTextForm
+                                        name="sigla"
+                                        label="Sigla" 
+                                        control={control} 
+                                        colSpan={3} 
+                                        maxLength={3}
+                                        minLength={3}
+                                        required
+                                    />
 
-                                <AppCalendar
-                                    name='dataAssociacao'
-                                    label='Sócio desde:'
-                                    control={control}
-                                    colSpan={3}
-                                    required
-                                />
+                                    <AppMultiSelectForm
+                                        name="especialidades"
+                                        label="Especialidades"
+                                        control={control}
+                                        colSpan={3}
+                                        options={especialidadeOptions}
+                                        optionLabel="nome"
+                                        optionValue="id"
+                                        showClear
+                                        required={true}
+                                    />
 
-                                <AppSwitchForm
-                                    name="ativo"
-                                    label="Situação"
-                                    control={control}
-                                    colSpan={3}
-                                    labelOn='Ativo'
-                                    labelOff='Inativo'
-                                />
-                            </div>
-                        </TabPanel>
-                        
-                        <TabPanel header="Escalas/Ano" leftIcon="pi pi-calendar mr-2" disabled={!medicoId}>
-                            <div className="pt-4">
-                                <div className="flex justify-between items-center mb-6 bg-gray-50 p-4 rounded-lg border border-gray-100">
-                                    <div>
-                                        <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Histórico de Atividades</h3>
-                                        <p className="text-xs text-gray-500">Consolidado mensal de plantões e horas</p>
-                                    </div>
-                                    <div className="w-full max-w-[250px]">
-                                        <AppSelect 
-                                            className='-mb-2'
-                                            name="anoResumo" 
-                                            label='Ano de Referência'
-                                            options={anosDisponiveis}
-                                            value={anoSelecionado}
-                                            optionLabel="nome"
-                                            optionValue="value"
-                                            onChange={(e) => {
-                                                setAnoSelecionado(e.value);
-                                                buscarResumo(e.value, medicoId);
-                                            }}
-                                            placeholder="Selecione o Ano"
-                                        />
-                                    </div>
+                                    <AppCalendar
+                                        name='dataAssociacao'
+                                        label='Sócio desde:'
+                                        control={control}
+                                        colSpan={3}
+                                        required
+                                    />
+
+                                    <AppSwitchForm
+                                        name="ativo"
+                                        label="Situação"
+                                        control={control}
+                                        colSpan={3}
+                                        labelOn='Ativo'
+                                        labelOff='Inativo'
+                                    />
                                 </div>
-                                
-                                <DataTable 
-                                    value={resumoEscalas}
-                                    loading={loadingResumo}
-                                    breakpoint="400px" 
-                                    scrollHeight="400px"
-                                    className="p-datatable-sm"
-                                    showGridlines
-                                    scrollable
-                                    emptyMessage={loadingResumo ? "Carregando..." : "Nenhum dado encontrado."}
-                                    pt={{
-                                        thead: { className: 'bg-gray-50' },
-                                        headerRow: { className: 'sticky top-0 z-10' },
-                                        column: {
-                                            headerCell: { className: 'bg-gray-50 text-gray-500 text-[15px] font-bold' },
-                                            bodyCell: { className: '!p-0' }
-                                        },
-                                    }}
-                                >
-                                    <Column header="Clinica / Hospitais"
-                                            frozen
-                                            className="bg-slate-100 font-bold border-r border-slate-300 !p-0"
-                                            headerClassName='border-r border-b border-t border-slate-300 text-[15px]'
-                                            headerStyle={{ justifyContent: 'center' }}  
-                                            pt={{
-                                                headerContent: { className: 'justify-center' },
-                                            }}
-                                            body={(est) => (
-                                                <div className="flex items-center gap-1 ml-1 h-full">
-                                                    <div 
-                                                        className="w-[28px] h-[28px] rounded-full shadow-inner border-b border-black/5 flex items-center justify-center overflow-hidden" 
-                                                        style={{ backgroundColor: est.cor?.startsWith('#') ? est.cor : `#${est.cor}` }}
-                                                    >
-                                                        {est.icone ? (
-                                                            <img 
-                                                                src={est.icone.startsWith('data:') ? est.icone : `data:image/png;base64,${est.icone}`} 
-                                                                className="object-contain"
-                                                                alt={est.estabelecimento}
-                                                            />
-                                                        ) : null}
+                            </TabPanel>
+                            
+                            <TabPanel header="Escalas/Ano" leftIcon="pi pi-calendar mr-2" disabled={!medicoId}>
+                                <div className="pt-4">
+                                    <div className="flex justify-between items-center mb-6 bg-gray-50 p-4 rounded-lg border border-gray-100">
+                                        <div>
+                                            <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Histórico de Atividades</h3>
+                                            <p className="text-xs text-gray-500">Consolidado mensal de plantões e horas</p>
+                                        </div>
+                                        <div className="w-full max-w-[250px]">
+                                            <AppSelect 
+                                                className='-mb-2'
+                                                name="anoResumo" 
+                                                label='Ano de Referência'
+                                                options={anosDisponiveis}
+                                                value={anoSelecionado}
+                                                optionLabel="nome"
+                                                optionValue="value"
+                                                onChange={(e) => {
+                                                    setAnoSelecionado(e.value);
+                                                    buscarResumo(e.value, medicoId);
+                                                }}
+                                                placeholder="Selecione o Ano"
+                                            />
+                                        </div>
+                                    </div>
+                                    
+                                    <DataTable 
+                                        value={resumoEscalas}
+                                        loading={loadingResumo}
+                                        breakpoint="400px" 
+                                        scrollHeight="400px"
+                                        className="p-datatable-sm"
+                                        showGridlines
+                                        scrollable
+                                        emptyMessage={loadingResumo ? "Carregando..." : "Nenhum dado encontrado."}
+                                        pt={{
+                                            thead: { className: 'bg-gray-50' },
+                                            headerRow: { className: 'sticky top-0 z-10' },
+                                            column: {
+                                                headerCell: { className: 'bg-gray-50 text-gray-500 text-[15px] font-bold' },
+                                                bodyCell: { className: '!p-0' }
+                                            },
+                                        }}
+                                    >
+                                        <Column header="Clinica / Hospitais"
+                                                frozen
+                                                className="bg-slate-100 font-bold border-r border-slate-300 !p-0"
+                                                headerClassName='border-r border-b border-t border-slate-300 text-[15px]'
+                                                headerStyle={{ justifyContent: 'center' }}  
+                                                pt={{
+                                                    headerContent: { className: 'justify-center' },
+                                                }}
+                                                body={(est) => (
+                                                    <div className="flex items-center gap-1 ml-1 h-full">
+                                                        <div 
+                                                            className="w-[28px] h-[28px] rounded-full shadow-inner border-b border-black/5 flex items-center justify-center overflow-hidden" 
+                                                            style={{ backgroundColor: est.cor?.startsWith('#') ? est.cor : `#${est.cor}` }}
+                                                        >
+                                                            {est.icone ? (
+                                                                <img 
+                                                                    src={est.icone.startsWith('data:') ? est.icone : `data:image/png;base64,${est.icone}`} 
+                                                                    className="object-contain"
+                                                                    alt={est.estabelecimento}
+                                                                />
+                                                            ) : null}
+                                                        </div>
+                                                        <span className="truncate text-[10px] uppercase tracking-wide">{est.estabelecimento}</span>
                                                     </div>
-                                                    <span className="truncate text-[10px] uppercase tracking-wide">{est.estabelecimento}</span>
-                                                </div>
-                                            )}
-                                    />
-                                    {[
-                                        { f: 'janeiro', h: 'JAN' }, { f: 'fevereiro', h: 'FEV' },
-                                        { f: 'marco', h: 'MAR' }, { f: 'abril', h: 'ABR' },
-                                        { f: 'maio', h: 'MAI' }, { f: 'junho', h: 'JUN' },
-                                        { f: 'julho', h: 'JUL' }, { f: 'agosto', h: 'AGO' },
-                                        { f: 'setembro', h: 'SET' }, { f: 'outubro', h: 'OUT' },
-                                        { f: 'novembro', h: 'NOV' }, { f: 'dezembro', h: 'DEZ' }
-                                    ].map((mes) => (
-                                        <Column 
-                                            key={mes.f} 
-                                            field={mes.f} 
-                                            header={mes.h} 
-                                            headerClassName='text-[15px] font-bold]'
-                                            bodyClassName="!px-0 !py-0 m-0"
-                                            pt={{
-                                                headerContent: { className: 'justify-center' }
-                                            }}
-                                            body={(ano) => {
-                                                const bgBlue =  ano[mes.f] > 0;
-                                                return (
-                                                    <div className={`flex items-center justify-center gap-1 w-full h-full ${bgBlue && 'bg-blue-200'}`}>
-                                                        <span className="text-[15px] uppercase tracking-wide">{ano[mes.f]}</span>
-                                                    </div>
-                                                )
-                                            }}
+                                                )}
                                         />
-                                    ))}
-                                    <Column 
-                                        field="total_ano" 
-                                        header="TOTAL" 
-                                        className="bg-blue-50 font-bold" 
-                                        headerClassName='text-[15px] font-bold]' 
-                                        bodyClassName='text-center'
-                                    />
-                                </DataTable>
-                            </div>
-                        </TabPanel>
-                    </TabView>
+                                        {[
+                                            { f: 'janeiro', h: 'JAN' }, { f: 'fevereiro', h: 'FEV' },
+                                            { f: 'marco', h: 'MAR' }, { f: 'abril', h: 'ABR' },
+                                            { f: 'maio', h: 'MAI' }, { f: 'junho', h: 'JUN' },
+                                            { f: 'julho', h: 'JUL' }, { f: 'agosto', h: 'AGO' },
+                                            { f: 'setembro', h: 'SET' }, { f: 'outubro', h: 'OUT' },
+                                            { f: 'novembro', h: 'NOV' }, { f: 'dezembro', h: 'DEZ' }
+                                        ].map((mes) => (
+                                            <Column 
+                                                key={mes.f} 
+                                                field={mes.f} 
+                                                header={mes.h} 
+                                                headerClassName='text-[15px] font-bold]'
+                                                bodyClassName="!px-0 !py-0 m-0"
+                                                pt={{
+                                                    headerContent: { className: 'justify-center' }
+                                                }}
+                                                body={(ano) => {
+                                                    const bgBlue =  ano[mes.f] > 0;
+                                                    return (
+                                                        <div className={`flex items-center justify-center gap-1 w-full h-full ${bgBlue && 'bg-blue-200'}`}>
+                                                            <span className="text-[15px] uppercase tracking-wide">{ano[mes.f]}</span>
+                                                        </div>
+                                                    )
+                                                }}
+                                            />
+                                        ))}
+                                        <Column 
+                                            field="total_ano" 
+                                            header="TOTAL" 
+                                            className="bg-blue-50 font-bold" 
+                                            headerClassName='text-[15px] font-bold]' 
+                                            bodyClassName='text-center'
+                                        />
+                                    </DataTable>
+                                </div>
+                            </TabPanel>
+                        </TabView>
                     </div>
                 </>
                 )

@@ -2,7 +2,7 @@ import { server } from '@/api/server';
 import { AppCameraInput } from '@/componentes/camera/AppCameraCapture';
 import { CrudBase } from '@/componentes/crud/CrudBase';
 import { AppCalendar } from '@/componentes/datetime/AppCalendar';
-import { AppInputText } from '@/componentes/inputtext/AppInputText';
+import { AppInputTextForm } from '@/componentes/inputtext/AppInputTextForm';
 import { AppSelect } from '@/componentes/select/AppSelect';
 import { AppSelectForm } from '@/componentes/select/AppSelectForm';
 import { AppSwitchForm } from '@/componentes/switch/AppSwitchForm';
@@ -186,7 +186,7 @@ const ProcedimentosTable = ({ control, activeIndex, onSelectRow }: { control: an
                         valueTemplate={estabelecimentoTemplate}
                     />
 
-                    <AppInputText
+                    <AppInputTextForm
                         name={`procedimentos.${activeIndex}.cirurgiao`}
                         label="Cirurgião" 
                         control={control} 
@@ -194,7 +194,7 @@ const ProcedimentosTable = ({ control, activeIndex, onSelectRow }: { control: an
                         colSpan={5}
                     />
 
-                    <AppInputText
+                    <AppInputTextForm
                         name={`procedimentos.${activeIndex}.procedimento`} 
                         label="Procedimento" 
                         control={control} 
@@ -354,7 +354,7 @@ export const PacienteView = () => {
                 {(control) => {
                     return (
                     <>
-                        <AppInputText
+                        <AppInputTextForm
                             name="nome"
                             label="Nome" 
                             control={control} 

@@ -1,5 +1,5 @@
 import { CrudBase } from '@/componentes/crud/CrudBase';
-import { AppInputText } from '@/componentes/inputtext/AppInputText';
+import { AppInputTextForm } from '@/componentes/inputtext/AppInputTextForm';
 import { type Usuario, usuarioSchema } from '@/types/usuario';
 import { AppInputPassword } from '@/componentes/inputtext/AppInputPassword';
 import { AppUsuarioPermissao } from '@/componentes/usuario/AppUsuarioPermissao';
@@ -41,7 +41,7 @@ export const UsuarioView = () => {
 
           return (
             <>
-              <AppInputText
+              <AppInputTextForm
                 name="nome"
                 label="Nome" 
                 control={control} 
@@ -58,7 +58,7 @@ export const UsuarioView = () => {
                 labelOff='Inativo'
               />
 
-              <AppInputText
+              <AppInputTextForm
                 name="login"
                 label="Login" 
                 control={control} 

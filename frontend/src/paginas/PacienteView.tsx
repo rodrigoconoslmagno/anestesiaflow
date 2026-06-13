@@ -18,8 +18,11 @@ import { useState } from 'react';
 import { useFieldArray, useWatch } from 'react-hook-form';
 import { useAppToast } from '@/context/ToastContext';
 import type { Estabelecimento } from '@/types/estabelecimento';
+import { AppInputText } from '@/componentes/inputtext/AppInputText';
 
-const ProcedimentosTable = ({ control, activeIndex, onSelectRow }: { control: any, activeIndex: number, onSelectRow: (index: number) => void }) => {
+const ProcedimentosTable = ({ control, activeIndex, onSelectRow, setDlgCirurgiao, cirurgiaoParams }: 
+            { control: any, activeIndex: number, onSelectRow: (index: number) => void, 
+                        setDlgCirurgiao: (value: boolean) => void,  cirurgiaoParams: any }) => {
     const { fields, append, remove } = useFieldArray({
         control,
         name: "procedimentos",
@@ -165,7 +168,7 @@ const ProcedimentosTable = ({ control, activeIndex, onSelectRow }: { control: an
                         name={`procedimentos.${activeIndex}.medicoId`}
                         control={control} 
                         url="/medico" 
-                        filterParams={{ ativo: true }}
+                        filterParams={{ ativo: true,  especialidades: ['1'] }}
                         optionLabel="nome"
                         optionValue="id"
                         colSpan={6}
@@ -186,12 +189,32 @@ const ProcedimentosTable = ({ control, activeIndex, onSelectRow }: { control: an
                         valueTemplate={estabelecimentoTemplate}
                     />
 
-                    <AppInputTextForm
-                        name={`procedimentos.${activeIndex}.cirurgiao`}
-                        label="Cirurgião" 
+                    <AppSelectForm
                         control={control} 
-                        maxLength={60}
-                        colSpan={5}
+                        name={`procedimentos.${activeIndex}.cirurgiaoId`}
+                        label='Cirurgião'
+                        url="/medico"
+                        filterParams={cirurgiaoParams}
+                        optionLabel="nome"
+                        optionValue="id"
+                        colSpan={6}
+                        itemTemplate={medicoTemplate}
+                        valueTemplate={medicoTemplate}
+                    />
+
+                     <Button 
+                        type="button" 
+                        icon="pi pi-user-plus" 
+                        label="Cadastrar Cirurgião" 
+                        className='bg-blue-600 text-white border-none shadow-md md:mt-3 h-[40px] px-4 justify-betwenn items-center col-span-12 md:col-span-4'
+                        onClick={() => setDlgCirurgiao(true)}
+                    />
+
+                    <AppCalendar
+                        name={`procedimentos.${activeIndex}.dataProcedimento`}
+                        label='Data'
+                        control={control}
+                        colSpan={2}
                     />
 
                     <AppInputTextForm
@@ -200,13 +223,6 @@ const ProcedimentosTable = ({ control, activeIndex, onSelectRow }: { control: an
                         control={control} 
                         maxLength={60}
                         colSpan={5}
-                    />
-
-                    <AppCalendar
-                        name={`procedimentos.${activeIndex}.dataProcedimento`}
-                        label='Data'
-                        control={control}
-                        colSpan={2}
                     />
                 </div>
             )}
@@ -224,15 +240,15 @@ const ProcedimentosTable = ({ control, activeIndex, onSelectRow }: { control: an
                 rowClassName={(options: any) => options.rowIndex === activeIndex ? 'bg-blue-50' : ''}
             >
                 <Column header="Anestesista" 
-                        body={(rowData) => rowData.medicoId ? `Médico selecionado` : 'Não definido'} 
+                        body={(rowData) => rowData.medicoId ? rowData.medicoExibir : 'Não definido'} 
                         headerClassName="bg-gray-200 text-gray-700 border-1 border-200"
                         className="border-1 border-gray-300"/>
                 <Column header="Clinica/Hospital" 
-                        body={(rowData) => rowData.estabelecimentoId ? `Clinica/hospital selecionado` : 'Não definido'} 
+                        body={(rowData) => rowData.estabelecimentoId ? rowData.estabelecimentoExibir : 'Não definido'} 
                         headerClassName="bg-gray-200 text-gray-700 border-1 border-200"
                         className="border-1 border-gray-300"/>
                 <Column header="Cirurgião" 
-                        field="cirurgiao" 
+                        body={(rowData) => rowData.cirurgiaoId ? rowData.cirurgiaoExibir : 'Não definido'} 
                         headerClassName="bg-gray-200 text-gray-700 border-1 border-200"
                         className="border-1 border-gray-300"/>
                 <Column header="Procedimento" 
@@ -266,10 +282,19 @@ const ProcedimentosTable = ({ control, activeIndex, onSelectRow }: { control: an
 export const PacienteView = () => {
     const [ loadingIA, setLoadingIA ] = useState(false);
     const [ cameraVisible, setCameraVisible ] = useState(false);
-    const [ medicoId, setMedicoId ] =  useState<Number | undefined>(undefined);
+    const [ medicoId, setMedicoId ] =  useState<number | undefined>(undefined);
     const [ selectedFile, setSelectedFile ] = useState<File | null>(null);
-    const { showError } = useAppToast();
+    const { showError, showSuccess } = useAppToast();
     const [ loadData, setLoadData ] = useState<(() => Promise<void>) | null>(null);
+
+    const [ dlgCirurgiao, setDlgCirurgiao ] = useState<boolean>(false);
+    const [ nomeCirurgiao, setNomeCirurgiao ] = useState<string>('');
+    const [ siglaCirurgiao, setSiglaCirurgiao ] = useState<string>('');
+    const [ cirurgiaoParams, setCirurgiaoParams ] = useState<{ 
+        ativo: boolean; 
+        especialidades: string[]; 
+        _refresh?: string 
+    }>({ ativo: true, especialidades: ['2'] });
 
     const [activeIndex, setActiveIndex] = useState<number>(-1);
 
@@ -352,6 +377,36 @@ export const PacienteView = () => {
                 ]}
             >
                 {(control) => {
+                    const handleSaveCirurgiao = async () => {
+                        try {
+                            setLoadingIA(true);
+                            const novoMedico = await server.api.criar<Medico>('/medico', {
+                                nome: nomeCirurgiao.toUpperCase(),
+                                sigla: siglaCirurgiao.toUpperCase(),
+                                ativo: true,
+                                especialidades: [2],
+                                dataAssociacao: undefined
+                            });
+
+                            if (activeIndex !== -1) {
+                                (control as any).setValue(`procedimentos.${activeIndex}.cirurgiaoId`, novoMedico.id);
+                            }
+
+                            setCirurgiaoParams({ 
+                                ativo: true, 
+                                especialidades: ['2'], 
+                                _refresh: Date.now().toString() 
+                            });
+
+                             showSuccess('Sucesso', 'Cirurgião cadastrado e selecionado.');
+                            setDlgCirurgiao(false);
+                        } catch (err: any) {
+                            showError("Erro", "Não foi possível cadastrar o cirurgião.");
+                        } finally {
+                            setLoadingIA(false);
+                        }
+                    };
+
                     return (
                     <>
                         <AppInputTextForm
@@ -377,7 +432,81 @@ export const PacienteView = () => {
                             control={control} 
                             activeIndex={activeIndex}
                             onSelectRow={(index) => setActiveIndex(index)}
+                            setDlgCirurgiao={(value) => setDlgCirurgiao(value)}
+                            cirurgiaoParams={cirurgiaoParams}
                         />
+
+                        <Dialog 
+                            visible={dlgCirurgiao} 
+                            showCloseIcon={false}
+                            onHide={() =>{
+                                setDlgCirurgiao(false)
+                            }} 
+                            onShow={() => {
+                                setNomeCirurgiao('')
+                                setSiglaCirurgiao('')
+                            }}
+                            style={{ width: '450px' }}
+                            headerClassName='p-0'
+                            header={
+                                <div className="bg-blue-600 text-white p-4 flex w-full">
+                                    <div className="flex gap-2 items-center w-full">
+                                        <i className="pi pi-user-plus w-5 h-5 text-xg font-bold text-blue-300" />
+                                        <h2 className="pl-1 text-xg font-bold tracking-tight w-full">Cadastrar Novo Cirurgião</h2>
+                                        <Button  
+                                            icon="pi pi-times" 
+                                            onClick={() => {
+                                                setDlgCirurgiao(false)
+                                                setNomeCirurgiao('')    
+                                                setSiglaCirurgiao('')
+                                            }} 
+                                            className=" text-slate-300 font-bold hover:text-white hover:bg-white/10 rounded-lg transition-colors" />
+                                    </div>
+                                </div>
+                            }
+                            footer={
+                                <div className="flex gap-2 justify-between items-center">
+                                    <Button 
+                                        label="Cancelar" 
+                                        icon="pi pi-ban" 
+                                        onClick={() => {
+                                            setDlgCirurgiao(false)
+                                            setNomeCirurgiao('')    
+                                            setSiglaCirurgiao('')
+                                        }} 
+                                        className="p-button-outlined p-button-text shadow-md border-none p-2" />
+                                    <Button 
+                                        label="Cadastrar" 
+                                        icon="pi pi-bolt" 
+                                        disabled={!nomeCirurgiao || !siglaCirurgiao} 
+                                        onClick={handleSaveCirurgiao}
+                                        className="p-button-outlined p-button-text shadow-md bg-blue-600 border-none text-white p-2"
+                                    />
+                                </div>
+                            }  
+                        >
+                            <div className="flex flex-col gap-4 mt-4">
+                               <AppInputText    
+                                    name="nomeCirurgiao"
+                                    label="Nome"
+                                    value={nomeCirurgiao}
+                                    onChange={(e) => setNomeCirurgiao(e.target.value)}
+                                    colSpan={12} 
+                                    maxLength={60}
+                                    required
+                                />
+                                <AppInputText    
+                                    name="siglaCirurgiao"
+                                    label="Sigla"
+                                    value={siglaCirurgiao}
+                                    onChange={(e) => setSiglaCirurgiao(e.target.value)}
+                                    colSpan={12} 
+                                    maxLength={3}
+                                    minLength={3}
+                                    required
+                                />
+                            </div>
+                        </Dialog>
                     </>
                     )
                 }}
@@ -414,7 +543,6 @@ export const PacienteView = () => {
                 }
             >
                 <div className="flex flex-col gap-4">
-                    {/* Seleção do Médico */}
                     <div className="flex flex-col gap-2">
                         <label className="font-bold text-sm">Médico Responsável</label>
                         <AppSelect
@@ -431,7 +559,6 @@ export const PacienteView = () => {
                         />
                     </div>
 
-                    {/* Componente de Câmera "Cru" */}
                     <div className="flex flex-col gap-2">
                         <label className="font-bold text-sm">Captura da Agenda/Etiqueta</label>
                         <AppCameraInput 

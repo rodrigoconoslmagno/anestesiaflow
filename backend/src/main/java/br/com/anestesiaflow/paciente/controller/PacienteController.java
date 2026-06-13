@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+
 import br.com.anestesiaflow.paciente.dto.PacienteRequestDTO;
 import br.com.anestesiaflow.paciente.dto.PacienteResponseDTO;
 import br.com.anestesiaflow.paciente.service.PacienteService;
@@ -79,7 +81,7 @@ public class PacienteController {
 	   File temp = File.createTempFile("img", ".jpg");
 	   file.transferTo(temp);
 	   try(InputStream stream = new FileInputStream(temp.getAbsolutePath())){
-		   pacienteService.decodeImagem(stream, medicoId);
+		//    pacienteService.decodeImagem(stream, medicoId);
 		   return ResponseEntity.ok().build();
 	   }
 	}

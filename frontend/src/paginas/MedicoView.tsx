@@ -163,6 +163,10 @@ export const MedicoView = () => {
         >
             {(control) => {
                 const medicoId = control._formValues?.id;
+                
+                // Monitora o campo especialidades para reagir a mudanças na seleção
+                const especialidadesSelecionadas = (control as any).watch('especialidades') || [];
+                const isAnestesista = especialidadesSelecionadas.includes(1);
 
                 return (
                 <>
@@ -201,7 +205,7 @@ export const MedicoView = () => {
                                         name="especialidades"
                                         label="Especialidades"
                                         control={control}
-                                        colSpan={3}
+                                        colSpan={isAnestesista ? 3 : 6}
                                         options={especialidadeOptions}
                                         optionLabel="nome"
                                         optionValue="id"
@@ -209,13 +213,15 @@ export const MedicoView = () => {
                                         required={true}
                                     />
 
-                                    <AppCalendar
-                                        name='dataAssociacao'
-                                        label='Sócio desde:'
-                                        control={control}
-                                        colSpan={3}
-                                        required
-                                    />
+                                    {isAnestesista && (
+                                        <AppCalendar
+                                            name='dataAssociacao'
+                                            label='Sócio desde:'
+                                            control={control}
+                                            colSpan={3}
+                                            required
+                                        />
+                                    )}
 
                                     <AppSwitchForm
                                         name="ativo"

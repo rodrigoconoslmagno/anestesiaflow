@@ -8,7 +8,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 import org.springframework.stereotype.Service;
+
 import com.google.cloud.vision.v1.AnnotateImageRequest;
 import com.google.cloud.vision.v1.AnnotateImageResponse;
 import com.google.cloud.vision.v1.BatchAnnotateImagesResponse;
@@ -110,9 +112,12 @@ public class PacienteService {
 				procedimento.getId(), 
 				procedimento.getDataProcedimento(), 
 				procedimento.getProcedimento(), 
-				procedimento.getCirurgiao(), 
+				procedimento.getCirurgiao().getId(), 
+				procedimento.getCirurgiao().getNome(),
 				procedimento.getMedico().getId(),
+				procedimento.getMedico().getNome(),
 				procedimento.getEstabelecimento().getId(),
+				procedimento.getEstabelecimento().getNome(),
 				procedimento.getDataCriacao(),
 				procedimento.getDataAtualizacao());
 	}
@@ -136,7 +141,7 @@ public class PacienteService {
 		procedimento.setDataProcedimento(dto.dataProcedimento());
 		procedimento.setMedico(entityManager.getReference(Medico.class, dto.medicoId()));
 		procedimento.setProcedimento(dto.procedimento());
-		procedimento.setCirurgiao(dto.cirurgiao());
+		procedimento.setCirurgiao(entityManager.getReference(Medico.class, dto.cirurgiaoId()));
 		procedimento.setEstabelecimento(entityManager.getReference(Estabelecimento.class, dto.estabelecimentoId()));
 		return procedimento;
 	}
@@ -163,7 +168,7 @@ public class PacienteService {
 			} else {
 				procedimentos.stream().forEach(procedimento -> {
 					if (dto.id() == procedimento.getId()) {
-						procedimento.setCirurgiao(dto.cirurgiao());
+						procedimento.setCirurgiao(entityManager.getReference(Medico.class, dto.cirurgiaoId()));
 						procedimento.setProcedimento(dto.procedimento());
 						procedimento.setDataProcedimento(dto.dataProcedimento());
 						procedimento.setMedico(entityManager.getReference(Medico.class, dto.medicoId()));
@@ -175,14 +180,14 @@ public class PacienteService {
 		
 	}
 	
-	public void decodeImagem(InputStream inputStream, int medicoId) throws Exception  {
+	public void decodeImagem(InputStream inputStream, int medicoId, int cirurgiaoId) throws Exception  {
 		String dados = extrairTexto(inputStream);
 		if (dados == null || dados.isEmpty()) {
 			throw new BusinessException("Não foi encontrado nenhum texto na imagem fornecida.");
 		}
 		List<PacienteImagemDTO> processa = processarTexto(dados); 
 		
-		if (processa.size() == 0) {
+		if (processa.isEmpty()) {
 			throw new BusinessException("Não foi possível decodificar os dados do(s) paciente(s) da image fornecida.");
 		}
 		
@@ -201,7 +206,7 @@ public class PacienteService {
 				proc.setMedico(entityManager.getReference(Medico.class, medicoId));
 				proc.setDataProcedimento(item.dataProcedimento());
 				proc.setProcedimento(item.procedimento());
-				proc.setCirurgiao(item.cirurgiao());
+				proc.setCirurgiao(entityManager.getReference(Medico.class, cirurgiaoId));
 				paciente.getProcedimentos().add(proc);
 				pacienteRepository.save(paciente);
 			} else {
@@ -210,7 +215,7 @@ public class PacienteService {
 						itemPro.setMedico(entityManager.getReference(Medico.class, medicoId));
 						itemPro.setDataProcedimento(item.dataProcedimento());
 						itemPro.setProcedimento(item.procedimento().toUpperCase());
-						itemPro.setCirurgiao(item.cirurgiao().toUpperCase());
+						itemPro.setCirurgiao(entityManager.getReference(Medico.class, cirurgiaoId));
 						return;
 					}
 				});		

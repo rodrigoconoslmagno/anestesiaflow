@@ -1,6 +1,7 @@
 package br.com.anestesiaflow.paciente.entidade;
 
 import java.time.LocalDate;
+
 import com.fasterxml.jackson.annotation.JsonBackReference;
 
 import br.com.anestesiaflow.estabelecimento.model.Estabelecimento;
@@ -27,8 +28,10 @@ public class PacienteProcedimento extends BaseEntity<Integer>{
 	private LocalDate dataProcedimento;
 	@Column
 	private String procedimento;
-	@Column
-	private String cirurgiao;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cirurgiaoid")
+	private Medico cirurgiao;
 	
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "medicoid")
@@ -62,11 +65,11 @@ public class PacienteProcedimento extends BaseEntity<Integer>{
 		this.procedimento = procedimento;
 	}
 	
-	public String getCirurgiao() {
+	public Medico getCirurgiao() {
 		return cirurgiao;
 	}
 	
-	public void setCirurgiao(String cirurgiao) {
+	public void setCirurgiao(Medico cirurgiao) {
 		this.cirurgiao = cirurgiao;
 	}
 	

@@ -3,7 +3,13 @@ import { baseEntitySchema } from '@/types/baseEntity';
 import { DateUtils } from '@/utils/DateUtils';
 
 export const pacienteProcedimentoSchema = baseEntitySchema.extend({
-    cirurgiao: z.string().min(1, 'Cirurgião é obrigatório'),
+    cirurgiaoId: z.any()
+          .refine((val) => {
+              const num = Number(val);
+              return !isNaN(num) && num !== null && num !== undefined && num > 0;
+          }, {
+              message: 'Cirurgião é obrigatório'
+          }),
     procedimento: z.string().min(1, 'Procedimento é obrigatório'),
     dataProcedimento: z.any().refine(val => {
       if (val) {
@@ -31,6 +37,7 @@ export const pacienteProcedimentoSchema = baseEntitySchema.extend({
     cor: z.string().nullable().optional(),
     icone: z.any().optional(),     
     estabelecimentoExibir: z.string().nullable().optional(),
+    cirurgiaoExibir: z.string().nullable().optional(),
 });
 
 export type PacienteProcedimento = z.infer<typeof pacienteProcedimentoSchema>;

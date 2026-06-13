@@ -146,6 +146,7 @@ export const AppSelect = ({
             /* Ajuste do container do Dropdown para alinhar com seu InputText */
             .custom-app-select-float-label .p-dropdown {
               padding: 0.10rem 0 !important;
+              height: 40px;
             }
 
             .custom-app-select-float-label .p-inputtext {

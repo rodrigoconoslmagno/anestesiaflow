@@ -72,6 +72,7 @@ export const AppInputText = ({
           padding-inline-start: 1rem !important;
           background-image: none !important;
           border: 1px solid rgb(107 114 128 / var(--tw-border-opacity, 1));
+          height: 40px; 
         }
 
         .custom-app-float-label input::-webkit-contacts-auto-fill-button,

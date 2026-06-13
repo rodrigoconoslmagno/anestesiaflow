@@ -2,7 +2,9 @@ package br.com.anestesiaflow.paciente.entidade;
 
 import java.util.ArrayList;
 import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+
 import br.com.anestesiaflow.framework.persistence.BaseEntity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -42,4 +44,5 @@ public class Paciente extends BaseEntity<Integer> {
 	public List<PacienteProcedimento> getProcedimentos() {
 		return procedimentos;
 	}
+	
 }

@@ -2,6 +2,8 @@ package br.com.anestesiaflow.plantao.service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,6 +14,7 @@ import br.com.anestesiaflow.estabelecimento.dto.EstabelecimentoResponseDTO;
 import br.com.anestesiaflow.estabelecimento.model.Estabelecimento;
 import br.com.anestesiaflow.medico.dto.MedicoResponseDTO;
 import br.com.anestesiaflow.medico.model.Medico;
+import br.com.anestesiaflow.medico.model.MedicoEspecialidade;
 import br.com.anestesiaflow.plantao.dto.EscalaItemPlantaoDTO;
 import br.com.anestesiaflow.plantao.dto.EscalaPlantaoDTO;
 import jakarta.persistence.EntityManager;
@@ -30,7 +33,7 @@ public class PlantaoService {
 	public List<EscalaPlantaoDTO> listarPorData(LocalDate data){
 		return escalaRepository.findByDataAndPlantaoOrderByMedicoDataAssociacaoAscItensHoraAsc(data, true).
 				stream().map(this::mapperEstalaToPlantao).
-				filter(escalaBando -> escalaBando.itens().size() > 0).toList();
+				filter(escalaBando -> !escalaBando.itens().isEmpty()).toList();
 	}
 
 	@Transactional
@@ -50,7 +53,7 @@ public class PlantaoService {
 			mergeItens(dto, persiste);
 		}
 		
-		if (persiste.getItens().size() == 0) {
+		if (persiste.getItens().isEmpty()) {
 			escalaRepository.delete(persiste);
 			return null;
 		}
@@ -129,6 +132,12 @@ public class PlantaoService {
 				medico.getNome(),
 				medico.getSigla(),
 				medico.getDataAssociacao(),
+				medico.getEspecialidades().stream()
+						.map(MedicoEspecialidade::getCodigo)
+						.toList(),
+				medico.getEspecialidades().stream()
+						.map(MedicoEspecialidade::getDescricao)
+						.collect(Collectors.joining(", ")),
 				medico.isAtivo(),
 				medico.getDataCriacao(),
 				medico.getDataAtualizacao()

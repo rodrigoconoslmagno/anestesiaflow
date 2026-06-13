@@ -39,7 +39,7 @@ export const AppSwitch = ({
       className={classNames(getColSpanClass(colSpan), props.className)}
     >
       <div className={classNames(
-        "flex items-center justify-between sm:gap-4 p-[0.40rem] border rounded-lg transition-all duration-300",
+        "flex items-center justify-between h-[40px] sm:gap-4 p-[0.40rem] border rounded-lg transition-all duration-300",
         { 
           "bg-gray-50 border-gray-400": !isChecked, 
           "bg-green-50/40 border-green-500 shadow-sm": isChecked 

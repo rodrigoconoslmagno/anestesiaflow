@@ -1,6 +1,7 @@
 package br.com.anestesiaflow.auth.permission;
 
 import java.util.Map;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -27,7 +28,12 @@ public enum Permissoes {
 	PACIENTE_NOVO("Cadastro", "Novo", "NOVO", "pi pi-plus", false, null),
 	PACIENTE_ALTERAR("Cadastro", "Alterar", "ALTERAR", "pi pi-pencil", false, null),
 	PACIENTE_EXCLUIR("Cadastro", "Excluir", "EXCLUIR", "pi pi-trash", false, null),
-	
+
+	PROCEDIMENTO_ACESSAR("Cadastro", "Procedimento", "ACESSAR", "pi pi-users", true, "/procedimento"),
+	PROCEDIMENTO_NOVO("Cadastro", "Novo", "NOVO", "pi pi-plus", false, null),
+	PROCEDIMENTO_ALTERAR("Cadastro", "Alterar", "ALTERAR", "pi pi-pencil", false, null),
+	PROCEDIMENTO_EXCLUIR("Cadastro", "Excluir", "EXCLUIR", "pi pi-trash", false, null),
+
 	ESCALA_ACESSAR("Escala", "Escala", "ACESSAR", "pi pi-calendar", true, "/escala"),
 	ESCALA_NOVO("Escala", "Novo", "NOVO", "pi pi-plus", false, null),
 	ESCALA_ALTERAR("Escala", "Alterar", "ALTERAR", "pi pi-pencil", false, null),
@@ -52,6 +58,8 @@ public enum Permissoes {
 	
 	PLANTAORESUMO_ACESSAR("Plantão", "Plantão Resumo", "ACESSAR", "pi pi-chart-bar", true, "/plantaoresumoview"),
 	
+
+
 	CONFIG_ACESSAR("Configuração", "Configurações", "ACESSAR", "pi pi-clone", true, "/configview"),
 	CONFIG_ALTERAR("Plantão", "Criar / Alterar / Escluir", "ALTERAR", "pi pi-pencil", false, null),
     ;

@@ -23,7 +23,7 @@ public class Paciente extends BaseEntity<Integer> {
 	private boolean ativo;
     @OneToMany(mappedBy = "paciente", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @JsonManagedReference // Indica que este é o lado principal que "gerencia" a serialização
-    private List<PacienteProcedimento> procedimentos = new ArrayList<>();
+    private final List<PacienteProcedimento> procedimentos = new ArrayList<>();
 
 	public String getNome() {
 		return nome;

@@ -15,6 +15,7 @@ import { PlantaoView } from '@/paginas/PlantaoView';
 import { ConfigView } from '@/paginas/ConfigView';
 import { PlantaoResumoView } from '@/paginas/PlantaoResumoView';
 import { PacienteView } from '@/paginas/PacienteView';
+import { ProcedimentoView } from '@/paginas/ProcedimentoView';
 // import { TelaPlanilhaMedica } from '@/paginas/TelaPlanilhaMedica';
 
 export const AppRoutes = () => {
@@ -41,6 +42,7 @@ export const AppRoutes = () => {
             <Route path="/simetriaview" element={<SimetriaView />} />
             <Route path="/plantaoview" element={<PlantaoView />} />
             <Route path="/paciente" element={<PacienteView />} />
+            <Route path="/procedimento" element={<ProcedimentoView />} />
             <Route path='/plantaoresumoview' element={<PlantaoResumoView />} />
             <Route path="/configview" element={<ConfigView />} />
             {/* <Route path="/planilha" element={<TelaPlanilhaMedica />} /> */}

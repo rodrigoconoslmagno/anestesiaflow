@@ -172,7 +172,6 @@ public class PacienteService {
 						procedimento.setProcedimento(dto.procedimento());
 						procedimento.setDataProcedimento(dto.dataProcedimento());
 						procedimento.setMedico(entityManager.getReference(Medico.class, dto.medicoId()));
-						return;
 					}
 				});
 			}			
@@ -216,7 +215,6 @@ public class PacienteService {
 						itemPro.setDataProcedimento(item.dataProcedimento());
 						itemPro.setProcedimento(item.procedimento().toUpperCase());
 						itemPro.setCirurgiao(entityManager.getReference(Medico.class, cirurgiaoId));
-						return;
 					}
 				});		
 				pacienteRepository.save(paciente);

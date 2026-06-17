@@ -103,7 +103,7 @@ export const EscalaMedicoView = () => {
                             value={medicoId}
                             label='Médico'
                             url="/api/public/escala/medicos"
-                            filterParams={{ ativo: true }}
+                            filterParams={{ ativo: true, especialidades: [1] }}
                             optionLabel="nome"
                             optionValue="id"
                             itemTemplate={medicoTemplate}

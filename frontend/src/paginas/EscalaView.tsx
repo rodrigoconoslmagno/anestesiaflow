@@ -41,6 +41,7 @@ export const EscalaView = () => {
                         label=""
                         url="/medico"
                         value={filtroMedicoId}
+                        filterParams={{ especialidades: [1] }}
                         onChange={(e) => setFiltroMedicoId(e.value)}
                         colSpan={12}
                         showClear
@@ -84,7 +85,7 @@ export const EscalaView = () => {
                         label='Médico'
                         url="/medico"
                         control={control}
-                        filterParams={{ ativo: true }}
+                        filterParams={{ ativo: true, especialidades: [1] }}
                         optionLabel="nome"
                         optionValue="id"
                         valueTemplate={medicoTemplate}

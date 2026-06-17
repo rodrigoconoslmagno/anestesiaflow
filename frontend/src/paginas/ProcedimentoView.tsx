@@ -1,6 +1,5 @@
 import { CrudBase } from "@/componentes/crud/CrudBase";
 import { AppInputTextAreaForm } from "@/componentes/inputtext/AppInputTextAreaForm";
-import { AppInputTextForm } from "@/componentes/inputtext/AppInputTextForm";
 import { AppSwitchForm } from "@/componentes/switch/AppSwitchForm";
 import { Recurso } from "@/permissoes/recurso";
 import { procedimentoSchema, type Procedimento } from "@/types/procedimento";

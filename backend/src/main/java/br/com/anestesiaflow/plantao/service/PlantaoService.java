@@ -63,7 +63,7 @@ public class PlantaoService {
 	}
 	
 	private void mergeItens(EscalaPlantaoDTO dto, Escala escala) {
-		boolean encontrou = false;
+		boolean encontrou;
 		escala.getItens().removeIf(itemBanco -> 
 					itemBanco.getArquivado() == null &&
 					dto.itens().stream().noneMatch(itemDto -> 

@@ -48,7 +48,7 @@ export const AppInputTextArea = ({
           autoComplete="off"
           className={classNames(
             'w-full transition-all duration-200',
-            '!p-2 !pl-4 border border-gray-500 rounded-lg outline-none text-lg',
+            '!p-2 !pl-4 border border-gray-500 rounded-lg outline-none text-lg custom-scrollbar',
             props.className,
             { 'p-invalid border-red-500': errorMessage }
           )}
@@ -75,6 +75,8 @@ export const AppInputTextArea = ({
           background-image: none !important;
           border: 1px solid rgb(107 114 128 / var(--tw-border-opacity, 1));
           min-height: 40px;
+          max-height: 150px;
+          overflow-y: auto !important;
           padding-inline-start: 1rem !important;
         }
 

@@ -19,6 +19,321 @@ import { useFieldArray, useWatch } from 'react-hook-form';
 import { useAppToast } from '@/context/ToastContext';
 import type { Estabelecimento } from '@/types/estabelecimento';
 import { AppInputText } from '@/componentes/inputtext/AppInputText';
+import { AppInputTextAreaForm } from '@/componentes/inputtext/AppInputTextAreaForm';
+import type { Procedimento } from '@/types/procedimento';
+import { AppInputTextArea } from '@/componentes/inputtext/AppInputTextArea';
+
+const getNomeEstabelecimento = (estabelecimento: Estabelecimento): string => {
+    let nomeExibir = estabelecimento.nome;
+    if (nomeExibir.length > 28) {
+        nomeExibir = nomeExibir.substring(0, 28);
+    }
+
+    return estabelecimento.sigla ? `${nomeExibir} - ${estabelecimento.sigla}` : nomeExibir;
+};  
+
+const estabelecimentoTemplate = (option: Estabelecimento) => {
+        if (!option) {
+            return "Selecione uma clinica/hospital";
+        }
+  
+        return (
+          <div
+            className={`flex items-center justify-between transition-all min-h-[28px] min-w-[28px]
+              'cursor-pointer hover:bg-blue-50/50 gap-1`}
+          >
+            <div
+                className={`w-[28px] h-[28px] rounded-full border border-white shadow-inne flex items-center justify-center animate-fadein overflow-hidden`}
+                style={{ backgroundColor: option.cor?.startsWith('#') ? option.cor : `#${option.cor}` }}
+            >
+                {option.icone ? (
+                    <img 
+                          src={((option.icone as any) as string).startsWith('data:') 
+                          ? (option.icone as string) 
+                          : `data:image/png;base64,${option.icone}`}
+                        className="object-contain"
+                        alt={option.nome}
+                    />
+                ) : <i className=" text-white text-[11px]" />}
+            </div>
+            {getNomeEstabelecimento(option)}
+        </div>
+        )
+    };  
+
+const CompProcedimento = ({ incClick, procChange, isReplace, procedimentoParams }:{ incClick: () => void, 
+        procChange: (procedimento: Procedimento | undefined) => void, 
+        isReplace: (value: boolean) => void, procedimentoParams: { ativo: boolean; _refresh?: string | undefined } }) => {
+    const [ shortcutMode, setShortcutMode ] = useState<'replace' | 'append'>('replace');
+    const [ selectedTemplateId, setSelectedTemplateId ] = useState<number | undefined>(undefined);
+
+    const handleTemplateChange = (e: any) => {
+        const templateId = e.target.value;
+        setSelectedTemplateId(templateId);
+    };    
+
+    const handleProcedimentoChange = (proc: any) => {
+        if (proc == null) {
+            return
+        }
+
+        if (proc) {
+            procChange(proc);
+            setSelectedTemplateId(undefined);
+        }
+    }
+    
+    return (
+        <div className="col-span-12 lg:col-span-6 space-y-2">
+            {/* ShortCut Autocomplete Menu block */}
+            <div className="p-2 bg-blue-50/50 border border-blue-100 rounded-xl space-y-2">
+            <div className="flex flex-row items-center justify-between gap-1.5">
+                <label className="text-[11px] font-bold text-blue-800 flex items-center gap-1 shrink-0">
+                    <i className="pi pi-bookmark text-xs mr-1" />
+                    Atalho de Procedimento
+                </label>
+                
+                {/* Toggle template action style: replace or append */}
+                <div className="flex items-center gap-2">
+                    <span className="text-[9px] font-bold text-slate-400">Modo:</span>
+                    <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setShortcutMode('replace');
+                                isReplace(true);
+                            }}
+                            className={`px-1.5 py-0.5 rounded text-[9px] font-bold transition-all ${
+                                shortcutMode === 'replace' ? 'bg-blue-600 text-white shadow-3xs' : 'text-slate-500'
+                            }`}
+                            title="Substitui todo o texto escrito no campo de procedimento"
+                        >
+                            Substituir
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setShortcutMode('append');
+                                isReplace(false);
+                            }}
+                            className={`px-1.5 py-0.5 rounded text-[9px] font-bold transition-all ${
+                                shortcutMode === 'append' ? 'bg-blue-600 text-white shadow-3xs' : 'text-slate-500'
+                            }`}
+                            title="Anexa ao final do texto que você já escreveu"
+                        >
+                            Anexar
+                        </button>
+                    </div>
+                </div>
+            </div> 
+
+            {/* SELECT ACCELERATOR ATALHO */}
+            <div className="flex gap-2">
+                <AppSelect
+                    name='templateProcedimento'
+                    label=''
+                    value={selectedTemplateId}
+                    onChange={handleTemplateChange}
+                    onObjectChange={handleProcedimentoChange}
+                    url="/procedimento"
+                    filterParams={procedimentoParams}
+                    optionLabel="descricao"
+                    optionValue="id"
+                />
+
+                {/* Save current written description as dynamic shortcut template */}
+                <Button
+                    onClick={incClick}
+                    className={`px-2 py-1.5 h-[40px] mt-3 border rounded-lg flex items-center justify-center gap-1 text-[10px] font-bold transition-all shrink-0 
+                        bg-white text-blue-700 border-blue-200 hover:bg-blue-50
+                    `}
+                    title="Salvar o texto atual abaixo como um novo atalho reutilizável"
+                >
+                    <i className="pi pi-bookmark text-xs mr-1"></i>
+                    <span>Incluir</span>
+                </Button>
+            </div> 
+            </div>
+        </div>
+    )
+}
+
+const DlgProcedimento = ({exibir, handleSave, onHide} : {exibir: boolean, handleSave: (proc: Procedimento) => void, onHide: () => void}) => {
+    const [ descProcedimento, setDescProcedimento ] = useState('');
+    const { showError, showSuccess } = useAppToast();
+
+    const handleSaveProcedimento = async () => {
+        try {
+            const novoProcedimento = await server.api.criar<Procedimento>('/procedimento', {
+                descricao: descProcedimento,
+                ativo: true
+            });
+
+            handleSave(novoProcedimento);
+
+            showSuccess('Sucesso', 'Procedimento cadastrado e selecionado.');
+            onHide();
+        } catch (err: any) {
+            showError("Erro", "Não foi possível cadastrar o procedimento.");
+        }
+    };
+
+    return (
+        <Dialog 
+            visible={exibir} 
+            showCloseIcon={false}
+            onHide={onHide} 
+            onShow={() => {
+                setDescProcedimento('')
+            }}
+            style={{ width: '450px' }}
+            headerClassName='p-0'
+            header={
+                <div className="bg-blue-600 text-white p-4 flex w-full">
+                    <div className="flex gap-2 items-center w-full">
+                        <i className="pi pi-user-plus w-5 h-5 text-xg font-bold text-blue-300" />
+                        <h2 className="pl-1 text-xg font-bold tracking-tight w-full">Cadastrar Novo Procedimento</h2>
+                        <Button  
+                            icon="pi pi-times" 
+                            onClick={() => {
+                                onHide();
+                                setDescProcedimento('')
+                            }} 
+                            className=" text-slate-300 font-bold hover:text-white hover:bg-white/10 rounded-lg transition-colors" />
+                    </div>
+                </div>
+            }
+            footer={
+                <div className="flex gap-2 justify-between items-center">
+                    <Button 
+                        label="Cancelar" 
+                        icon="pi pi-ban" 
+                        onClick={() => {
+                            onHide();
+                            setDescProcedimento('')
+                        }} 
+                        className="p-button-outlined p-button-text shadow-md border-none p-2" />
+                    <Button 
+                        label="Cadastrar" 
+                        icon="pi pi-bolt" 
+                        disabled={!descProcedimento.trim()} 
+                        onClick={handleSaveProcedimento}
+                        className="p-button-outlined p-button-text shadow-md bg-blue-600 border-none text-white p-2"
+                    />
+                </div>
+            }  
+        >
+            <div className="flex flex-col gap-4 mt-4">
+                <AppInputText    
+                    name="descProcedimento"
+                    label="Descrição"
+                    value={descProcedimento}
+                    onChange={(e) => setDescProcedimento(e.target.value)}
+                    colSpan={12} 
+                    maxLength={60}
+                    required
+                />
+            </div>
+        </Dialog>
+    )
+}
+
+const DlgCirurgiao = ({exibir, handleSave, onHide} : {exibir: boolean, handleSave: (cirurgiao: Medico) => void, onHide: () => void}) => {
+    const [ nomeCirurgiao, setNomeCirurgiao ] = useState<string>('');
+    const [ siglaCirurgiao, setSiglaCirurgiao ] = useState<string>('');    
+    const { showError, showSuccess } = useAppToast();
+    
+    const handleSaveCirurgiao = async () => {
+        try {
+            const novoMedico = await server.api.criar<Medico>('/medico', {
+                nome: nomeCirurgiao,
+                sigla: siglaCirurgiao.toUpperCase(),
+                ativo: true,
+                especialidades: [2],
+                dataAssociacao: undefined
+            });
+
+            handleSave(novoMedico);
+
+            showSuccess('Sucesso', 'Cirurgião cadastrado e selecionado.');
+            onHide();
+        } catch (err: any) {
+            showError("Erro", "Não foi possível cadastrar o cirurgião.");
+        }
+    };
+
+    return (
+        <Dialog 
+            visible={exibir} 
+            showCloseIcon={false}
+            onHide={onHide} 
+            onShow={() => {
+                setNomeCirurgiao('')
+                setSiglaCirurgiao('')
+            }}
+            style={{ width: '450px' }}
+            headerClassName='p-0'
+            header={
+                <div className="bg-blue-600 text-white p-4 flex w-full">
+                    <div className="flex gap-2 items-center w-full">
+                        <i className="pi pi-user-plus w-5 h-5 text-xg font-bold text-blue-300" />
+                        <h2 className="pl-1 text-xg font-bold tracking-tight w-full">Cadastrar Novo Cirurgião</h2>
+                        <Button  
+                            icon="pi pi-times" 
+                            onClick={() => {
+                                onHide();
+                                setNomeCirurgiao('')    
+                                setSiglaCirurgiao('')
+                            }} 
+                            className=" text-slate-300 font-bold hover:text-white hover:bg-white/10 rounded-lg transition-colors" />
+                    </div>
+                </div>
+            }
+            footer={
+                <div className="flex gap-2 justify-between items-center">
+                    <Button 
+                        label="Cancelar" 
+                        icon="pi pi-ban" 
+                        onClick={() => {
+                            onHide();
+                            setNomeCirurgiao('')    
+                            setSiglaCirurgiao('')
+                        }} 
+                        className="p-button-outlined p-button-text shadow-md border-none p-2" />
+                    <Button 
+                        label="Cadastrar" 
+                        icon="pi pi-bolt" 
+                        disabled={!nomeCirurgiao || !siglaCirurgiao} 
+                        onClick={handleSaveCirurgiao}
+                        className="p-button-outlined p-button-text shadow-md bg-blue-600 border-none text-white p-2"
+                    />
+                </div>
+            }  
+        >
+            <div className="flex flex-col gap-4 mt-4">
+                <AppInputText    
+                    name="nomeCirurgiao"
+                    label="Nome"
+                    value={nomeCirurgiao}
+                    onChange={(e) => setNomeCirurgiao(e.target.value)}
+                    colSpan={12} 
+                    maxLength={60}
+                    required
+                />
+                <AppInputText    
+                    name="siglaCirurgiao"
+                    label="Sigla"
+                    value={siglaCirurgiao}
+                    onChange={(e) => setSiglaCirurgiao(e.target.value)}
+                    colSpan={12} 
+                    maxLength={3}
+                    minLength={3}
+                    required
+                />
+            </div>
+        </Dialog>
+    )
+}
 
 const ProcedimentosTable = ({ control, activeIndex, onSelectRow, setDlgCirurgiao, cirurgiaoParams }: 
             { control: any, activeIndex: number, onSelectRow: (index: number) => void, 
@@ -29,8 +344,17 @@ const ProcedimentosTable = ({ control, activeIndex, onSelectRow, setDlgCirurgiao
         keyName: "rowId"
     });
 
-    const [isEditing, setIsEditing] = useState(false);
-    const [isNewRecord, setIsNewRecord] = useState(false);
+    const [ procedimentoParams, setProcedimentoParams ] = useState<{ 
+        ativo: boolean; 
+        _refresh?: string 
+    }>({ ativo: true });   
+
+    const [ isEditing, setIsEditing ] = useState(false);
+    const [ isNewRecord, setIsNewRecord ] = useState(false);
+
+    const [ dlgProcedimento, setDlgProcedimento ] = useState(false);
+
+    const [ replace, setReplace ] = useState<boolean>(true);
 
     const watchProcedimentos = useWatch({
         control,
@@ -84,44 +408,6 @@ const ProcedimentosTable = ({ control, activeIndex, onSelectRow, setDlgCirurgiao
         }
         return option.sigla ? `${option.nome} - ${option.sigla}` : option.nome;
     };
-
-    const getNomeEstabelecimento = (estabelecimento: Estabelecimento): string => {
-        let nomeExibir = estabelecimento.nome;
-        if (nomeExibir.length > 28) {
-            nomeExibir = nomeExibir.substring(0, 28);
-        }
-
-        return estabelecimento.sigla ? `${nomeExibir} - ${estabelecimento.sigla}` : nomeExibir;
-    };
-
-    const estabelecimentoTemplate = (option: Estabelecimento) => {
-        if (!option) {
-            return "Selecione uma clinica/hospital";
-        }
-  
-        return (
-          <div
-            className={`flex items-center justify-between transition-all min-h-[28px] min-w-[28px]
-              'cursor-pointer hover:bg-blue-50/50 gap-1`}
-          >
-            <div
-                className={`w-[28px] h-[28px] rounded-full border border-white shadow-inne flex items-center justify-center animate-fadein overflow-hidden`}
-                style={{ backgroundColor: option.cor?.startsWith('#') ? option.cor : `#${option.cor}` }}
-            >
-                {option.icone ? (
-                    <img 
-                          src={((option.icone as any) as string).startsWith('data:') 
-                          ? (option.icone as string) 
-                          : `data:image/png;base64,${option.icone}`}
-                        className="object-contain"
-                        alt={option.nome}
-                    />
-                ) : <i className=" text-white text-[11px]" />}
-            </div>
-            {getNomeEstabelecimento(option)}
-        </div>
-        )
-    };    
 
     return (
         <div className="flex flex-col gap-1.5 mb-2 w-full col-span-12">
@@ -202,7 +488,7 @@ const ProcedimentosTable = ({ control, activeIndex, onSelectRow, setDlgCirurgiao
                         valueTemplate={medicoTemplate}
                     />
 
-                     <Button 
+                    <Button 
                         type="button" 
                         icon="pi pi-user-plus" 
                         label="Cadastrar Cirurgião" 
@@ -217,12 +503,31 @@ const ProcedimentosTable = ({ control, activeIndex, onSelectRow, setDlgCirurgiao
                         colSpan={2}
                     />
 
-                    <AppInputTextForm
+                    <CompProcedimento 
+                        incClick={() => setDlgProcedimento(true)} 
+                        isReplace={(value) => setReplace(value)}
+                        procedimentoParams={procedimentoParams}
+                        procChange={(proc) => {
+                            if (proc) {
+                                if (replace) {
+                                    (control as any).setValue(`procedimentos.${activeIndex}.procedimento`, proc.descricao);
+                                } else {
+                                    // Append mode
+                                    const currentVal = watchProcedimentos[activeIndex]?.procedimento || '';
+                                    const separator = currentVal.trim() ? ' ' : '';
+                                    (control as any).setValue(`procedimentos.${activeIndex}.procedimento`, currentVal + separator + proc.descricao);
+                                }
+                            }  
+                        }}
+                    />
+
+                    <AppInputTextAreaForm
                         name={`procedimentos.${activeIndex}.procedimento`} 
                         label="Procedimento" 
                         control={control} 
                         maxLength={60}
-                        colSpan={5}
+                        colSpan={6}
+                        className="!max-h-[90px]"
                     />
                 </div>
             )}
@@ -275,6 +580,30 @@ const ProcedimentosTable = ({ control, activeIndex, onSelectRow, setDlgCirurgiao
                         />
                 )} />
             </DataTable>
+
+            <DlgProcedimento 
+                exibir={dlgProcedimento} 
+                onHide={() => setDlgProcedimento(false)}
+                handleSave={(proc) => {
+    
+                    if (activeIndex !== -1) {
+                        if (replace) {
+                            (control as any).setValue(`procedimentos.${activeIndex}.procedimento`, proc.descricao);
+                        } else {
+                            // Append mode
+                            const currentVal = watchProcedimentos[activeIndex]?.procedimento || '';
+                            const separator = currentVal.trim() ? ' ' : '';
+                            (control as any).setValue(`procedimentos.${activeIndex}.procedimento`, currentVal + separator + proc.descricao);
+                        }
+                    }
+
+                    setProcedimentoParams({ 
+                        ativo: true, 
+                        _refresh: Date.now().toString() 
+                    });
+
+                }}
+            />
         </div>
     );
 };
@@ -284,19 +613,32 @@ export const PacienteView = () => {
     const [ cameraVisible, setCameraVisible ] = useState(false);
     const [ medicoId, setMedicoId ] =  useState<number | undefined>(undefined);
     const [ selectedFile, setSelectedFile ] = useState<File | null>(null);
-    const { showError, showSuccess } = useAppToast();
+    const { showError } = useAppToast();
     const [ loadData, setLoadData ] = useState<(() => Promise<void>) | null>(null);
 
     const [ dlgCirurgiao, setDlgCirurgiao ] = useState<boolean>(false);
-    const [ nomeCirurgiao, setNomeCirurgiao ] = useState<string>('');
-    const [ siglaCirurgiao, setSiglaCirurgiao ] = useState<string>('');
+
+    const [ textAreaProcedimento, setTextAreaProcedimento ] = useState<string>('');
+
     const [ cirurgiaoParams, setCirurgiaoParams ] = useState<{ 
         ativo: boolean; 
         especialidades: string[]; 
         _refresh?: string 
     }>({ ativo: true, especialidades: ['2'] });
+    
+    const [ procedimentoScanParams, setProcedimentoScanParams ] = useState<{ 
+        ativo: boolean; 
+        _refresh?: string 
+    }>({ ativo: true });
+
+    const [ dlgProcedimento, setDlgProcedimento ] = useState<boolean>(false);
 
     const [activeIndex, setActiveIndex] = useState<number>(-1);
+
+    const [ replaceScan, setReplaceScan ] = useState<boolean>(true);
+
+    const [ estabelecimentoId, setEstabelecimentoId ] = useState<number | undefined>(undefined);
+    const [ cirurgiaoId, setCirurgiaoId ] = useState<number | undefined>(undefined);
 
     const handleCapture = async (file: File) => {
         try {
@@ -377,36 +719,18 @@ export const PacienteView = () => {
                 ]}
             >
                 {(control) => {
-                    const handleSaveCirurgiao = async () => {
-                        try {
-                            setLoadingIA(true);
-                            const novoMedico = await server.api.criar<Medico>('/medico', {
-                                nome: nomeCirurgiao.toUpperCase(),
-                                sigla: siglaCirurgiao.toUpperCase(),
-                                ativo: true,
-                                especialidades: [2],
-                                dataAssociacao: undefined
-                            });
-
-                            if (activeIndex !== -1) {
-                                (control as any).setValue(`procedimentos.${activeIndex}.cirurgiaoId`, novoMedico.id);
-                            }
-
-                            setCirurgiaoParams({ 
-                                ativo: true, 
-                                especialidades: ['2'], 
-                                _refresh: Date.now().toString() 
-                            });
-
-                             showSuccess('Sucesso', 'Cirurgião cadastrado e selecionado.');
-                            setDlgCirurgiao(false);
-                        } catch (err: any) {
-                            showError("Erro", "Não foi possível cadastrar o cirurgião.");
-                        } finally {
-                            setLoadingIA(false);
+                    const saveCirurgiao = (cirurgiao: Medico) => {
+                         if (activeIndex !== -1) {
+                            (control as any).setValue(`procedimentos.${activeIndex}.cirurgiaoId`, cirurgiao.id);
                         }
-                    };
 
+                        setCirurgiaoParams({ 
+                            ativo: true, 
+                            especialidades: ['2'], 
+                            _refresh: Date.now().toString() 
+                        });
+                    }
+                    
                     return (
                     <>
                         <AppInputTextForm
@@ -436,77 +760,11 @@ export const PacienteView = () => {
                             cirurgiaoParams={cirurgiaoParams}
                         />
 
-                        <Dialog 
-                            visible={dlgCirurgiao} 
-                            showCloseIcon={false}
-                            onHide={() =>{
-                                setDlgCirurgiao(false)
-                            }} 
-                            onShow={() => {
-                                setNomeCirurgiao('')
-                                setSiglaCirurgiao('')
-                            }}
-                            style={{ width: '450px' }}
-                            headerClassName='p-0'
-                            header={
-                                <div className="bg-blue-600 text-white p-4 flex w-full">
-                                    <div className="flex gap-2 items-center w-full">
-                                        <i className="pi pi-user-plus w-5 h-5 text-xg font-bold text-blue-300" />
-                                        <h2 className="pl-1 text-xg font-bold tracking-tight w-full">Cadastrar Novo Cirurgião</h2>
-                                        <Button  
-                                            icon="pi pi-times" 
-                                            onClick={() => {
-                                                setDlgCirurgiao(false)
-                                                setNomeCirurgiao('')    
-                                                setSiglaCirurgiao('')
-                                            }} 
-                                            className=" text-slate-300 font-bold hover:text-white hover:bg-white/10 rounded-lg transition-colors" />
-                                    </div>
-                                </div>
-                            }
-                            footer={
-                                <div className="flex gap-2 justify-between items-center">
-                                    <Button 
-                                        label="Cancelar" 
-                                        icon="pi pi-ban" 
-                                        onClick={() => {
-                                            setDlgCirurgiao(false)
-                                            setNomeCirurgiao('')    
-                                            setSiglaCirurgiao('')
-                                        }} 
-                                        className="p-button-outlined p-button-text shadow-md border-none p-2" />
-                                    <Button 
-                                        label="Cadastrar" 
-                                        icon="pi pi-bolt" 
-                                        disabled={!nomeCirurgiao || !siglaCirurgiao} 
-                                        onClick={handleSaveCirurgiao}
-                                        className="p-button-outlined p-button-text shadow-md bg-blue-600 border-none text-white p-2"
-                                    />
-                                </div>
-                            }  
-                        >
-                            <div className="flex flex-col gap-4 mt-4">
-                               <AppInputText    
-                                    name="nomeCirurgiao"
-                                    label="Nome"
-                                    value={nomeCirurgiao}
-                                    onChange={(e) => setNomeCirurgiao(e.target.value)}
-                                    colSpan={12} 
-                                    maxLength={60}
-                                    required
-                                />
-                                <AppInputText    
-                                    name="siglaCirurgiao"
-                                    label="Sigla"
-                                    value={siglaCirurgiao}
-                                    onChange={(e) => setSiglaCirurgiao(e.target.value)}
-                                    colSpan={12} 
-                                    maxLength={3}
-                                    minLength={3}
-                                    required
-                                />
-                            </div>
-                        </Dialog>
+                        <DlgCirurgiao
+                            exibir={dlgCirurgiao}
+                            onHide={() => setDlgCirurgiao(false)}
+                            handleSave={saveCirurgiao}
+                        />
                     </>
                     )
                 }}
@@ -535,7 +793,7 @@ export const PacienteView = () => {
                         <Button 
                             label="Processar" 
                             icon="pi pi-bolt" 
-                            disabled={!selectedFile || !medicoId || loadingIA} 
+                            disabled={!selectedFile || !medicoId || !estabelecimentoId || !cirurgiaoId || !textAreaProcedimento || loadingIA} 
                             onClick={handleExecute}
                             className="p-button-outlined p-button-text shadow-md bg-blue-600 border-none text-white p-2"
                         />
@@ -543,21 +801,88 @@ export const PacienteView = () => {
                 }
             >
                 <div className="flex flex-col gap-4">
-                    <div className="flex flex-col gap-2">
-                        <label className="font-bold text-sm">Médico Responsável</label>
+                    <div className="flex flex-col mt-3 gap-2">
                         <AppSelect
                             label='Médico'
                             name='medicoId'
                             value={medicoId}
+                            filterParams={{ ativo: true, especialidades: ['1'] }}
                             onChange={(e) => setMedicoId(e.value)}    
                             url="/medico"
-                            placeholder="Selecione o médico para o filtro da agenda"
+                            placeholder="Selecione o médico"
                             valueTemplate={medicoTemplate}
                             itemTemplate={medicoTemplate}
                             optionLabel="nome"
                             optionValue="id"
                         />
                     </div>
+
+                    <div className="flex flex-col gap-2">
+                        <AppSelect
+                            label='Clinica / Hospital'
+                            name='estabelecimentoId'
+                            value={estabelecimentoId}
+                            filterParams={{ ativo: true }}
+                            onChange={(e) => setEstabelecimentoId(e.value)}    
+                            url="/estabelecimento"
+                            placeholder="Selecione uma clinica/hospital"
+                            valueTemplate={estabelecimentoTemplate}
+                            itemTemplate={estabelecimentoTemplate}
+                            optionLabel="nome"
+                            optionValue="id"
+                        />
+                    </div>
+
+                    <div className="flex flex-col grid grid-cols-12 gap-2">
+                        <AppSelect
+                            className="!col-span-10"
+                            label='Cirurgião'
+                            name='cirurgiaoId'
+                            value={cirurgiaoId}
+                            filterParams={cirurgiaoParams}
+                            onChange={(e) => setCirurgiaoId(e.value)}    
+                            url="/medico"
+                            placeholder="Selecione o cirurgião"
+                            valueTemplate={medicoTemplate}
+                            itemTemplate={medicoTemplate}
+                            optionLabel="nome"
+                            optionValue="id"
+                        />
+
+                        <Button 
+                            type="button" 
+                            icon="pi pi-user-plus" 
+                            className='bg-blue-600 text-white border-none shadow-md ml-4 mt-3 h-[40px] px-4 justify-betwenn items-center col-span-1'
+                            onClick={() => setDlgCirurgiao(true)}
+                        />
+                    </div>        
+
+                    <CompProcedimento
+                        incClick={() => setDlgProcedimento(true)}
+                        isReplace={(value) => setReplaceScan(value)}
+                        procedimentoParams={procedimentoScanParams}
+                        procChange={(proc) => {
+                            if (proc) {
+                                if (replaceScan) {
+                                    setTextAreaProcedimento(proc.descricao);
+                                } else {
+                                    const separator = textAreaProcedimento.trim() ? ' ' : '';
+                                    setTextAreaProcedimento(textAreaProcedimento + separator + proc.descricao);
+                                }
+                            }
+                        }}
+                    />
+                             
+                    <div className="flex flex-col gap-2">
+                        <AppInputTextArea
+                            name='procediemtno'
+                            label='Procedimento'
+                            value={textAreaProcedimento}
+                            onChange={(e) => setTextAreaProcedimento(e.target.value)}
+                            colSpan={12}
+                        />
+                    </div>
+
 
                     <div className="flex flex-col gap-2">
                         <label className="font-bold text-sm">Captura da Agenda/Etiqueta</label>
@@ -569,6 +894,39 @@ export const PacienteView = () => {
                     </div>
                 </div>
             </Dialog>
+
+            <DlgProcedimento
+                exibir={dlgProcedimento}
+                onHide={() => setDlgProcedimento(false)}
+                handleSave={(proc) => {
+                    if (proc) {
+                        if (replaceScan) {
+                            setTextAreaProcedimento(proc.descricao);
+                        } else {
+                            const separator = textAreaProcedimento.trim() ? ' ' : '';
+                            setTextAreaProcedimento(textAreaProcedimento + separator + proc.descricao);
+                        }
+                    }
+                    setProcedimentoScanParams({ 
+                        ativo: true, 
+                        _refresh: Date.now().toString() 
+                    });
+                }}
+            />
+
+            <DlgCirurgiao
+                exibir={dlgCirurgiao}
+                onHide={() => setDlgCirurgiao(false)}
+                handleSave={(cirurgiao) => {
+                    setCirurgiaoId(cirurgiao.id);
+
+                    setCirurgiaoParams({ 
+                        ativo: true, 
+                        especialidades: ['2'], 
+                        _refresh: Date.now().toString() 
+                    });
+                }}
+            />
         </>
     )
 }

@@ -3,7 +3,7 @@ package br.com.anestesiaflow.medico.model;
 import br.com.anestesiaflow.framework.persistence.BaseEnum;
 
 public enum MedicoEspecialidade implements BaseEnum {
-	ANESTESISTE(1, "Anestesista"),
+	ANESTESISTA(1, "Anestesista"),
 	CIRURGIAO(2, "Cirurgião");
 
 	private final int codigo;

@@ -643,8 +643,14 @@ export const PacienteView = () => {
     const handleCapture = async (file: File) => {
         try {
             setLoadingIA(true);
-            await server.api.upload('/paciente/decode', 
-                        [{key: "medicoId", value: String(medicoId)}], file, 'file');
+            const uploadParams: Array<{ key: string; value: string | Blob }> = [
+                { key: "medicoId", value: String(medicoId) },
+                { key: "cirurgiaoId", value: String(cirurgiaoId) },
+                { key: "estabelecimentoId", value: String(estabelecimentoId) },
+                { key: "procedimentoTexto", value: textAreaProcedimento }
+            ];
+
+            await server.api.upload('/paciente/decode', uploadParams as any, file, 'file');
 
             if (loadData) {
                await loadData();

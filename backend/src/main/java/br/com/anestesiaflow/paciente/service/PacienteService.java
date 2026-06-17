@@ -2,10 +2,8 @@ package br.com.anestesiaflow.paciente.service;
 
 import java.io.InputStream;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -179,7 +177,8 @@ public class PacienteService {
 		
 	}
 	
-	public void decodeImagem(InputStream inputStream, int medicoId, int cirurgiaoId) throws Exception  {
+	public void decodeImagem(InputStream inputStream, int medicoId, int cirurgiaoId, 
+				int estabelecimentoId, String procedimentoTexto) throws Exception  {
 		String dados = extrairTexto(inputStream);
 		if (dados == null || dados.isEmpty()) {
 			throw new BusinessException("Não foi encontrado nenhum texto na imagem fornecida.");
@@ -198,14 +197,15 @@ public class PacienteService {
 				paciente.setAtivo(true);
 				pacienteRepository.save(paciente);
 			}
-			final PacienteProcedimento procedimento = pacienteRepository.findByProcedimentoData(paciente, item.dataProcedimento(), item.procedimento().toUpperCase());	
+			final PacienteProcedimento procedimento = pacienteRepository.findByProcedimentoData(paciente, item.dataProcedimento(), procedimentoTexto.toUpperCase());	
 			if (procedimento == null) {
 				PacienteProcedimento proc = new PacienteProcedimento();
 				proc.setPaciente(paciente);
 				proc.setMedico(entityManager.getReference(Medico.class, medicoId));
 				proc.setDataProcedimento(item.dataProcedimento());
-				proc.setProcedimento(item.procedimento());
+				proc.setProcedimento(procedimentoTexto.toUpperCase());
 				proc.setCirurgiao(entityManager.getReference(Medico.class, cirurgiaoId));
+				proc.setEstabelecimento(entityManager.getReference(Estabelecimento.class, estabelecimentoId));
 				paciente.getProcedimentos().add(proc);
 				pacienteRepository.save(paciente);
 			} else {
@@ -213,8 +213,9 @@ public class PacienteService {
 					if (itemPro.getId().equals(procedimento.getId())) {
 						itemPro.setMedico(entityManager.getReference(Medico.class, medicoId));
 						itemPro.setDataProcedimento(item.dataProcedimento());
-						itemPro.setProcedimento(item.procedimento().toUpperCase());
+						itemPro.setProcedimento(procedimentoTexto.toUpperCase());
 						itemPro.setCirurgiao(entityManager.getReference(Medico.class, cirurgiaoId));
+						itemPro.setEstabelecimento(entityManager.getReference(Estabelecimento.class, estabelecimentoId));
 					}
 				});		
 				pacienteRepository.save(paciente);
@@ -258,23 +259,23 @@ public class PacienteService {
         return m.find() ? m.group(1).trim() : null;
    }
    
-   private LocalDate converterDataAgenda(String dataStr) {
-	    if (dataStr == null) return LocalDate.now();
-	    try {
-	        // Ajuste para o local brasileiro para entender "abril"
-	        DateTimeFormatter parser = DateTimeFormatter.ofPattern("dd 'de' MMMM 'de' yyyy", new Locale("pt", "BR"));
-	        return LocalDate.parse(dataStr.toLowerCase(), parser);
-	    } catch (Exception e) {
-	        return LocalDate.now();
-	    }
-	}
+//    private LocalDate converterDataAgenda(String dataStr) {
+// 	    if (dataStr == null) return LocalDate.now();
+// 	    try {
+// 	        // Ajuste para o local brasileiro para entender "abril"
+// 	        DateTimeFormatter parser = DateTimeFormatter.ofPattern("dd 'de' MMMM 'de' yyyy", Locale.of("pt", "BR"));
+// 	        return LocalDate.parse(dataStr.toLowerCase(), parser);
+// 	    } catch (Exception e) {
+// 	        return LocalDate.now();
+// 	    }
+// 	}
    
    private List<PacienteImagemDTO> processarTexto(String texto) {
 	    List<PacienteImagemDTO> resultados = new ArrayList<>();
 
 	 // Extração da data (mantendo sua lógica que parece correta para o header)
-	    String dataAgendaStr = extrair(texto, "(\\d{2} de [a-z]+ de \\d{4})");
-	    LocalDate dataProcedimento = converterDataAgenda(dataAgendaStr);
+	    // String dataAgendaStr = extrair(texto, "(\\d{2} de [a-z]+ de \\d{4})");
+	    // LocalDate dataProcedimento = converterDataAgenda(dataAgendaStr);
 
 	    // Nova Regex: 
 	    // 1. Procura o horário (\\d{2}:\\d{2})
@@ -293,7 +294,7 @@ public class PacienteService {
 
 	        resultados.add(new PacienteImagemDTO(
 	            nomePaciente, 
-	            dataProcedimento, 
+	            LocalDate.now(), 
 	            procedimento, 
 	            nomeMedico
 	        ));

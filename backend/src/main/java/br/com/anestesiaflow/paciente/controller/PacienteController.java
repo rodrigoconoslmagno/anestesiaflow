@@ -76,12 +76,15 @@ public class PacienteController {
 	
 	@PostMapping("/decode")
 	public ResponseEntity<String> upload(@RequestParam @Validated int medicoId,
+					int cirurgiaoId,
+					int estabelecimentoId,
+					String procedimentoTexto,
 					@RequestParam MultipartFile file) throws Exception {
 
 	   File temp = File.createTempFile("img", ".jpg");
 	   file.transferTo(temp);
 	   try(InputStream stream = new FileInputStream(temp.getAbsolutePath())){
-		//    pacienteService.decodeImagem(stream, medicoId);
+		   pacienteService.decodeImagem(stream, medicoId, cirurgiaoId, estabelecimentoId, procedimentoTexto);
 		   return ResponseEntity.ok().build();
 	   }
 	}

@@ -1,13 +1,18 @@
 package br.com.anestesiaflow.publicview.escala;
 
 import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
 import br.com.anestesiaflow.escala.dto.EscalaSemanaDTO;
 import br.com.anestesiaflow.escala.service.EscalaService;
 import br.com.anestesiaflow.medico.dto.MedicoResponseDTO;
@@ -20,18 +25,21 @@ public class EscalaViewController implements BasePublicController {
     
 	private final MedicoService medicoService;
 	private final EscalaService escalaService;
+	private final Map<String, Object> filtrosMedico = new HashMap<>();
 	
 	public EscalaViewController(MedicoService medicoService, EscalaService escalaService) {
 		this.medicoService = medicoService;
 		this.escalaService = escalaService;
+		filtrosMedico.put("especialidades", Arrays.asList(1));
 	}
 	
     @GetMapping("/medicos")
 	public ResponseEntity<List<MedicoResponseDTO>> listar(@RequestParam(required = false) boolean ativo) {
     	if (ativo) {
-        	return ResponseEntity.ok(medicoService.listarAtivos());
+			filtrosMedico.put("ativo", true);
+        	return ResponseEntity.ok(medicoService.listar(filtrosMedico));
         }
-        
+        filtrosMedico.remove("ativo");
         return ResponseEntity.ok(medicoService.listarTodos());
     }
     

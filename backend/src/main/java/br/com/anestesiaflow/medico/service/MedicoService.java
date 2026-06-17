@@ -46,13 +46,13 @@ public class MedicoService {
 				.toList();
 	}
 
-	public List<MedicoResponseDTO> listarAtivos(){
-		return medicoRepository.findAll().stream()
-				.filter(medico -> medico.isAtivo())
-				.sorted(Comparator.comparing(Medico::getDataAssociacao))
-				.map(this::mapperToDto)
-				.toList();
-	}
+	// public List<MedicoResponseDTO> listarAtivos(){
+	// 	return medicoRepository.findAll().stream()
+	// 			.filter(medico -> medico.isAtivo())
+	// 			.sorted(Comparator.comparing(Medico::getDataAssociacao))
+	// 			.map(this::mapperToDto)
+	// 			.toList();
+	// }
 	
 	public MedicoResponseDTO buscaId(Integer id) {
 		Medico medico = medicoRepository.findById(id).orElseThrow(() -> new BusinessException("Médico não encontrado")); 

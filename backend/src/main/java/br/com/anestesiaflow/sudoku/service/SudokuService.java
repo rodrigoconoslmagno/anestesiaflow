@@ -3,9 +3,14 @@ package br.com.anestesiaflow.sudoku.service;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+
 import org.springframework.stereotype.Service;
+
 import br.com.anestesiaflow.escala.dto.EscalaItemResponseDTO;
 import br.com.anestesiaflow.escala.dto.EscalaResponseDTO;
 import br.com.anestesiaflow.escala.entidade.Escala;
@@ -18,16 +23,19 @@ public class SudokuService {
 
 	private final EscalaRepository escalaRepository;
 	private final MedicoService medicoService;
+	private final Map<String, Object> filtrosMedico = new HashMap<>();
 	
 	public SudokuService(EscalaRepository escalaRepository, MedicoService medicoService) {
 		this.escalaRepository = escalaRepository;
 		this.medicoService = medicoService;
+		filtrosMedico.put("ativo", true);
+		filtrosMedico.put("especialidades", Arrays.asList(1));
 	}
 	
 	public List<EscalaResponseDTO> listarPorData(LocalDate data){
 		List<Escala> escalas = escalaRepository.findByData(data, null);
 		
-		return medicoService.listarAtivos().stream().map(medico -> {
+		return medicoService.listar(filtrosMedico).stream().map(medico -> {
 			
 			Optional<Escala> escalaPlantao = escalas.stream().
 					filter(escala -> escala.isPlantao() && escala.getMedico().getId().equals(medico.id())).
@@ -89,7 +97,7 @@ public class SudokuService {
 	}
 	
 	private EscalaResponseDTO mapperToDtoMerge(Escala escala, Escala escalaPlantao) {
-		List<EscalaItem> itensMerge = new ArrayList<EscalaItem>();
+		List<EscalaItem> itensMerge = new ArrayList<>();
 		escala.getItens().stream()
 				.filter(item -> !item.isReagendado())
 				.forEach(item -> itensMerge.add(item));
@@ -99,7 +107,7 @@ public class SudokuService {
 		        LocalTime fim = LocalTime.of(19, 0);
 		        boolean estaNoIntervalo = !item.getHora().isBefore(inicio) && !item.getHora().isAfter(fim);
 				return !item.isReagendado() && estaNoIntervalo;
-			}).forEach(item -> itensMerge.add(item));;
+			}).forEach(item -> itensMerge.add(item));
 		return new EscalaResponseDTO(
 					escala.getId(), 
 					escala.getMedico().getId(),

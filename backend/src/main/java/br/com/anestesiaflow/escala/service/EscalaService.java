@@ -48,6 +48,7 @@ public class EscalaService {
 	private final EstabelecimentoRepository estabelecimentoRepository;
 	private final MedicoService medicoService;
 	private final EntityManager entityManager;
+	private final Map<String, Object> filtrosMedico = new HashMap<>();
 	
 	public EscalaService(EscalaRepository escalaRepository,EstabelecimentoRepository estabelecimentoRepository,
 					MedicoService medicoService, EntityManager entityManager) {
@@ -55,6 +56,8 @@ public class EscalaService {
 		this.estabelecimentoRepository = estabelecimentoRepository;
 		this.medicoService = medicoService;
 		this.entityManager = entityManager;
+		filtrosMedico.put("ativo", true);
+		filtrosMedico.put("especialidades", Arrays.asList(1));
 	}
 	
 	public List<EscalaSemanaSummaryDTO> listarTodos(Map<String, Object> filtros){
@@ -69,7 +72,7 @@ public class EscalaService {
 	public List<EscalaResponseDTO> listarPorData(LocalDate data, Boolean plantao){
 		List<Escala> escalas = escalaRepository.findByData(data, plantao);
 		
-		return medicoService.listarAtivos().stream().map(medico -> {
+		return medicoService.listar(filtrosMedico).stream().map(medico -> {
 			
 			Optional<Escala> escalaEncontrada = escalas.stream().
 					filter(escala -> escala.getMedico().getId().equals(medico.id())).

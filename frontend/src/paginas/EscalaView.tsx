@@ -7,10 +7,12 @@ import { type EscalaEdicao, escalaEdicaoSchema } from '@/types/escala';
 import type { Medico } from '@/types/medico';
 import { DateUtils } from '@/utils/DateUtils';
 import { useState } from 'react';
+import { useAuthStore } from '@/permissoes/authStore';
 
 export const EscalaView = () => {
 
     const RESOURCE_PATH = '/escala';
+    const medicoAtualId = useAuthStore((state) => state.user?.medicoId);
 
     const [filtroMedicoId, setFiltroMedicoId] = useState<number | undefined>(undefined);
     const [paramsBusca, setParamsBusca] = useState({});
@@ -63,6 +65,7 @@ export const EscalaView = () => {
                 medicoId: undefined,
                 semana: []
             }}
+            initialValues={{ medicoId: medicoAtualId ?? undefined }}
             columns={[
                 { field: 'medicoNome',
                   header: 'Médico',

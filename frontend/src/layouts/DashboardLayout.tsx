@@ -179,7 +179,7 @@ export const DashboardLayout: FC = () => {
             {!isCollapsed && (
               <div className="flex flex-col truncate animate-fadein">
                 <span className="text-sm font-bold text-gray-800 truncate">{usuario?.nome}</span>
-                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Médico Plantonista</span>
+                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Médico</span>
               </div>
             )}
           </div>

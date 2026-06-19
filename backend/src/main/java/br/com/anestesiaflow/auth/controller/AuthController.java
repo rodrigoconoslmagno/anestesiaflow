@@ -19,7 +19,6 @@ import br.com.anestesiaflow.auth.dto.LoginResponseDTO;
 import br.com.anestesiaflow.auth.permission.Permissoes;
 import br.com.anestesiaflow.auth.service.TokenService;
 import br.com.anestesiaflow.entidades.Usuario;
-import br.com.anestesiaflow.usuario.dto.UsuarioResponseDTO;
 import br.com.anestesiaflow.usuario.service.UsuarioService;
 
 @RestController
@@ -36,9 +35,9 @@ public class AuthController {
 
 	@PostMapping("/login")
 	public ResponseEntity<LoginResponseDTO> login(@RequestBody LoginRequestDTO body){
-		UsuarioResponseDTO usuario = usuarioService.findUsuarioByLogin(body.login(), body.senha());
+		LoginResponseDTO usuario = usuarioService.findUsuarioByLogin(body.login(), body.senha());
 		if (usuario != null){
-			String token = tokenService.generateToken(usuario);
+			String token = tokenService.generateToken(usuario.login());
 			ResponseCookie cookie = ResponseCookie.from("accessToken", token)
 							.httpOnly(true)
 							.secure(false)
@@ -48,7 +47,11 @@ public class AuthController {
 							.build();
 			return ResponseEntity.ok()
 					.header(HttpHeaders.SET_COOKIE, cookie.toString())
-					.body(new LoginResponseDTO(usuario.nome(), token, analisaRetornoPermissoes(usuario)));
+					.body(new LoginResponseDTO(usuario.nome(), 
+											   usuario.login(),
+											   usuario.medicoId(),
+											   usuario.medicoExibir(),
+											   usuario.permissoes()));
 		}
 		
 		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -74,9 +77,20 @@ public class AuthController {
 		if (usuario == null) {
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 		}
+
+		String medicoExibir = null;
+		if (usuario.getMedico() != null) {
+			medicoExibir = usuario.getMedico().getNome();
+			if (usuario.getMedico().getSigla() != null && !usuario.getMedico().getSigla().isBlank()) {
+				medicoExibir += " - " + usuario.getMedico().getSigla();
+			}
+		}
 		
-		return ResponseEntity.ok(new LoginResponseDTO(usuario.getNome(), null,
-				analisaRetornoPermissoes(usuario)));
+		return ResponseEntity.ok(new LoginResponseDTO(usuario.getNome(), 
+								usuario.getLogin(),
+								usuario.getMedico() != null ? usuario.getMedico().getId() : null,
+								medicoExibir,
+								analisaRetornoPermissoes(usuario)));
 	}
 	
 	private List<Permissoes> analisaRetornoPermissoes(Usuario usuario){
@@ -85,13 +99,5 @@ public class AuthController {
 		} 
 		
 		return usuario.getPermissoes().parallelStream().toList();
-	}
-	
-	private List<Permissoes> analisaRetornoPermissoes(UsuarioResponseDTO usuario){
-		if (usuario.login().equalsIgnoreCase("admin")) {
-			return Arrays.asList(Permissoes.values());
-		} 
-		
-		return usuario.permissoes();
 	}
 }

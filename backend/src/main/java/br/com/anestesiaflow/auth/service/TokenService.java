@@ -9,7 +9,6 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTCreationException;
 import com.auth0.jwt.exceptions.JWTVerificationException;
-import br.com.anestesiaflow.usuario.dto.UsuarioResponseDTO;
 
 @Service
 public class TokenService {
@@ -18,13 +17,13 @@ public class TokenService {
 	private String secrety;
 	private final String issuer = "anestesiaflow";
 	
-	public String generateToken(UsuarioResponseDTO usuario) {
+	public String generateToken(String login) {
 		try {
 			Algorithm algorithm = Algorithm.HMAC256(secrety);
 			
 			String token = JWT.create()
 						.withIssuer(issuer)
-						.withSubject(usuario.login())
+						.withSubject(login)
 						.withExpiresAt(generateExpirationDate())
 						.sign(algorithm);
 			return token;

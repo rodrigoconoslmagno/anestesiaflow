@@ -1,20 +1,20 @@
 import { createContext, useContext, useState, useEffect, type FC, type ReactNode } from 'react';
-import { type Usuario, server } from '@/api/server';
+import { type UsuarioLogin, server } from '@/api/server';
 import { Manutencao } from '@/paginas/Manutencao';
 import { useAuthStore } from '@/permissoes/authStore';
 
 interface AuthContextData {
-    usuario: Usuario | null;
+    usuario: UsuarioLogin | null;
     loading: boolean;
     isOffline: boolean;
-    loginSucesso: (dados: Usuario) => void;
+    loginSucesso: (dados: UsuarioLogin) => Promise<void>;
     logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
 
 export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
-    const [usuario, setUsuario] = useState<Usuario | null>(null);
+    const [usuario, setUsuario] = useState<UsuarioLogin | null>(null);
     const [loading, setLoading] = useState(true);
     const [isOffline, setIsOffline] = useState(false);
     const setLoginStore = useAuthStore((state) => state.setLogin);
@@ -22,8 +22,15 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
     useEffect(() => {
         const handleOffline = () => setIsOffline(true);
+        const handleOnline = () => setIsOffline(false);
 
         window.addEventListener('server-offline', handleOffline);
+        window.addEventListener('online', handleOnline);
+
+        async function sincronizarSessao(dados: UsuarioLogin) {
+            setUsuario(dados);
+            setLoginStore(dados);
+        }
 
         async function validate() {
             const isPublicRoute = window.location.pathname.startsWith('/view/');
@@ -35,8 +42,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
             try {
                 const data = await server.auth.me();
-                setLoginStore(data);
-                setUsuario(data);
+                await sincronizarSessao(data);
             } catch (err) {
                 console.error("Sessão inválida ou expirada");
                 handleLocalLogout();
@@ -45,11 +51,16 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             }
         }
         validate();
+
+        return () => {
+          window.removeEventListener('server-offline', handleOffline);
+          window.removeEventListener('online', handleOnline);
+        };
     }, []);
 
-    const loginSucesso = (dados: Usuario) => {
-        setLoginStore(dados as any);
+    const loginSucesso = async (dados: UsuarioLogin) => {
         setUsuario(dados);
+        setLoginStore(dados);
         setLoading(false);
     };
 
@@ -65,9 +76,6 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const handleLocalLogout = () => {
         setUsuario(null);
         logoutStore(); 
-        localStorage.removeItem('@AnestesiaFlow:user');
-        localStorage.removeItem('af-auth-storage');
-        sessionStorage.clear();
     };
 
     if (isOffline) {

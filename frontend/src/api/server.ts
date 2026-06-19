@@ -1,8 +1,7 @@
 import httpClient from '@/api/client';
+import type { LoginResponse } from '@/types/auth';
 
-export interface Usuario {
-    nome: string;
-  }
+export type UsuarioLogin = LoginResponse;
 
 export const server = {
   api: {

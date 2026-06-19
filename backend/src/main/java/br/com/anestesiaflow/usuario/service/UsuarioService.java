@@ -4,6 +4,7 @@ import java.util.List;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import br.com.anestesiaflow.entidades.Usuario;
+import br.com.anestesiaflow.auth.dto.LoginResponseDTO;
 import br.com.anestesiaflow.exception.BusinessException;
 import br.com.anestesiaflow.medico.model.Medico;
 import br.com.anestesiaflow.usuario.dto.UsuarioRequestDTO;
@@ -86,10 +87,10 @@ public class UsuarioService {
 		return mapperToResponseDTO(usuario);
 	}
 	
-	public UsuarioResponseDTO findUsuarioByLogin(String login, String senha) {
+	public LoginResponseDTO findUsuarioByLogin(String login, String senha) {
 		Usuario usuario = usuarioRepository.findByLogin(login).orElse(null);
 		if (usuario != null && usuario.isAtivo() && passwordEncoder.matches(senha, usuario.getSenha())){
-			return mapperToResponseDTO(usuario);			
+			return mapperToLoginResponseDTO(usuario);			
 		}
 		
 		return null;
@@ -104,6 +105,26 @@ public class UsuarioService {
 			      usuario.getDataCriacao(),
 			      usuario.getDataAtualizacao(),
 			      usuario.getPermissoes().parallelStream().toList());
+	}
+
+	private LoginResponseDTO mapperToLoginResponseDTO(Usuario usuario) {
+		String medicoExibir = null;
+		if (usuario.getMedico() != null) {
+			medicoExibir = usuario.getMedico().getNome();
+			if (usuario.getMedico().getSigla() != null && !usuario.getMedico().getSigla().isBlank()) {
+				medicoExibir += " - " + usuario.getMedico().getSigla();
+			}
+		}
+
+		return new LoginResponseDTO(
+				usuario.getNome(),
+				usuario.getLogin(),
+				usuario.getMedico() != null ? usuario.getMedico().getId() : null,
+				medicoExibir,
+				usuario.getLogin().equalsIgnoreCase("admin")
+					? List.of(br.com.anestesiaflow.auth.permission.Permissoes.values())
+					: usuario.getPermissoes().parallelStream().toList()
+		);
 	}
 	
 	private Usuario mapperToUsuario(UsuarioRequestDTO dto) {

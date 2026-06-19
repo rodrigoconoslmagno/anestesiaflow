@@ -1,6 +1,7 @@
 package br.com.anestesiaflow.usuario.dto;
 
 import java.util.List;
+
 import br.com.anestesiaflow.auth.permission.Permissoes;
 import jakarta.validation.constraints.NotBlank;
 
@@ -11,5 +12,6 @@ public record UsuarioRequestDTO(
 	    String login,
 	    String senha,
 	    Boolean ativo,
+		Integer medicoId,
 	    List<Permissoes> permissoes
 	) {}

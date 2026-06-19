@@ -9,6 +9,7 @@ export const usuarioSchema = baseEntitySchema.extend({
   ativo: z.boolean().default(true),
   senha: z.string().optional().or(z.literal('')),
   confirmarSenha: z.string().optional().or(z.literal('')),
+  medicoId: z.number().nullable().optional().default(null),
   permissoes: z.array(permissoesSchema).default([]),
 }).superRefine((data, ctx) => {
   if (!data.id) {

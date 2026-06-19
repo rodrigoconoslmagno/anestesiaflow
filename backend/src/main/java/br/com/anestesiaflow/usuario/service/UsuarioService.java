@@ -5,9 +5,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import br.com.anestesiaflow.entidades.Usuario;
 import br.com.anestesiaflow.exception.BusinessException;
+import br.com.anestesiaflow.medico.model.Medico;
 import br.com.anestesiaflow.usuario.dto.UsuarioRequestDTO;
 import br.com.anestesiaflow.usuario.dto.UsuarioResponseDTO;
 import br.com.anestesiaflow.usuario.repository.UsuarioRepository;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 
 @Service
@@ -15,10 +17,12 @@ public class UsuarioService {
 	
 	private final UsuarioRepository usuarioRepository;
 	private final PasswordEncoder passwordEncoder;
+	private final EntityManager entityManager;
 	
-	public UsuarioService(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder) {
+	public UsuarioService(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder, EntityManager entityManager) {
 		this.usuarioRepository = usuarioRepository;
 		this.passwordEncoder = passwordEncoder;
+		this.entityManager = entityManager;
 	}
 	
 	public List<UsuarioResponseDTO> listarTodos() {
@@ -96,6 +100,7 @@ public class UsuarioService {
 			      usuario.getNome(),
 			      usuario.getLogin(),
 			      usuario.isAtivo(),
+				  usuario.getMedico() != null ? usuario.getMedico().getId() : null,
 			      usuario.getDataCriacao(),
 			      usuario.getDataAtualizacao(),
 			      usuario.getPermissoes().parallelStream().toList());
@@ -107,7 +112,9 @@ public class UsuarioService {
 		usuario.setLogin(dto.login());
 		usuario.setAtivo(dto.ativo());
 		usuario.setSenha(passwordEncoder.encode(dto.senha()));
-		
+		if (dto.medicoId() != null) {
+			usuario.setMedico(entityManager.getReference(Medico.class, dto.medicoId()));
+		}
 		return usuario;
 	}
 	
@@ -125,6 +132,12 @@ public class UsuarioService {
 	        usuario.getPermissoes().addAll(request.permissoes());
 	    }
 		
+		if (request.medicoId() != null) {
+			usuario.setMedico(entityManager.getReference(Medico.class, request.medicoId()));
+		} else {
+			usuario.setMedico(null);
+		}
+
 		return usuario;
 	}
 }

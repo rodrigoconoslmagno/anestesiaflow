@@ -5,8 +5,18 @@ import { AppInputPassword } from '@/componentes/inputtext/AppInputPassword';
 import { AppUsuarioPermissao } from '@/componentes/usuario/AppUsuarioPermissao';
 import { Recurso } from '@/permissoes/recurso';
 import { AppSwitchForm } from '@/componentes/switch/AppSwitchForm';
+import type { Medico } from '@/types/medico';
+import { AppSelectForm } from '@/componentes/select/AppSelectForm';
 
 export const UsuarioView = () => {
+
+    const medicoTemplate = (option: Medico) => {
+        if (!option) {
+            return "Selecione um médico";
+        }
+        return option.sigla ? `${option.nome} - ${option.sigla}` : option.nome;
+    };
+
   return (
       <CrudBase<Usuario>
         title="Usuários do Sistema"
@@ -62,8 +72,21 @@ export const UsuarioView = () => {
                 name="login"
                 label="Login" 
                 control={control} 
-                colSpan={12} 
+                colSpan={6} 
                 required
+              />
+
+              <AppSelectForm 
+                  label='Anestesista'
+                  name='medicoId'
+                  control={control} 
+                  url="/medico" 
+                  filterParams={{ ativo: true,  especialidades: [1] }}
+                  optionLabel="nome"
+                  optionValue="id"
+                  colSpan={6}
+                  valueTemplate={medicoTemplate}
+                  itemTemplate={medicoTemplate}
               />
 
               <AppInputPassword

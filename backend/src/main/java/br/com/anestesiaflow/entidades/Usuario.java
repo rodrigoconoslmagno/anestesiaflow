@@ -5,6 +5,7 @@ import java.util.Set;
 
 import br.com.anestesiaflow.auth.permission.Permissoes;
 import br.com.anestesiaflow.framework.persistence.BaseEntity;
+import br.com.anestesiaflow.medico.model.Medico;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -13,6 +14,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 
 @Entity
 public class Usuario extends BaseEntity<Integer>{
@@ -28,10 +30,14 @@ public class Usuario extends BaseEntity<Integer>{
 	@Column
 	private boolean ativo;
 	
+   @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "medicoid")
+	private Medico medico;
+
 	@ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "usuariopermissao", joinColumns = @JoinColumn(name = "usuarioid"))
     @Enumerated(EnumType.STRING)
-    private Set<Permissoes> permissoes = new HashSet<>();
+    private final Set<Permissoes> permissoes = new HashSet<>();
 	
 	public String getNome() {
 		return nome;
@@ -64,7 +70,15 @@ public class Usuario extends BaseEntity<Integer>{
 	public void setAtivo(boolean ativo) {
 		this.ativo = ativo;
 	}
-	
+
+    public Medico getMedico() {
+        return medico;
+    }
+
+    public void setMedico(Medico medico) {
+        this.medico = medico;
+    }
+
 	public Set<Permissoes> getPermissoes() {
 		return permissoes;
 	}

@@ -10,6 +10,7 @@ import type { EscalaSemana } from "@/types/escala";
 import { server } from "@/api/server";
 import { DateUtils } from "@/utils/DateUtils";
 import { useEffect, useState } from "react";
+import { useAuthStore } from "@/permissoes/authStore";
 
 export const EscalaMedicoView = () => {
     const navigate = useNavigate();
@@ -18,10 +19,11 @@ export const EscalaMedicoView = () => {
     const [loading, setLoading] = useState(false);
     const [exibirGrid, setExibirGrid] = useState(false);
     const [ inicio, setInicio ] = useState<boolean>(true);
+    const medicoAtualId = useAuthStore((state) => state.user?.medicoId);
 
     const methods = useForm<EscalaSemana[]>({    
     });
-    const [ medicoId, setMedicoId] = useState<Number | undefined>(undefined);
+    const [ medicoId, setMedicoId] = useState<number | undefined>(medicoAtualId ?? undefined);
     const { control } = methods;
 
     useEffect(() => {

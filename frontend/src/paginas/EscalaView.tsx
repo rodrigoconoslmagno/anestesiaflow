@@ -14,7 +14,7 @@ export const EscalaView = () => {
     const RESOURCE_PATH = '/escala';
     const medicoAtualId = useAuthStore((state) => state.user?.medicoId);
 
-    const [filtroMedicoId, setFiltroMedicoId] = useState<number | undefined>(undefined);
+    const [filtroMedicoId, setFiltroMedicoId] = useState<number | undefined>(medicoAtualId ?? undefined);
     const [paramsBusca, setParamsBusca] = useState({});
 
     const handleApply = () => {
@@ -41,7 +41,8 @@ export const EscalaView = () => {
                         className='mb-0 mt-2'
                         name="filtroMedico"
                         label=""
-                        url="/medico"
+                        url="/api/public/escala/medicos"
+                        public_back
                         value={filtroMedicoId}
                         filterParams={{ especialidades: [1] }}
                         onChange={(e) => setFiltroMedicoId(e.value)}
@@ -62,10 +63,9 @@ export const EscalaView = () => {
             resourcePath={RESOURCE_PATH}
             schema={escalaEdicaoSchema}
             defaultValues={{ 
-                medicoId: undefined,
+                medicoId: medicoAtualId ?? undefined,
                 semana: []
             }}
-            initialValues={{ medicoId: medicoAtualId ?? undefined }}
             columns={[
                 { field: 'medicoNome',
                   header: 'Médico',
@@ -86,7 +86,8 @@ export const EscalaView = () => {
                     <AppSelectForm
                         name='medicoId'
                         label='Médico'
-                        url="/medico"
+                        url="/api/public/escala/medicos"
+                        public_back
                         control={control}
                         filterParams={{ ativo: true, especialidades: [1] }}
                         optionLabel="nome"

@@ -79,7 +79,7 @@ public class PacienteService {
 		if (dataProcInicio == null ^ dataProcFim == null) {
 			throw new BusinessException("Para filtrar por data, informe a data inicial e a data final.");
 		} 
-		if (dataProcInicio.isAfter(dataProcFim)) {
+		if (dataProcInicio != null && dataProcFim != null && dataProcInicio.isAfter(dataProcFim)) {
 			throw new BusinessException("A data inicial não pode ser maior que a data final.");
 		}
 		boolean aplicarFiltroProcedimento = pago != null

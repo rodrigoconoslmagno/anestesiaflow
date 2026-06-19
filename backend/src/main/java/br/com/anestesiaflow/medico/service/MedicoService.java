@@ -23,13 +23,6 @@ public class MedicoService {
 	@Autowired
 	private MedicoRepository medicoRepository;
 	
-	public List<MedicoResponseDTO> listarTodos(){
-		return medicoRepository.findAll().stream()
-				.sorted(Comparator.comparing(Medico::getDataAssociacao))
-				.map(medico -> mapperToDto(medico))
-				.toList();
-	}
-	
 	public List<MedicoResponseDTO> listar(Map<String, Object> filtros) {
 		String sigla = null;
 		Boolean ativo = null;
@@ -42,17 +35,13 @@ public class MedicoService {
 		}
 
 		return medicoRepository.filtrarMedicos(sigla, ativo, especialidades).stream()
+				.sorted(Comparator.comparing(
+						Medico::getDataAssociacao,
+						Comparator.nullsLast(Comparator.naturalOrder())
+				))
 				.map(this::mapperToDto)
 				.toList();
 	}
-
-	// public List<MedicoResponseDTO> listarAtivos(){
-	// 	return medicoRepository.findAll().stream()
-	// 			.filter(medico -> medico.isAtivo())
-	// 			.sorted(Comparator.comparing(Medico::getDataAssociacao))
-	// 			.map(this::mapperToDto)
-	// 			.toList();
-	// }
 	
 	public MedicoResponseDTO buscaId(Integer id) {
 		Medico medico = medicoRepository.findById(id).orElseThrow(() -> new BusinessException("Médico não encontrado")); 

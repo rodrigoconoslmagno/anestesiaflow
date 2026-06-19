@@ -25,6 +25,7 @@ import { AppInputTextAreaForm } from '@/componentes/inputtext/AppInputTextAreaFo
 import type { Procedimento } from '@/types/procedimento';
 import { AppInputTextArea } from '@/componentes/inputtext/AppInputTextArea';
 import { AppInputNumberForm } from '@/componentes/inputtext/AppInputNumberForm';
+import { useAuthStore } from '@/permissoes/authStore';
 
 const getNomeEstabelecimento = (estabelecimento: Estabelecimento): string => {
     let nomeExibir = estabelecimento.nome;
@@ -338,9 +339,9 @@ const DlgCirurgiao = ({exibir, handleSave, onHide} : {exibir: boolean, handleSav
     )
 }
 
-const ProcedimentosTable = ({ control, activeIndex, onSelectRow, setDlgCirurgiao, cirurgiaoParams }: 
+const ProcedimentosTable = ({ control, activeIndex, onSelectRow, setDlgCirurgiao, cirurgiaoParams, medicoId }: 
             { control: any, activeIndex: number, onSelectRow: (index: number) => void, 
-                        setDlgCirurgiao: (value: boolean) => void,  cirurgiaoParams: any }) => {
+                        setDlgCirurgiao: (value: boolean) => void,  cirurgiaoParams: any, medicoId: number | undefined }) => {
     const { fields, append, remove } = useFieldArray({
         control,
         name: "procedimentos",
@@ -392,8 +393,8 @@ const ProcedimentosTable = ({ control, activeIndex, onSelectRow, setDlgCirurgiao
     }, [pagoAtivo, valorEfetivoAtivo, activeIndex, control]);
 
     const onAdd = () => {
-        append({ medicoId: null, dataProcedimento: new Date(), cirurgiao: '', procedimento: '' });
-        onSelectRow(fields.length); // Foca na nova linha criada
+        append({ medicoId: medicoId, dataProcedimento: new Date(), cirurgiao: '', procedimento: '' });
+        onSelectRow(fields.length);
         setIsEditing(true);
         setIsNewRecord(true);
     };
@@ -482,7 +483,8 @@ const ProcedimentosTable = ({ control, activeIndex, onSelectRow, setDlgCirurgiao
                         label='Anestesista'
                         name={`procedimentos.${activeIndex}.medicoId`}
                         control={control} 
-                        url="/medico" 
+                        url="/api/public/escala/medicos"
+                        public_back
                         filterParams={{ ativo: true,  especialidades: [1] }}
                         optionLabel="nome"
                         optionValue="id"
@@ -508,7 +510,8 @@ const ProcedimentosTable = ({ control, activeIndex, onSelectRow, setDlgCirurgiao
                         control={control} 
                         name={`procedimentos.${activeIndex}.cirurgiaoId`}
                         label='Cirurgião'
-                        url="/medico"
+                        url="/api/public/escala/medicos"
+                        public_back
                         filterParams={cirurgiaoParams}
                         optionLabel="nome"
                         optionValue="id"
@@ -707,9 +710,10 @@ const ProcedimentosTable = ({ control, activeIndex, onSelectRow, setDlgCirurgiao
 };
 
 export const PacienteView = () => {
+    const medicoAtualId = useAuthStore((state) => state.user?.medicoId);
     const [ loadingIA, setLoadingIA ] = useState(false);
     const [ cameraVisible, setCameraVisible ] = useState(false);
-    const [ medicoId, setMedicoId ] =  useState<number | undefined>(undefined);
+    const [ medicoId, setMedicoId ] =  useState<number | undefined>(medicoAtualId ?? undefined);
     const [ selectedFile, setSelectedFile ] = useState<File | null>(null);
     const { showError } = useAppToast();
     const [ loadData, setLoadData ] = useState<(() => Promise<void>) | null>(null);
@@ -783,7 +787,6 @@ export const PacienteView = () => {
     };
 
     const handleExecute = () => {
-        console.log("click execute", medicoId, selectedFile)
         if (selectedFile && medicoId) {
             handleCapture(selectedFile);
         }
@@ -850,7 +853,7 @@ export const PacienteView = () => {
         <>
             <CrudBase<Paciente>
                 title="Paciente"
-                recurso={Recurso.MEDICO}
+                recurso={Recurso.PACIENTE}
                 filterContent={(
                     <div className="grid grid-cols-12 gap-4">
                         <AppInputText
@@ -1049,6 +1052,7 @@ export const PacienteView = () => {
                             onSelectRow={(index) => setActiveIndex(index)}
                             setDlgCirurgiao={(value) => setDlgCirurgiao(value)}
                             cirurgiaoParams={cirurgiaoParams}
+                            medicoId={medicoAtualId ?? undefined}
                         />
 
                         <DlgCirurgiao
@@ -1066,11 +1070,11 @@ export const PacienteView = () => {
                 visible={cameraVisible} 
                 onHide={() =>{
                     setCameraVisible(false)
-                    setMedicoId(undefined)
+                    setMedicoId(medicoAtualId ?? undefined)
                     setSelectedFile(null)
                 }} 
                 onShow={() => {
-                    setMedicoId(undefined)
+                    setMedicoId(medicoAtualId ?? undefined)
                     setSelectedFile(null)
                 }}
                 style={{ width: '450px' }}
@@ -1099,7 +1103,8 @@ export const PacienteView = () => {
                             value={medicoId}
                             filterParams={{ ativo: true, especialidades: ['1'] }}
                             onChange={(e) => setMedicoId(e.value)}    
-                            url="/medico"
+                            url="/api/public/escala/medicos"
+                            public_back
                             placeholder="Selecione o médico"
                             valueTemplate={medicoTemplate}
                             itemTemplate={medicoTemplate}

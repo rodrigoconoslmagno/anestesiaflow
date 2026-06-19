@@ -41,15 +41,15 @@ interface EscalaItemPlantao extends EscalaItem {
 
 export const PlantaoView = () => {
     const navigate = useNavigate();
-    const [date, setDate] = useState<Date>(new Date());
-    const [escalas, setEscalas ] = useState<EscalaPlantao[]>([]);
-    const [exibeDialogo, setExibeDialogo] = useState<boolean>(false);
+    const [ date, setDate ] = useState<Date>(new Date());
+    const [ escalas, setEscalas ] = useState<EscalaPlantao[]>([]);
+    const [ exibeDialogo, setExibeDialogo ] = useState<boolean>(false);
     const [ sendMessaging, setSendMessaging ] = useState(false);
     const [ loading, setLoading ] = useState(false);
     const [ permiteArquivar, setPermiteArquivar ] = useState(false);
     const { showError } = useAppToast();
-    const [datasComPlantao, setDatasComPlantao] = useState<string[]>([]);
-    const [mesVisualizado, setMesVisualizado] = useState<Date>(new Date());
+    const [ datasComPlantao, setDatasComPlantao ] = useState<string[]>([]);
+    const [ mesVisualizado, setMesVisualizado ] = useState<Date>(new Date());
 
     const hasPerm = useAuthStore(state => state.hasPermission);
 
@@ -168,7 +168,7 @@ export const PlantaoView = () => {
     }, [date]);
 
     const saveEscala = (plantao: boolean, 
-                    medicoId: number, 
+                    medicoId: number | undefined, 
                     estabelecimentoId: number, 
                     formData: {data: Date, horas: string[]}, 
                     customIntervals: TimeInterval[],

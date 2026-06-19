@@ -30,7 +30,7 @@ public class EscalaController {
 	@Autowired
 	private EscalaService escalaService;
 	
-	@PreAuthorize("@auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).MEDICO_ACESSAR)")
+	@PreAuthorize("@auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).ESCALA_ACESSAR)")
 	@PostMapping("/listar")
 	public ResponseEntity<List<EscalaSemanaSummaryDTO>> listar(@RequestBody(required = false) Map<String, Object> filtros) {
         return ResponseEntity.ok(escalaService.listarTodos(filtros));
@@ -45,7 +45,7 @@ public class EscalaController {
 		return ResponseEntity.ok().build();
 	}
 	
-	@PreAuthorize("@auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).MEDICO_ACESSAR)")
+	@PreAuthorize("@auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).ESCALA_ACESSAR)")
 	@PostMapping("/buscarid")
 	public ResponseEntity<EscalaEdicaoDTO> buscaPorId(@RequestBody Map<String, Integer> payload) {
 		Integer id = payload.get("id");

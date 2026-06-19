@@ -11,6 +11,7 @@ import type { Escala } from "@/types/escala";
 import { AppSwitch } from "../switch/AppSwitch";
 import clsx from "clsx";
 import { IconeSirenePlantao } from "@/utils/IconeSirene";
+import { useAuthStore } from "@/permissoes/authStore";
 
 export interface TimeInterval {
     id: string;
@@ -42,7 +43,8 @@ export const DialogoLancamento = ({
     closeDialog
 } : DialogoLancamentoProps) => {
     const { showError, showWarn } = useAppToast();
-    const [ medicoId, setMedicoId] = useState<number | undefined>(undefined);
+    const medicoAtualId = useAuthStore((state) => state.user?.medicoId);
+    const [ medicoId, setMedicoId] = useState<number | undefined>(medicoAtualId ?? undefined);
     const [ estabelecimentoId, setEstabelecimentoId] = useState<number | undefined>(undefined);
     const [ medico, setMedico ] = useState<Medico>();
     const [ estabelecimento, setEstabelecimento ] = useState<Estabelecimento>();
@@ -630,7 +632,7 @@ export const DialogoLancamento = ({
                 } 
                 setPlantao(plantao)
                 setComplementoTitulo(forcarPlantao ? "Plantão" : "Escala");
-                setMedicoId(undefined)
+                setMedicoId(medicoAtualId ?? undefined)
                 setEstabelecimentoId(undefined)
                 setFormData({
                     data: date,

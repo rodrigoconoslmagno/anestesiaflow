@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.util.MultiValueMap;
 
 import br.com.anestesiaflow.escala.dto.EscalaSemanaDTO;
 import br.com.anestesiaflow.escala.service.EscalaService;
@@ -34,18 +35,45 @@ public class EscalaViewController implements BasePublicController {
 	}
 	
     @GetMapping("/medicos")
-	public ResponseEntity<List<MedicoResponseDTO>> listar(@RequestParam(required = false) boolean ativo) {
-    	if (ativo) {
-			filtrosMedico.put("ativo", true);
-        	return ResponseEntity.ok(medicoService.listar(filtrosMedico));
-        }
-        filtrosMedico.remove("ativo");
-        return ResponseEntity.ok(medicoService.listarTodos());
+	public ResponseEntity<List<MedicoResponseDTO>> listar(@RequestParam(required = false) MultiValueMap<String, String> filtros) {
+        return ResponseEntity.ok(medicoService.listar(normalizarFiltros(filtros)));
     }
     
     @GetMapping("/escalassemanais")
     public ResponseEntity<List<EscalaSemanaDTO>> escalas(@RequestParam int medicoId, 
     				@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data){
     	return ResponseEntity.ok(escalaService.listarSemanasMedicos(medicoId, data));
+    }
+
+    private Map<String, Object> normalizarFiltros(MultiValueMap<String, String> filtros) {
+        Map<String, Object> retorno = new HashMap<>();
+
+        if (filtros == null || filtros.isEmpty()) {
+            retorno.put("especialidades", Arrays.asList(1));
+            return retorno;
+        }
+
+        filtros.forEach((chave, valores) -> {
+            if (valores == null || valores.isEmpty()) {
+                return;
+            }
+
+            if (chave.startsWith("especialidades")) {
+                retorno.put("especialidades", valores.stream()
+                        .flatMap(valor -> Arrays.stream(valor.split(",")))
+                        .map(String::trim)
+                        .filter(valor -> !valor.isEmpty())
+                        .map(Integer::valueOf)
+                        .toList());
+            } else {
+                retorno.put(chave, valores.size() == 1 ? valores.get(0) : valores);
+            }
+        });
+
+        if (!retorno.containsKey("especialidades")) {
+            retorno.put("especialidades", Arrays.asList(1));
+        }
+
+        return retorno;
     }
 }

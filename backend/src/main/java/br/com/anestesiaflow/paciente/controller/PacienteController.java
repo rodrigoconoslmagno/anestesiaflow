@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import br.com.anestesiaflow.paciente.dto.PacientePesquisaResponseDTO;
 import br.com.anestesiaflow.paciente.dto.PacienteRequestDTO;
 import br.com.anestesiaflow.paciente.dto.PacienteResponseDTO;
 import br.com.anestesiaflow.paciente.service.PacienteService;
@@ -35,12 +36,8 @@ public class PacienteController {
 	
 	@PreAuthorize("@auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).PACIENTE_ACESSAR)")
 	@PostMapping("/listar")
-	public ResponseEntity<List<PacienteResponseDTO>> listar(@RequestBody(required = false) Map<String, Object> filtros) {
-        if (filtros != null && filtros.get("ativo") != null) {
-        	return ResponseEntity.ok(pacienteService.listarAtivos());
-        }
-        
-        return ResponseEntity.ok(pacienteService.listarTodos());
+	public ResponseEntity<List<PacientePesquisaResponseDTO>> listar(@RequestBody(required = false) Map<String, Object> filtros) {
+        return ResponseEntity.ok(pacienteService.listar(filtros));
     }
 	
 	@PreAuthorize("@auth.has(T(br.com.anestesiaflow.auth.permission.Permissoes).PACIENTE_ACESSAR)")

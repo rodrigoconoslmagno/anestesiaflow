@@ -66,6 +66,9 @@ export const CrudBase = <T extends { id?: any }>({
     watch,
     getValues,
     setValue,
+    trigger,
+    setError,
+    clearErrors,
     formState: { isDirty, dirtyFields,  errors } 
   } = methods;
 
@@ -447,6 +450,9 @@ export const CrudBase = <T extends { id?: any }>({
                     {children(Object.assign(control, { 
                           setValue, 
                           watch,
+                          trigger,
+                          setError,
+                          clearErrors,
                           loadData
                         }), 
                         errors)}

@@ -13,6 +13,9 @@ public record PacienteProcedimentoResponseDTO(
 		String medicoExibir,
 		int estabelecimentoId,
 		String estabelecimentoExibir,
+		boolean pago,
+		double valorPrevisto,
+		double valorEfetivo,
 		LocalDateTime dataCriacao,
 		LocalDateTime dataAtualizacao
 ) {}

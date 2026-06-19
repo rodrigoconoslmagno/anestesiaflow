@@ -38,6 +38,17 @@ export const pacienteProcedimentoSchema = baseEntitySchema.extend({
     icone: z.any().optional(),     
     estabelecimentoExibir: z.string().nullable().optional(),
     cirurgiaoExibir: z.string().nullable().optional(),
+    pago: z.boolean().default(false),
+    valorPrevisto: z.coerce.number().default(0),
+    valorEfetivo: z.coerce.number().default(0),
+}).refine((data) => {
+    if (data.pago && (!data.valorEfetivo || data.valorEfetivo <= 0)) {
+        return false;
+    }
+    return true;
+}, {
+    message: "O valor efetivo deve ser maior que zero quando o procedimento estiver pago",
+    path: ["valorEfetivo"]
 });
 
 export type PacienteProcedimento = z.infer<typeof pacienteProcedimentoSchema>;

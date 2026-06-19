@@ -40,6 +40,13 @@ public class PacienteProcedimento extends BaseEntity<Integer>{
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "estabelecimentoid")
 	private Estabelecimento estabelecimento;
+
+	@Column
+	private boolean pago;
+	@Column(name="valorprevisto", precision=2)
+	private double valorPrevisto;
+	@Column(name="valorefetivo", precision=2)
+	private double valorEfetivo;
 	
 	public Paciente getPaciente() {
 		return paciente;
@@ -88,4 +95,28 @@ public class PacienteProcedimento extends BaseEntity<Integer>{
 	public void setEstabelecimento(Estabelecimento estabelecimento) {
 		this.estabelecimento = estabelecimento;
 	}
+
+    public boolean isPago() {
+        return pago;
+    }
+
+    public void setPago(boolean pago) {
+        this.pago = pago;
+    }
+
+    public double getValorEfetivo() {
+        return valorEfetivo;
+    }
+
+    public void setValorEfetivo(double valorEfetivo) {
+        this.valorEfetivo = valorEfetivo;
+    }
+
+    public double getValorPrevisto() {
+        return valorPrevisto;
+    }
+
+    public void setValorPrevisto(double valorPrevisto) {
+        this.valorPrevisto = valorPrevisto;
+    }
 }

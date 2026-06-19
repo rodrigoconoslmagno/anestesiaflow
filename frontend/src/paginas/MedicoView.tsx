@@ -1,6 +1,6 @@
 import { server } from '@/api/server';
 import { CrudBase } from '@/componentes/crud/CrudBase';
-import { AppCalendar } from '@/componentes/datetime/AppCalendar';
+import { AppCalendarForm } from '@/componentes/datetime/AppCalendarForm';
 import { AppInputText } from '@/componentes/inputtext/AppInputText';
 import { AppInputTextForm } from '@/componentes/inputtext/AppInputTextForm';
 import { AppMultiSelect } from '@/componentes/select/AppMultiSelect';
@@ -214,7 +214,7 @@ export const MedicoView = () => {
                                     />
 
                                     {isAnestesista && (
-                                        <AppCalendar
+                                        <AppCalendarForm
                                             name='dataAssociacao'
                                             label='Sócio desde:'
                                             control={control}

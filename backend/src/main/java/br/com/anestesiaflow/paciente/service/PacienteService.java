@@ -1,9 +1,15 @@
 package br.com.anestesiaflow.paciente.service;
 
 import java.io.InputStream;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -19,8 +25,10 @@ import com.google.protobuf.ByteString;
 
 import br.com.anestesiaflow.estabelecimento.model.Estabelecimento;
 import br.com.anestesiaflow.exception.BusinessException;
+import br.com.anestesiaflow.framework.utils.DateUtils;
 import br.com.anestesiaflow.medico.model.Medico;
 import br.com.anestesiaflow.paciente.dto.PacienteImagemDTO;
+import br.com.anestesiaflow.paciente.dto.PacientePesquisaResponseDTO;
 import br.com.anestesiaflow.paciente.dto.PacienteProcedimentoResponseDTO;
 import br.com.anestesiaflow.paciente.dto.PacienteRequestDTO;
 import br.com.anestesiaflow.paciente.dto.PacienteResponseDTO;
@@ -52,16 +60,36 @@ public class PacienteService {
         }
     }
 	
-	public List<PacienteResponseDTO> listarTodos(){
-		return pacienteRepository.findAll().stream()
-				.map(this::mapperToDto)
-				.toList();
+	public List<PacientePesquisaResponseDTO> listarTodos(){
+		return listar(null);
 	}
 	
-	public List<PacienteResponseDTO> listarAtivos(){
-		return pacienteRepository.findAll().stream()
-				.filter(paciente -> paciente.isAtivo())
-				.map(this::mapperToDto)
+	public List<PacientePesquisaResponseDTO> listarAtivos(){
+		return listar(Map.of("ativo", true));
+	}
+
+	public List<PacientePesquisaResponseDTO> listar(Map<String, Object> filtros){
+		Boolean ativo = normalizarBooleano(filtros == null ? null : filtros.get("ativo"));
+		String nomeLike = normalizarTextoLike(filtros == null ? null : filtros.get("nome"));
+		Boolean pago = normalizarBooleano(filtros == null ? null : filtros.get("pago"));
+		LocalDate dataProcInicio = normalizarData(filtros == null ? null : filtros.get("dataProcInicio"));
+		LocalDate dataProcFim = normalizarData(filtros == null ? null : filtros.get("dataProcFim"));
+		Integer cirurgiaoId = normalizarInteiro(filtros == null ? null : filtros.get("cirurgiaoId"));
+		boolean usarFiltroPeriodo = dataProcInicio != null || dataProcFim != null;
+		if (dataProcInicio == null ^ dataProcFim == null) {
+			throw new BusinessException("Para filtrar por data, informe a data inicial e a data final.");
+		} 
+		if (dataProcInicio.isAfter(dataProcFim)) {
+			throw new BusinessException("A data inicial não pode ser maior que a data final.");
+		}
+		boolean aplicarFiltroProcedimento = pago != null
+				|| usarFiltroPeriodo
+				|| cirurgiaoId != null;
+
+		return pacienteRepository
+				.filtrarPacientes(ativo, nomeLike, pago, dataProcInicio, dataProcFim, cirurgiaoId, usarFiltroPeriodo, aplicarFiltroProcedimento)
+				.stream()
+				.map(this::mapperToPesquisaDto)
 				.toList();
 	}
 	
@@ -95,6 +123,34 @@ public class PacienteService {
 	    pacienteRepository.deleteById(id);
 	}
 	
+	private PacientePesquisaResponseDTO mapperToPesquisaDto(Paciente paciente) {
+		StringBuilder dataExibir = new StringBuilder();
+		StringBuilder procedimentoExibir = new StringBuilder();
+		double valorPrevistoExibir = 0;
+		double valorEfetivoExibir = 0;
+		for (PacienteProcedimento procedimento : paciente.getProcedimentos()) {
+			if (dataExibir.length() > 0) {
+				dataExibir.append(", ");
+			}
+			dataExibir.append(DateUtils.formatToPtBr(procedimento.getDataProcedimento()));
+			if (procedimentoExibir.length() > 0) {
+				procedimentoExibir.append(", ");
+			}
+			procedimentoExibir.append(procedimento.getProcedimento());
+			valorPrevistoExibir += procedimento.getValorPrevisto();
+			valorEfetivoExibir += procedimento.getValorEfetivo();
+		}
+		return new PacientePesquisaResponseDTO(
+			paciente.getId(),
+			paciente.getNome(),
+			dataExibir.toString(),
+			procedimentoExibir.toString(),
+			valorPrevistoExibir,
+			valorEfetivoExibir,
+			paciente.isAtivo()
+		);
+	}
+
 	private PacienteResponseDTO mapperToDto(Paciente paciente) {
 		return new PacienteResponseDTO(
 				paciente.getId(),
@@ -116,6 +172,9 @@ public class PacienteService {
 				procedimento.getMedico().getNome(),
 				procedimento.getEstabelecimento().getId(),
 				procedimento.getEstabelecimento().getNome(),
+				procedimento.isPago(),
+				procedimento.getValorPrevisto(),
+				procedimento.getValorEfetivo(),
 				procedimento.getDataCriacao(),
 				procedimento.getDataAtualizacao());
 	}
@@ -141,6 +200,9 @@ public class PacienteService {
 		procedimento.setProcedimento(dto.procedimento());
 		procedimento.setCirurgiao(entityManager.getReference(Medico.class, dto.cirurgiaoId()));
 		procedimento.setEstabelecimento(entityManager.getReference(Estabelecimento.class, dto.estabelecimentoId()));
+		procedimento.setPago(dto.pago());
+		procedimento.setValorPrevisto(dto.valorPrevisto());
+		procedimento.setValorEfetivo(dto.valorEfetivo());
 		return procedimento;
 	}
 	
@@ -170,11 +232,86 @@ public class PacienteService {
 						procedimento.setProcedimento(dto.procedimento());
 						procedimento.setDataProcedimento(dto.dataProcedimento());
 						procedimento.setMedico(entityManager.getReference(Medico.class, dto.medicoId()));
+						procedimento.setEstabelecimento(entityManager.getReference(Estabelecimento.class, dto.estabelecimentoId()));
+						procedimento.setPago(dto.pago());
+						procedimento.setValorPrevisto(dto.valorPrevisto());
+						procedimento.setValorEfetivo(dto.valorEfetivo());
 					}
 				});
 			}			
 		});
 		
+	}
+
+	private String normalizarTexto(Object valor) {
+		if (valor == null) {
+			return null;
+		}
+		String texto = valor.toString().trim();
+		return texto.isEmpty() ? null : texto;
+	}
+
+	private String normalizarTextoLike(Object valor) {
+		String texto = normalizarTexto(valor);
+		return texto == null ? null : "%" + texto.toLowerCase() + "%";
+	}
+
+	private Boolean normalizarBooleano(Object valor) {
+		if (valor == null) {
+			return null;
+		}
+		if (valor instanceof Boolean bool) {
+			return bool;
+		}
+		String texto = valor.toString().trim();
+		return texto.isEmpty() ? null : Boolean.valueOf(texto);
+	}
+
+	private Integer normalizarInteiro(Object valor) {
+		if (valor == null) {
+			return null;
+		}
+		if (valor instanceof Number number) {
+			return number.intValue();
+		}
+		String texto = valor.toString().trim();
+		if (texto.isEmpty()) {
+			return null;
+		}
+		return Integer.valueOf(texto);
+	}
+
+	private LocalDate normalizarData(Object valor) {
+		if (valor == null) {
+			return null;
+		}
+		if (valor instanceof LocalDate data) {
+			return data;
+		}
+		if (valor instanceof LocalDateTime dataHora) {
+			return dataHora.toLocalDate();
+		}
+		if (valor instanceof OffsetDateTime offsetDateTime) {
+			return offsetDateTime.toLocalDate();
+		}
+		if (valor instanceof java.util.Date date) {
+			return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+		}
+
+		String texto = valor.toString().trim();
+		if (texto.isEmpty()) {
+			return null;
+		}
+
+		try {
+			return LocalDate.parse(texto);
+		} catch (DateTimeParseException ex) {
+			try {
+				return OffsetDateTime.parse(texto).toLocalDate();
+			} catch (DateTimeParseException ex2) {
+				return Instant.parse(texto).atZone(ZoneId.systemDefault()).toLocalDate();
+			}
+		}
 	}
 	
 	public void decodeImagem(InputStream inputStream, int medicoId, int cirurgiaoId, 

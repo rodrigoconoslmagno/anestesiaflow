@@ -2,6 +2,7 @@ import { server } from '@/api/server';
 import { AppCameraInput } from '@/componentes/camera/AppCameraCapture';
 import { CrudBase } from '@/componentes/crud/CrudBase';
 import { AppCalendar } from '@/componentes/datetime/AppCalendar';
+import { AppCalendarForm } from '@/componentes/datetime/AppCalendarForm';
 import { AppInputTextForm } from '@/componentes/inputtext/AppInputTextForm';
 import { AppSelect } from '@/componentes/select/AppSelect';
 import { AppSelectForm } from '@/componentes/select/AppSelectForm';
@@ -10,11 +11,12 @@ import { Recurso } from '@/permissoes/recurso';
 import type { Medico } from '@/types/medico';
 import { pacienteSchema, type Paciente } from '@/types/paciente';
 import { DateUtils } from '@/utils/DateUtils';
+import { FormatUtils } from '@/utils/FormatUtils';
 import { Button } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useFieldArray, useWatch } from 'react-hook-form';
 import { useAppToast } from '@/context/ToastContext';
 import type { Estabelecimento } from '@/types/estabelecimento';
@@ -22,6 +24,7 @@ import { AppInputText } from '@/componentes/inputtext/AppInputText';
 import { AppInputTextAreaForm } from '@/componentes/inputtext/AppInputTextAreaForm';
 import type { Procedimento } from '@/types/procedimento';
 import { AppInputTextArea } from '@/componentes/inputtext/AppInputTextArea';
+import { AppInputNumberForm } from '@/componentes/inputtext/AppInputNumberForm';
 
 const getNomeEstabelecimento = (estabelecimento: Estabelecimento): string => {
     let nomeExibir = estabelecimento.nome;
@@ -362,6 +365,32 @@ const ProcedimentosTable = ({ control, activeIndex, onSelectRow, setDlgCirurgiao
         defaultValue: fields
     });
 
+    const procedimentoAtivo = watchProcedimentos[activeIndex];
+    const pagoAtivo = procedimentoAtivo?.pago;
+    const valorEfetivoAtivo = procedimentoAtivo?.valorEfetivo;
+
+    useEffect(() => {
+        if (activeIndex === -1 || !procedimentoAtivo) return;
+
+        if (pagoAtivo) {
+            if (!valorEfetivoAtivo || valorEfetivoAtivo <= 0) {
+                // Impede ligar o switch se não houver valor positivo
+                (control as any).setValue(`procedimentos.${activeIndex}.pago`, false);
+                
+                (control as any).setError(`procedimentos.${activeIndex}.valorEfetivo`, {
+                    type: 'manual',
+                    message: "O valor efetivo deve ser maior que zero para marcar como pago"
+                });
+            } else {
+                // Se ligou e o valor é válido, garante a limpeza de erros manuais
+                (control as any).clearErrors(`procedimentos.${activeIndex}.valorEfetivo`);
+            }
+        } else if (valorEfetivoAtivo > 0) {
+            // Se o switch está desligado mas o usuário digitou um valor, limpa o feedback de erro
+            (control as any).clearErrors(`procedimentos.${activeIndex}.valorEfetivo`);
+        }
+    }, [pagoAtivo, valorEfetivoAtivo, activeIndex, control]);
+
     const onAdd = () => {
         append({ medicoId: null, dataProcedimento: new Date(), cirurgiao: '', procedimento: '' });
         onSelectRow(fields.length); // Foca na nova linha criada
@@ -496,7 +525,7 @@ const ProcedimentosTable = ({ control, activeIndex, onSelectRow, setDlgCirurgiao
                         onClick={() => setDlgCirurgiao(true)}
                     />
 
-                    <AppCalendar
+                    <AppCalendarForm
                         name={`procedimentos.${activeIndex}.dataProcedimento`}
                         label='Data'
                         control={control}
@@ -529,6 +558,41 @@ const ProcedimentosTable = ({ control, activeIndex, onSelectRow, setDlgCirurgiao
                         colSpan={6}
                         className="!max-h-[90px]"
                     />
+
+                    <AppSwitchForm
+                        name={`procedimentos.${activeIndex}.pago`}
+                        label="Pago"
+                        control={control}
+                        colSpan={3}
+                        labelOff="Não"
+                        labelOn="Sim"
+                    />
+
+                    <AppInputNumberForm
+                        name={`procedimentos.${activeIndex}.valorPrevisto`}
+                        label='Valor Previsto'
+                        control={control}
+                        colSpan={3}
+                        isCurrency={true}                        
+                    />
+
+                    <AppInputNumberForm
+                        name={`procedimentos.${activeIndex}.valorEfetivo`}
+                        label='Valor Efetivo'
+                        control={control}
+                        colSpan={4}
+                        isCurrency={true}                        
+                    />
+                    <Button
+                        label='Copiar valor'
+                        icon="pi pi-copy"
+                        disabled={!(watchProcedimentos[activeIndex]?.valorPrevisto > 0)}
+                        className='bg-blue-600 text-white border-none shadow-md md:mt-3 h-[40px] px-4 justify-betwenn items-center col-span-12 md:col-span-2'
+                        onClick={() => {
+                            const valorPrevisto = watchProcedimentos[activeIndex]?.valorPrevisto || 0;
+                            (control as any).setValue(`procedimentos.${activeIndex}.valorEfetivo`, valorPrevisto);
+                        }}
+                    />
                 </div>
             )}
 
@@ -544,6 +608,32 @@ const ProcedimentosTable = ({ control, activeIndex, onSelectRow, setDlgCirurgiao
                 breakpoint="960px"
                 rowClassName={(options: any) => options.rowIndex === activeIndex ? 'bg-blue-50' : ''}
             >
+                <Column header="Pago" 
+                        headerClassName="bg-gray-200 text-gray-700 border-1 border-200"
+                        className="border-1 border-gray-300"
+                        body={(rowData) => {
+                            const isPaid = rowData.pago;
+                            const status = isPaid 
+                                ? {
+                                    text: 'Pago',
+                                    icon: 'pi pi-check-circle',
+                                    className: 'bg-green-100 text-green-800'
+                                  }
+                                : {
+                                    text: 'Pendente',
+                                    icon: 'pi pi-clock',
+                                    className: 'bg-red-100 text-red-800'
+                                  };
+                    
+                            return (
+                                <div className="flex justify-center">
+                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${status.className}`}>
+                                        <i className={status.icon}></i>
+                                        {status.text}
+                                    </span>
+                                </div>
+                            );
+                        }}/>
                 <Column header="Anestesista" 
                         body={(rowData) => rowData.medicoId ? rowData.medicoExibir : 'Não definido'} 
                         headerClassName="bg-gray-200 text-gray-700 border-1 border-200"
@@ -563,6 +653,14 @@ const ProcedimentosTable = ({ control, activeIndex, onSelectRow, setDlgCirurgiao
                 <Column header="Data" 
                         headerClassName="bg-gray-200 text-gray-700 border-1 border-200"
                         body={(rowData) => DateUtils.formatarParaBR(rowData.dataProcedimento)} 
+                        className="border-1 border-gray-300" />
+                <Column header="Valor Previsto" 
+                        headerClassName="bg-gray-200 text-gray-700 border-1 border-200"
+                        body={(rowData) => FormatUtils.formatCurrency(rowData.valorPrevisto)} 
+                        className="border-1 border-gray-300" />
+                <Column header="Valor Efetivo" 
+                        headerClassName="bg-gray-200 text-gray-700 border-1 border-200"
+                        body={(rowData) => FormatUtils.formatCurrency(rowData.valorEfetivo)} 
                         className="border-1 border-gray-300" />
                 <Column 
                     header="Excluir"
@@ -640,6 +738,24 @@ export const PacienteView = () => {
     const [ estabelecimentoId, setEstabelecimentoId ] = useState<number | undefined>(undefined);
     const [ cirurgiaoId, setCirurgiaoId ] = useState<number | undefined>(undefined);
 
+    const [ paramsBusca, setParamsBusca ] = useState<{
+        ativo?: boolean | null,
+        pago?: boolean | null,
+        nome?: string | null,
+        dataProcInicio?: string | null,
+        dataProcFim?: string | null,
+        cirurgiaoId?: number | null }
+    >({
+        ativo: true,
+        pago: false
+    });
+    const [ filtroDataProcInicio, setFiltroDataProcInicio ] = useState<Date | null>(null);
+    const [ filtroDataProcFim, setFiltroDataProcFim ] = useState<Date | null>(null);
+    const [ filtroCirurgiao, setFiltroCirurgiao ] = useState<number | undefined>(undefined);
+    const [ filtroNomePaciente, setFiltroNomePaciente ] = useState<string | undefined>(undefined);
+    const [ filtroStatus, setFiltroStatus ] = useState<boolean | undefined>(true);
+    const [ filtroPago, setFiltroPago ] = useState<boolean | undefined>(false);
+
     const handleCapture = async (file: File) => {
         try {
             setLoadingIA(true);
@@ -680,12 +796,172 @@ export const PacienteView = () => {
         return option.sigla ? `${option.nome} - ${option.sigla}` : option.nome;
     };
 
+    const handleClear = () => {
+        setFiltroStatus(undefined);
+        setFiltroNomePaciente(undefined);
+        setFiltroDataProcInicio(null);
+        setFiltroDataProcFim(null);
+        setFiltroCirurgiao(undefined);
+        setFiltroPago(undefined);
+        setParamsBusca({});
+    };
+
+    const handleApply = () => {
+        const possuiDataInicio = !!filtroDataProcInicio;
+        const possuiDataFim = !!filtroDataProcFim;
+
+        if (possuiDataInicio !== possuiDataFim) {
+            showError(
+                'Filtro de período',
+                'Quando informar uma data, preencha também a data inicial e a data final.'
+            );
+            return;
+        }
+
+        setParamsBusca({
+            ativo: filtroStatus ?? null,
+            nome: filtroNomePaciente ?? null,
+            dataProcInicio: filtroDataProcInicio ? DateUtils.paraISO(filtroDataProcInicio) : null,
+            dataProcFim: filtroDataProcFim ? DateUtils.paraISO(filtroDataProcFim) : null,
+            pago: filtroPago ?? null,
+            cirurgiaoId: filtroCirurgiao ?? null
+        });
+    };
+
+    const handleDataProcInicioChange = (value: Date | null) => {
+        setFiltroDataProcInicio(value);
+
+        if (value && filtroDataProcFim && filtroDataProcFim < value) {
+            setFiltroDataProcFim(null);
+        }
+    };
+
+    const handleDataProcFimChange = (value: Date | null) => {
+        if (value && filtroDataProcInicio && value < filtroDataProcInicio) {
+            return;
+        }
+
+        setFiltroDataProcFim(value);
+    };
+
+    const periodoDataPreenchido = Boolean(filtroDataProcInicio || filtroDataProcFim);
+
     return (
         <>
             <CrudBase<Paciente>
                 title="Paciente"
                 recurso={Recurso.MEDICO}
-                // filterContent={<p>Teste de Filtro</p>}
+                filterContent={(
+                    <div className="grid grid-cols-12 gap-4">
+                        <AppInputText
+                            name="filtroNomePaciente"
+                            label="Nome"
+                            colSpan={6}
+                            value={filtroNomePaciente}
+                            onChange={(e) => setFiltroNomePaciente(e.target.value)}
+                        />
+                        <AppCalendar
+                            name="dataProcInicio"
+                            label="Data Proc Inicio"
+                            colSpan={3}
+                            required={periodoDataPreenchido}
+                            value={filtroDataProcInicio}
+                            maxDate={filtroDataProcFim ?? undefined}
+                            onChange={(e) => handleDataProcInicioChange(e.value ?? null)}
+                        />
+                        <AppCalendar
+                            name="dataProcFim"
+                            label="Data Proc Fim"
+                            colSpan={3}
+                            required={periodoDataPreenchido}
+                            value={filtroDataProcFim}
+                            minDate={filtroDataProcInicio ?? undefined}
+                            onChange={(e) => handleDataProcFimChange(e.value ?? null)}
+                        />
+                        <AppSelect
+                            name="filtroCirurgia"
+                            label="Cirurgião"
+                            value={filtroCirurgiao}
+                            optionLabel="nome"
+                            optionValue="id"
+                            url='/medico'
+                            filterParams={{ especialidades: [2] }}
+                            showClear
+                            onChange={(e) => setFiltroCirurgiao(e.value ?? null)}
+                            colSpan={6}
+                            placeholder="Situação"
+                            itemTemplate={medicoTemplate}
+                            valueTemplate={medicoTemplate}
+                        />
+                        <AppSelect
+                            name="ativo"
+                            label="Situação"
+                            value={filtroStatus}
+                            options={[
+                                { nome: 'Ativo', value: true },
+                                { nome: 'Inativo', value: false }
+                            ]}
+                            optionLabel="nome"
+                            optionValue="value"
+                            showClear
+                            onChange={(e) => setFiltroStatus(e.value ?? null)}
+                            colSpan={3}
+                            placeholder="Situação"
+                            itemTemplate={(options) => {
+                                return (
+                                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${options.value  ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                            {options.value ? 'ATIVO' : 'INATIVO'}
+                                        </span>
+                                    )
+                            }}
+                            valueTemplate={(options) => {
+                                if (!options) {
+                                    return <></>;
+                                }
+                                return (
+                                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${options.value ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                            {options.value ? 'ATIVO' : 'INATIVO'}
+                                        </span>
+                                    )
+                            }}
+                        />
+                        <AppSelect
+                            name="pago"
+                            label="Financeiro"
+                            value={filtroPago}
+                            options={[
+                                { nome: 'Pago', value: true },
+                                { nome: 'Pendente', value: false }
+                            ]}
+                            optionLabel="nome"
+                            optionValue="value"
+                            showClear
+                            onChange={(e) => setFiltroPago(e.value ?? null)}
+                            colSpan={3}
+                            placeholder="Situação"
+                            itemTemplate={(options) => {
+                                return (
+                                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${options.value  ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                            {options.value ? 'PAGO' : 'PENDENTE'}
+                                        </span>
+                                    )
+                            }}
+                            valueTemplate={(options) => {
+                                if (!options) {
+                                    return <></>;
+                                }
+                                return (
+                                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${options.value ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                            {options.value ? 'PAGO' : 'PENDENTE'}
+                                        </span>
+                                    )
+                            }}
+                        />                        
+                    </div>
+                )}
+                onApplyFilters={handleApply}
+                onClearFilters={handleClear}
+                filterParams={paramsBusca}
                 resourcePath='/paciente'
                 schema={pacienteSchema}
                 getMethodLoadData={param => {
@@ -709,19 +985,28 @@ export const PacienteView = () => {
                     </Button>
                 }
                 columns={[
-                { field: 'nome', header: 'Nome' },
-                { field: 'dataProcedimento', header: 'Procedimento',
-                    body: (rowData) => DateUtils.formatarParaBR(rowData.dataProcedimento)
-                },
-                { 
-                    field: 'ativo', 
-                    header: 'Status', 
-                    body: (row: { ativo: any; }) => (
-                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${row.ativo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                        {row.ativo ? 'ATIVO' : 'INATIVO'}
-                    </span>
-                    )
-                }
+                    { field: 'nome', header: 'Nome' },
+                    { field: 'dataProcedimentoExibir', header: 'Data Procedimento' },
+                    { field: 'procedimentoExibir', header: 'Procedimento' },
+                    { 
+                        field: 'valorPrevistoExibir', 
+                        header: 'Valor Previsto',
+                        body: (rowData) => FormatUtils.formatCurrency(rowData.valorPrevistoExibir)
+                    },
+                    { 
+                        field: 'valorEfetivoExibir', 
+                        header: 'Valor Efetivo',
+                        body: (rowData) => FormatUtils.formatCurrency(rowData.valorEfetivoExibir)
+                    },
+                    { 
+                        field: 'ativo', 
+                        header: 'Status', 
+                        body: (row: { ativo: any; }) => (
+                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${row.ativo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            {row.ativo ? 'ATIVO' : 'INATIVO'}
+                        </span>
+                        )
+                    }
                 ]}
             >
                 {(control) => {

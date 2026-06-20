@@ -31,6 +31,7 @@ interface CrudBaseProps<T extends BaseEntity> {
   onClearFilters?: () => void;
   onAdd?: (item: T) => void
   onEdit?: (item: T) => void;
+  tableFooter?: (items: T[]) => React.ReactNode;
   children: (control: Control<T>, errors: FieldErrors<T>) => React.ReactNode;
   getMethodLoadData?: (method: () => Promise<void>) => void ;
   initialValues?: Partial<T> | null;
@@ -38,7 +39,7 @@ interface CrudBaseProps<T extends BaseEntity> {
 
 export const CrudBase = <T extends { id?: any }>({
   title, recurso, resourcePath, schema, defaultValues, columns, filterContent, extraActions,
-  filterParams, onApplyFilters, onClearFilters, onAdd, onEdit ,children, getMethodLoadData, initialValues
+  filterParams, onApplyFilters, onClearFilters, onAdd, onEdit, tableFooter, children, getMethodLoadData, initialValues
 }: CrudBaseProps<T>) => {
   const { setFormData, getFormData, clearFormData } = useCrudStore();
   const [data, setData] = useState<T[]>([]);
@@ -314,6 +315,7 @@ export const CrudBase = <T extends { id?: any }>({
                   loading={loading} 
                   paginator 
                   rows={10} 
+                  footer={tableFooter ? tableFooter(data) : undefined}
                   className="p-datatable-modern pb-4"
                   rowHover // Ativa o destaque da linha ao passar o mouse
                   stripedRows={false} // Desative as listras para um look mais clean

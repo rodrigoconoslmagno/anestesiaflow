@@ -86,10 +86,10 @@ public class PacienteService {
 				|| usarFiltroPeriodo
 				|| cirurgiaoId != null;
 
-		return pacienteRepository
+	return pacienteRepository
 				.filtrarPacientes(ativo, nomeLike, pago, dataProcInicio, dataProcFim, cirurgiaoId, usarFiltroPeriodo, aplicarFiltroProcedimento)
 				.stream()
-				.map(this::mapperToPesquisaDto)
+				.map(paciente -> mapperToPesquisaDto(paciente, pago, dataProcInicio, dataProcFim, cirurgiaoId))
 				.toList();
 	}
 	
@@ -123,12 +123,16 @@ public class PacienteService {
 	    pacienteRepository.deleteById(id);
 	}
 	
-	private PacientePesquisaResponseDTO mapperToPesquisaDto(Paciente paciente) {
+	private PacientePesquisaResponseDTO mapperToPesquisaDto(Paciente paciente, Boolean pago, LocalDate dataProcInicio, LocalDate dataProcFim, Integer cirurgiaoId) {
 		StringBuilder dataExibir = new StringBuilder();
 		StringBuilder procedimentoExibir = new StringBuilder();
 		double valorPrevistoExibir = 0;
 		double valorEfetivoExibir = 0;
 		for (PacienteProcedimento procedimento : paciente.getProcedimentos()) {
+			if (!deveIncluirProcedimentoNaPesquisa(procedimento, pago, dataProcInicio, dataProcFim, cirurgiaoId)) {
+				continue;
+			}
+
 			if (dataExibir.length() > 0) {
 				dataExibir.append(", ");
 			}
@@ -149,6 +153,34 @@ public class PacienteService {
 			valorEfetivoExibir,
 			paciente.isAtivo()
 		);
+	}
+
+	private boolean deveIncluirProcedimentoNaPesquisa(PacienteProcedimento procedimento, Boolean pago, LocalDate dataProcInicio, LocalDate dataProcFim, Integer cirurgiaoId) {
+		if (procedimento == null) {
+			return false;
+		}
+
+		if (pago != null && procedimento.isPago() != pago) {
+			return false;
+		}
+
+		if (cirurgiaoId != null && procedimento.getCirurgiao() != null && !cirurgiaoId.equals(procedimento.getCirurgiao().getId())) {
+			return false;
+		}
+
+		if (cirurgiaoId != null && procedimento.getCirurgiao() == null) {
+			return false;
+		}
+
+		if (dataProcInicio != null && dataProcFim != null) {
+			if (procedimento.getDataProcedimento() == null
+					|| procedimento.getDataProcedimento().isBefore(dataProcInicio)
+					|| procedimento.getDataProcedimento().isAfter(dataProcFim)) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	private PacienteResponseDTO mapperToDto(Paciente paciente) {

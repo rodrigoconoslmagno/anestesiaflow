@@ -16,7 +16,7 @@ import { Button } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useFieldArray, useWatch } from 'react-hook-form';
 import { useAppToast } from '@/context/ToastContext';
 import type { Estabelecimento } from '@/types/estabelecimento';
@@ -62,8 +62,18 @@ const estabelecimentoTemplate = (option: Estabelecimento) => {
             </div>
             {getNomeEstabelecimento(option)}
         </div>
-        )
-    };  
+    )
+};  
+
+const getMedicoExibir = (medico?: Medico | null) => {
+    if (!medico) {
+        return null;
+    }
+
+    return medico.sigla ? `${medico.nome} - ${medico.sigla}` : medico.nome;
+};
+
+const formatarResumoFinanceiro = (valor?: number | null) => FormatUtils.formatCurrency(Number(valor ?? 0));
 
 const CompProcedimento = ({ incClick, procChange, isReplace, procedimentoParams }:{ incClick: () => void, 
         procChange: (procedimento: Procedimento | undefined) => void, 
@@ -364,7 +374,18 @@ const ProcedimentosTable = ({ control, activeIndex, onSelectRow, setDlgCirurgiao
         control,
         name: "procedimentos",
         defaultValue: fields
-    });
+    }) ?? [];
+
+    const resumoTabela = useMemo(() => {
+        return watchProcedimentos.reduce(
+            (acc: { previsto: number; efetivo: number }, procedimento: any) => {
+                acc.previsto += Number(procedimento?.valorPrevisto ?? 0);
+                acc.efetivo += Number(procedimento?.valorEfetivo ?? 0);
+                return acc;
+            },
+            { previsto: 0, efetivo: 0 }
+        );
+    }, [watchProcedimentos]);
 
     const procedimentoAtivo = watchProcedimentos[activeIndex];
     const pagoAtivo = procedimentoAtivo?.pago;
@@ -491,6 +512,9 @@ const ProcedimentosTable = ({ control, activeIndex, onSelectRow, setDlgCirurgiao
                         colSpan={6}
                         valueTemplate={medicoTemplate}
                         itemTemplate={medicoTemplate}
+                        onObjectChange={(medico: Medico | null | undefined) => {
+                            (control as any).setValue(`procedimentos.${activeIndex}.medicoExibir`, getMedicoExibir(medico));
+                        }}
                     />
 
                     <AppSelectForm
@@ -504,6 +528,12 @@ const ProcedimentosTable = ({ control, activeIndex, onSelectRow, setDlgCirurgiao
                         colSpan={6}
                         itemTemplate={estabelecimentoTemplate}
                         valueTemplate={estabelecimentoTemplate}
+                        onObjectChange={(estabelecimento: Estabelecimento | null | undefined) => {
+                            (control as any).setValue(
+                                `procedimentos.${activeIndex}.estabelecimentoExibir`,
+                                estabelecimento ? getNomeEstabelecimento(estabelecimento) : null
+                            );
+                        }}
                     />
 
                     <AppSelectForm
@@ -518,6 +548,9 @@ const ProcedimentosTable = ({ control, activeIndex, onSelectRow, setDlgCirurgiao
                         colSpan={6}
                         itemTemplate={medicoTemplate}
                         valueTemplate={medicoTemplate}
+                        onObjectChange={(cirurgiao: Medico | null | undefined) => {
+                            (control as any).setValue(`procedimentos.${activeIndex}.cirurgiaoExibir`, getMedicoExibir(cirurgiao));
+                        }}
                     />
 
                     <Button 
@@ -610,6 +643,21 @@ const ProcedimentosTable = ({ control, activeIndex, onSelectRow, setDlgCirurgiao
                 emptyMessage="Nenhum procedimento registrado."
                 breakpoint="960px"
                 rowClassName={(options: any) => options.rowIndex === activeIndex ? 'bg-blue-50' : ''}
+                footer={
+                    <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between px-3 py-2 text-sm">
+                        <span className="font-bold text-gray-700">
+                            Total de procedimentos: {watchProcedimentos.length}
+                        </span>
+                        <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6">
+                            <span className="font-semibold text-gray-600">
+                                Valor Previsto: <span className="font-bold text-blue-700">{formatarResumoFinanceiro(resumoTabela.previsto)}</span>
+                            </span>
+                            <span className="font-semibold text-gray-600">
+                                Valor Efetivo: <span className="font-bold text-emerald-700">{formatarResumoFinanceiro(resumoTabela.efetivo)}</span>
+                            </span>
+                        </div>
+                    </div>
+                }
             >
                 <Column header="Pago" 
                         headerClassName="bg-gray-200 text-gray-700 border-1 border-200"
@@ -848,6 +896,7 @@ export const PacienteView = () => {
     };
 
     const periodoDataPreenchido = Boolean(filtroDataProcInicio || filtroDataProcFim);
+    const formatarValorTabelaPrincipal = (valor?: number | null) => FormatUtils.formatCurrency(Number(valor ?? 0));
 
     return (
         <>
@@ -965,6 +1014,32 @@ export const PacienteView = () => {
                 onApplyFilters={handleApply}
                 onClearFilters={handleClear}
                 filterParams={paramsBusca}
+                tableFooter={(items) => {
+                    const totais = items.reduce(
+                        (acc, item: any) => {
+                            acc.previsto += Number(item?.valorPrevistoExibir ?? 0);
+                            acc.efetivo += Number(item?.valorEfetivoExibir ?? 0);
+                            return acc;
+                        },
+                        { previsto: 0, efetivo: 0 }
+                    );
+
+                    return (
+                        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between px-3 py-2 text-sm">
+                            <span className="font-bold text-gray-700">
+                                Total de pacientes: {items.length}
+                            </span>
+                            <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6">
+                                <span className="font-semibold text-gray-600">
+                                    Valor Previsto: <span className="font-bold text-blue-700">{formatarValorTabelaPrincipal(totais.previsto)}</span>
+                                </span>
+                                <span className="font-semibold text-gray-600">
+                                    Valor Efetivo: <span className="font-bold text-emerald-700">{formatarValorTabelaPrincipal(totais.efetivo)}</span>
+                                </span>
+                            </div>
+                        </div>
+                    );
+                }}
                 resourcePath='/paciente'
                 schema={pacienteSchema}
                 getMethodLoadData={param => {
